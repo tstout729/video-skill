@@ -17,6 +17,8 @@ Make a video when the user asks for one, or when their preferences say to. Do no
 
 ## Pick the kind
 
+Each kind names its engine; [Choosing an engine](references/engines.md) covers three.js, GSAP, Remotion, HyperFrames and plain HTML.
+
 - **Explainer.** How a system, process or idea works: narrated diagrams in Manim, in the style of 3Blue1Brown, with every animation timed to the narrator's words. Build it with [Explainer (Manim)](#explainer-manim). Copy from `examples/explainer/`.
 - **Walkthrough.** A real screen used step by step, with a pointer that clicks each control as the narrator names it. Use it for product demos, feature tours, training and onboarding. A step list on the left and the app on the right work well for training; a full-frame app works for demos. Build it with [UI motion (HTML)](#ui-motion-html). Copy from `examples/walkthrough/`.
 - **Launch film.** A short narrated or music-driven piece for a launch or a social post: kinetic type, a redrawn UI, a 3D hero object ([3D with three.js](references/three.md)), real clips of other videos (`frames()`), burned-in captions and a music bed, all in one HTML page. The repository's `showcase/` project is a complete example, with its brief and review log.
@@ -57,9 +59,10 @@ Slow down. Agent-made animation is usually too fast and shows too much at once. 
   - `sheet`: a labeled contact sheet of a page or MP4;
   - `onion`: an onion skin of one move;
   - `graph`: a speed graph of an element, with a soft or hard start and stop;
-  - `holds`: holds per scene.
+  - `holds`: holds per scene;
+  - `audit`: runs checks of the brief's numbers that the page declared with `check()`, on every frame they name. It exits 1 on a failure.
 
-  Run `--help` for the options.
+  Run `--help` for the options. When something breaks, see [When things break](references/troubleshooting.md).
 - **Deliver.** Put the MP4 and `.srt` in the project's `out/` folder, or where the user's preferences say. Re-rendering replaces the project's own `out/` files; when you copy a video anywhere else, never overwrite an existing file (`cp -n`). Report the path, the length and the voice, and anything you simplified. For a walkthrough, say that the screen is a redraw with sample data.
 
 ```json
@@ -173,6 +176,7 @@ Pipeline:
 - **Randomness and loops.** `rand(seed)` gives a seeded random function; draw from it at load, never inside `seek`. `phase(t, period)` is a 0–1 loop phase. `loopNoise(t, period, seed)` is smooth noise that repeats exactly, for ambient drift.
 - **Captions.** `captions(el, t)` burns in the caption line from `window.CAPTIONS`, which `timeline.py` writes into `words.js` with the same line breaks as the `.srt`. Words get the classes `caption-past`, `caption-active` and `caption-upcoming`. Theme them with `--caption-size`, `--caption-color`, `--caption-accent` and `--caption-bg`.
 - **Clips.** `frames(img, {dir, fps, count})` plays an image sequence from `clip.py` (`uv run --script <skill>/scripts/clip.py video.mp4 --out clip --fps 30`) frame-exactly. It returns a function of time that returns a promise; `seek` must return or await it. Chromium in the renderer cannot decode H.264, so never use a `<video>` element.
+- **Audit.** `check(name, at, fn)` declares a test of the brief's numbers, at a time, over `[t0, t1]` or on `"all"` frames. Two helpers measure layout: `box(el)` and `overlap(a, b)`. For example, `check("caption band clear", "all", () => overlap("#title", "#cap") === 0)`. `review.mjs audit` runs every check.
 - **Preview and debug, in any page.** `?t=12.5` shows one moment, and `?debug=1` adds a frame, time, scene and cue overlay. `cue()` records `window.CUE_TIMES` for the review tools.
 
 Gotchas:
@@ -184,4 +188,4 @@ Gotchas:
 - Put the camera inside a clipped stage when there is a side panel, and keep the zoomed focus inside a phone's edges, or a zoom shows the canvas past the screen's edge.
 - For a seamless loop, the last frame must match the first, including the pointer's position and speed. Leave about 1.5 seconds after the final morph for springs to settle.
 - Playwright is loaded only from `$PLAYWRIGHT_DIR`, the skill's cache folder (`setup.sh` installs it there), or the global npm root, never from the current folder. Where Playwright cannot download its browser (some cloud sandboxes), set `CHROMIUM_PATH` to an installed Chromium. `RENDER_WORKERS` limits the parallel pages on a busy machine.
-- Motion blur covers 40% of each frame interval (`--shutter 0.4`). A full shutter ghosts text into doubled copies during fast camera moves.
+- Motion blur covers 40% of each frame interval (`--shutter 0.4`), and subframes are averaged in linear light, like a film camera's shutter (`--blur gamma` for the old look). A full shutter ghosts text into doubled copies during fast camera moves.

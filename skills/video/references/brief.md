@@ -18,10 +18,11 @@ SHOTS:
   2. ...
 LOOK: <background hex>, <ink hex>, <one accent hex, used only on ...>, <font>, <materials for 3D: satin ceramic, roughness 0.35, clearcoat 1>
 MOTION: springs ζ 0.82 (UI) and 1.0 (text); entrances 400 ms ease-out, exits 200 ms ease-in; stagger 60 ms; anticipation 4 frames
+MODEL: <for 3D: the object's locked proportions, e.g. "slab 1 : 1 : 0.28, corner radius 22% of width, triangle 42%"; the library version>
 CAMERA: <for 3D or zooms: FOV 40°, path, one push-in at f240–f300 ease-in-out, parallax 1.0 / 0.5 / 0.2>
 SOUND: <voice id | silent | bed: calm, 120 BPM>; hits land 1 frame after their picture; -14 LUFS for social, -16 for training
 BAN: <the starter list below, plus anything specific>
-QA: render stills at <frames> and a contact sheet before the full render; speed graph the hero move of each shot
+QA: render stills at <frames> and a contact sheet before the full render; speed graph the hero move of each shot; check() the numbers that can be tested (settle frames, safe areas, the caption band) and run review.mjs audit
 ```
 
 Cuts are the default handoff between shots. A match cut or a wipe is a deliberate choice; write it down.

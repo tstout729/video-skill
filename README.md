@@ -89,6 +89,14 @@ bash tests/render-examples.sh            # renders all three at draft quality
 
 Each example's README has the full-quality commands: [explainer](skills/video/examples/explainer/), [walkthrough](skills/video/examples/walkthrough/), [loop](skills/video/examples/loop/). They're also the templates your agent copies from.
 
+## Tips
+
+- **Direct, don't describe.** Give the agent numbers, not adjectives: "springs at damping 0.8, entrances 400 ms ease-out, one push-in at 3 s" instead of "make it premium". The skill writes a `brief.md` like this for every video, from [a template](skills/video/references/brief.md).
+- **Count your rounds.** A finished piece usually takes 2–4 review rounds. Each video's `log.md` records them, with notes tied to frame numbers. Post the log alongside the video: receipts build trust.
+- **Effort.** Run your agent at its default effort. Raise it only when a piece built from scratch misses twice.
+- **Windows.** Use WSL2. Native PowerShell 5 does not support `&&`, and `npx` may need to be `npx.cmd`.
+- **No install?** The brief template and the [numbers](skills/video/animation-principles.md) work in any chat. Paste them into the Claude app with your request, and give your fixes as frame numbers. You'll have to screen-record the result yourself, which drops frames, so install the skill for real exports.
+
 ## Your preferences
 
 Put your defaults in `~/.config/video-skill/preferences.md`, or in `VIDEO.md` in a project; the project file wins. Write them in plain words. For example:
@@ -123,6 +131,7 @@ narration.json ─▶ narrate.py ─▶ audio + word timings
 
 ## Credits
 
+- The directed brief, the numbers, the render contract and the review loop build on Florence's X Article [*Opus 5.5 Motion Lab: Make Claude Animate Like a Studio*](https://x.com/flxrnc/status/2105311836190978392) (@flxrnc, September 30, 2026).
 - The principles of animation come from Disney's animators. John Lasseter applied them to computer animation in [*Principles of Traditional Animation Applied to 3D Computer Animation*](https://dl.acm.org/doi/10.1145/37402.37407) (SIGGRAPH 1987).
 - The explainer style is inspired by [3Blue1Brown](https://www.3blue1brown.com) and built on [Manim Community](https://www.manim.community).
 - The UI motion approach was adapted from Ross's open motion-design prompt template ([@rossaxbt](https://x.com/rossaxbt)).

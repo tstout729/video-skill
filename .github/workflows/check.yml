@@ -26,9 +26,12 @@ jobs:
         run: |
           for f in skills/video/scripts/*.py; do python3 -m py_compile "$f"; done
           node --check skills/video/scripts/render.mjs
+          node --check skills/video/scripts/page.mjs
+          node --check skills/video/scripts/review.mjs
           node --check skills/video/runtime/motion.js
           bash -n skills/video/scripts/setup.sh tests/render-examples.sh
           python3 tests/test_captions.py
+          uv run -q --with numpy python3 tests/test_audio.py
           python3 -c "import json; [json.load(open(f)) for f in ['.claude-plugin/plugin.json', '.claude-plugin/marketplace.json']]"
       - name: Setup
         run: bash skills/video/scripts/setup.sh

@@ -10,7 +10,7 @@
 // page.mjs for what the local server serves. --debug adds ?debug=1, which shows the frame
 // number, time and current cue on every frame (motion.js), for drafts only.
 // Motion blur: each output frame averages `sub` subframes spread across `shutter` of the frame
-// interval (ffmpeg tmix), so 60fps x 4 = 240 page screenshots per second of video.
+// interval (ffmpeg tmix, in linear light), so 60fps x 4 = 240 page screenshots per second of video.
 // A loop renders frames 0..N-1 and never frame N, which would repeat frame 0 at the seam.
 // Work is split into time chunks rendered by parallel pages; chunks are joined
 // losslessly. window.SFX (if any) is written next to the output as <out>.sfx.json.
@@ -42,6 +42,8 @@ const out = opt("out");
 const stills = opt("stills");
 const from = Number(opt("from", 0));
 const query = args.includes("--debug") ? "debug=1" : "";
+// --blur gamma averages subframes in gamma space (the older look); linear is the default.
+const linear = opt("blur", "linear") !== "gamma";
 
 const { server, url } = await serve(page, Number(opt("port", 0)));
 if (args.includes("--serve")) {
@@ -79,8 +81,9 @@ if (stills) {
 
 if (!out) { console.error("--out or --stills required"); process.exit(1); }
 const frames = Math.round((duration - from) * fps);
-const chunks = Math.min(workers, frames);
-const per = Math.ceil(frames / chunks);
+// Split frames evenly; recount chunks so none is empty (15 frames over 6 workers is 5 chunks of 3).
+const per = Math.ceil(frames / Math.min(workers, frames));
+const chunks = Math.ceil(frames / per);
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "uimotion-"));
 process.on("exit", () => fs.rmSync(tmp, { recursive: true, force: true }));  // also after a crash
 const started = Date.now();
@@ -89,9 +92,14 @@ let done = 0;
 async function renderChunk(index, ctx) {
   const k0 = index * per, k1 = Math.min(frames, k0 + per);
   const file = path.join(tmp, `c${String(index).padStart(3, "0")}.mp4`);
-  const blur = sub > 1
-    ? `tmix=frames=${sub},select='eq(mod(n\\,${sub})\\,${sub - 1})',setpts=N/(${fps}*TB),`
-    : "";
+  // Subframes are averaged in linear light, as a film camera's shutter does: bright edges stay
+  // bright instead of dulling to gray. 16-bit RGB keeps the dark tones exact.
+  const toLinear = "lutrgb=r='pow(val/65535\\,2.2)*65535':g='pow(val/65535\\,2.2)*65535':b='pow(val/65535\\,2.2)*65535'";
+  const toGamma = "lutrgb=r='pow(val/65535\\,1/2.2)*65535':g='pow(val/65535\\,1/2.2)*65535':b='pow(val/65535\\,1/2.2)*65535'";
+  const select = `select='eq(mod(n\\,${sub})\\,${sub - 1})',setpts=N/(${fps}*TB)`;
+  const blur = sub <= 1 ? ""
+    : linear ? `format=gbrp16le,${toLinear},tmix=frames=${sub},${select},${toGamma},`
+    : `tmix=frames=${sub},${select},`;
   // Screenshots are full-range JPEG. Convert to standard (limited) range, which every player,
   // including iPhones and Safari, decodes the same way.
   const filter = `${blur}scale=in_range=pc:out_range=tv,format=yuv420p`;

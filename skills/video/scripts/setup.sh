@@ -3,20 +3,22 @@
 #   bash <skill>/scripts/setup.sh                install Playwright + Chromium if missing, then check everything
 #   bash <skill>/scripts/setup.sh --check        check only; change nothing
 #   bash <skill>/scripts/setup.sh --with three   also install three.js (for 3D), served to pages at /_vendor/three/
+#   bash <skill>/scripts/setup.sh --with gsap    also install GSAP (web timelines), served at /_vendor/gsap/
 # Playwright goes into a private cache folder ($VIDEO_SKILL_HOME, default ~/.cache/video-skill),
 # never into your project. Exit code 1 means a required tool is missing.
 set -uo pipefail
-check_only=0; with_three=0
+check_only=0; with_three=0; with_gsap=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --check) check_only=1 ;;
-    --with) [[ "${2:-}" == three ]] && with_three=1; shift ;;
+    --with) [[ "${2:-}" == three ]] && with_three=1; [[ "${2:-}" == gsap ]] && with_gsap=1; shift ;;
   esac
   shift
 done
 cache="${VIDEO_SKILL_HOME:-${XDG_CACHE_HOME:-$HOME/.cache}/video-skill}"
 pw_version="${PLAYWRIGHT_VERSION:-1.64.0}"
 three_version="${THREE_VERSION:-0.186.1}"  # pinned: three.js option names change between releases
+gsap_version="${GSAP_VERSION:-3.15.0}"
 missing=0
 ok()   { printf '  \033[32m✓\033[0m %s\n' "$1"; }
 warn() { printf '  \033[33m!\033[0m %s\n' "$1"; }
@@ -119,6 +121,18 @@ elif (( with_three && ! check_only )); then
   fi
 else
   ok "three.js not installed (only 3D pieces need it: setup.sh --with three)"
+fi
+
+gsap_pkg="$cache/node_modules/gsap/package.json"
+if [[ -f "$gsap_pkg" ]]; then
+  ok "gsap $(node -p "require('$gsap_pkg').version") at /_vendor/gsap/"
+elif (( with_gsap && ! check_only )); then
+  mkdir -p "$cache"
+  if (cd "$cache" && npm install --silent --no-audit --no-fund --ignore-scripts --prefix "$cache" "gsap@$gsap_version" >/dev/null); then
+    ok "gsap $gsap_version installed at /_vendor/gsap/"
+  else
+    bad "GSAP install failed; check npm and your network"
+  fi
 fi
 
 echo "Manim (for explainer videos)"

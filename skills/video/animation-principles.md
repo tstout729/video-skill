@@ -41,7 +41,7 @@ Each shot has one hero move. Everything else waits, dims or holds still.
 | 0.4–0.6 | Playful | Only when the brief asks for it |
 | below 0.3 | Cartoon | Avoid |
 
-Position and size may bounce. Opacity and color never do.
+Position and size may bounce. Opacity and color never do. Other libraries name springs differently. Translate their defaults into ζ before you use them: Remotion's default spring is about 0.5 (playful), and react-spring's is about 1.0.
 
 **Durations.**
 
@@ -103,8 +103,9 @@ The first render is a draft. Finishing means rendering stills, looking at them, 
    - **Speed graph** (`review.mjs graph`) plots position per frame. A straight line means linear motion. A sharp corner means an abrupt start or stop.
 4. **Write notes against frames, not feelings,** and send only one or two notes per round, because a list of ten notes turns a fix into a rewrite. For example: "f312–f318: the card lands 2 frames after the tap sound. Start it 3 frames earlier." The [brief reference](references/brief.md) shows how to turn vague notes into numbers.
 5. **When a fix doesn't hold,** render the frames just before and after the problem and describe the difference.
-6. **Pin labels to frames while you iterate.** `?debug=1` (`render.mjs --debug`) prints the frame, time and current cue on every frame. If a move runs late, its label shows before the action.
-7. **Measure the holds.** `review.mjs holds video.mp4` prints each still stretch of 0.6 seconds or longer and flags scenes without a hold of 1.5 seconds. The same check by hand:
+6. **Test the numbers.** Declare `check()`s for what can be measured: settle frames, the caption band, safe areas, an object on its mark. Then run `review.mjs audit`, which reports failures by frame. The Motion Lab article ran 71 checks over 480 frames, and six failures were caught before the final render.
+7. **Pin labels to frames while you iterate.** `?debug=1` (`render.mjs --debug`) prints the frame, time and current cue on every frame. If a move runs late, its label shows before the action.
+8. **Measure the holds.** `review.mjs holds video.mp4` prints each still stretch of 0.6 seconds or longer and flags scenes without a hold of 1.5 seconds. The same check by hand:
 
    ```sh
    ffmpeg -v info -i draft.mp4 -an -vf "fps=10,scale=480:-2,freezedetect=n=0.002:d=0.6" -f null - 2>&1 \
@@ -114,4 +115,4 @@ The first render is a draft. Finishing means rendering stills, looking at them, 
    - **The check can be fooled both ways.** A pointer or background that never stops moving hides holds; look at the stills for those scenes. A small change, such as a moving pointer, a spinner or one new line of text, may not break a "still" stretch; compare the freeze times with your plan.
    - **Measure the final render before any web re-encode.** A low-resolution draft gives different counts, a re-encode's keyframes can split a hold, and a slow fade of a small element can count as stillness.
    - **Leave margin:** a hold of exactly 1.5 seconds can split in two.
-8. **Measure the sound** with `check_sync.py`: every hit lands one frame after its picture, and loudness and peak are on target.
+9. **Measure the sound** with `check_sync.py`: every hit lands one frame after its picture, and loudness and peak are on target.

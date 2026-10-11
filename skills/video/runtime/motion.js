@@ -508,3 +508,38 @@ function drawDebug(t) {
   hud.cueAt.textContent = last ? ` @ ${last.t.toFixed(2)}` : "";
   hud.bottom.style.display = scene || last ? "block" : "none";
 }
+
+// ---------- audit ----------
+
+// Declare a check of the brief's numbers; `review.mjs audit` seeks each frame it names and runs
+// it. `at` is a time, [t0, t1] (every frame between) or "all". `fn(t)` returns true (or nothing)
+// to pass, false or a string explaining the failure.
+//   check("caption band stays clear", "all", () => overlap("#title", "#captions") === 0);
+//   check("card settled by f1167", 1167 / 60, () => Math.abs(box("#card").x - 640) < 1 || `x ${box("#card").x}`);
+export function check(name, at, fn) {
+  (window.CHECKS ||= []).push({ name, at, fn });
+}
+
+// The element's box as the viewer sees it (camera included), in page pixels.
+export function box(el) {
+  if (typeof el === "string") el = $(el);
+  const r = el.getBoundingClientRect();
+  return { x: r.x, y: r.y, w: r.width, h: r.height, cx: r.x + r.width / 2, cy: r.y + r.height / 2 };
+}
+
+// Visible area (px²) that two elements share; 0 when either is hidden or they do not touch.
+export function overlap(a, b) {
+  const shown = (el) => {
+    for (let n = el; n && n.nodeType === 1; n = n.parentElement) {
+      const cs = getComputedStyle(n);
+      if (cs.display === "none" || cs.visibility === "hidden" || Number(cs.opacity) < 0.01) return false;
+    }
+    return true;
+  };
+  const [ea, eb] = [a, b].map((e) => (typeof e === "string" ? $(e) : e));
+  if (!ea || !eb || !shown(ea) || !shown(eb)) return 0;
+  const [p, q] = [box(ea), box(eb)];
+  const w = Math.min(p.x + p.w, q.x + q.w) - Math.max(p.x, q.x);
+  const h = Math.min(p.y + p.h, q.y + q.h) - Math.max(p.y, q.y);
+  return w > 0 && h > 0 ? w * h : 0;
+}

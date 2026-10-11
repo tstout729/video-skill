@@ -8,6 +8,7 @@
 //   node review.mjs graph <page.html> --select "#card" --from t0 --to t1 --out graph.png
 //                         [--prop x|y|both|scale|opacity] [--fps 60]
 //   node review.mjs holds <video.mp4> [--min 1.5] [--scenes words.js | scenes.json | 0,10.3,24.7]
+//   node review.mjs audit <page.html> [--fps 60] [--every 1]
 //
 // sheet  Frames spread evenly from --from to --to (default: the whole video), or the given
 //        times, in one grid. Each cell shows its frame number and time and, for a page, the
@@ -29,6 +30,10 @@
 // holds  ffmpeg freezedetect (fps=10, scale=480, n=0.002, d=0.6): each still stretch of 0.6 s
 //        or more. With --scenes, a scene with no hold of --min seconds prints TOO FAST. A scene
 //        runs from its start to the next scene's start. Exits 0 once the video has been read.
+// audit  Page only. Runs the checks the page declared with check() from motion.js (the brief's
+//        numbers as tests: "caption band stays clear", "card settled by f1167") on every frame
+//        each one names (--every n checks every nth frame of a range). Prints PASS or FAIL per
+//        check with its failing frames, and exits 1 if any check fails.
 //
 // Frames are numbered as render.mjs renders them: frame n of a page is window.seek(n / fps)
 // (--fps, default 60); a video uses its own frame rate and an exact ffmpeg seek. --debug opens
@@ -50,6 +55,7 @@ const COMMANDS = {
   onion: ["out", "from", "to", "count", "fps", "debug"],
   graph: ["out", "select", "from", "to", "prop", "fps", "debug"],
   holds: ["min", "scenes"],
+  audit: ["fps", "every", "debug"],
 };
 const FLAGS = new Set(["debug"]);
 
@@ -884,6 +890,53 @@ async function holds(file, o) {
   console.log(out.join("\n"));
 }
 
+// ---------- audit ----------
+
+async function audit(src, o) {
+  const every = numOpt(o, "every", 1, { min: 1, int: true });
+  const checks = await src.page.evaluate(() => (window.CHECKS || []).map((c, i) => ({ i, name: c.name, at: c.at })));
+  if (!checks.length) {
+    console.log("no checks: declare them in the page with check(name, at, fn) from motion.js");
+    return 0;
+  }
+  // Frames each check names, then one seek per frame for every check that names it.
+  const byFrame = new Map();
+  for (const c of checks) {
+    let frames;
+    if (c.at === "all") frames = spread(0, src.last, Math.ceil((src.last + 1) / every));
+    else if (Array.isArray(c.at)) {
+      const [f0, f1] = c.at.map((t) => src.clamp(src.frameOf(t)));
+      frames = [];
+      for (let n = f0; n <= f1; n += every) frames.push(n);
+    } else frames = [src.clamp(src.frameOf(Number(c.at)))];
+    c.frames = frames.length;
+    c.failed = [];
+    for (const n of frames) (byFrame.get(n) ?? byFrame.set(n, []).get(n)).push(c.i);
+  }
+  const order = [...byFrame.keys()].sort((a, b) => a - b);
+  for (const n of order) {
+    const results = await src.page.evaluate(async ({ t, ids }) => {
+      await window.seek(t);
+      return ids.map((i) => {
+        try {
+          const r = window.CHECKS[i].fn(t);
+          return r === true || r === undefined ? null : r === false ? "failed" : String(r);
+        } catch (e) { return `threw: ${e.message}`; }
+      });
+    }, { t: src.timeOf(n), ids: byFrame.get(n) });
+    byFrame.get(n).forEach((i, k) => { if (results[k] !== null) checks[i].failed.push({ n, why: results[k] }); });
+  }
+  let bad = 0;
+  for (const c of checks) {
+    if (!c.failed.length) { console.log(`PASS  ${c.name}  (${c.frames} frame${c.frames === 1 ? "" : "s"})`); continue; }
+    bad++;
+    const first = c.failed.slice(0, 3).map((f) => `f${f.n}: ${f.why}`).join("; ");
+    console.log(`FAIL  ${c.name}  (${c.failed.length} of ${c.frames} frames)  ${first}${c.failed.length > 3 ? "; ..." : ""}`);
+  }
+  console.log(`${checks.length - bad} of ${checks.length} checks pass over ${order.length} frames`);
+  return bad ? 1 : 0;
+}
+
 // ---------- main ----------
 
 async function main() {
@@ -892,8 +945,8 @@ async function main() {
   if (!argv.length) { console.error(usage()); return 1; }
   const { pos, o } = parseArgs(argv);
   const [cmd, input, extra] = pos;
-  if (!COMMANDS[cmd]) fail(`${cmd ? `unknown command ${JSON.stringify(cmd)}` : "no command"}; use sheet, onion, graph or holds (--help shows how)`);
-  if (!input) fail(`${cmd} needs a ${cmd === "graph" ? "page (.html)" : cmd === "holds" ? "video" : "page or video"} to read`);
+  if (!COMMANDS[cmd]) fail(`${cmd ? `unknown command ${JSON.stringify(cmd)}` : "no command"}; use sheet, onion, graph, holds or audit (--help shows how)`);
+  if (!input) fail(`${cmd} needs a ${cmd === "graph" || cmd === "audit" ? "page (.html)" : cmd === "holds" ? "video" : "page or video"} to read`);
   if (extra) fail(`unexpected argument ${JSON.stringify(extra)}`);
   for (const k of Object.keys(o)) if (!COMMANDS[cmd].includes(k)) fail(`--${k} does not apply to ${cmd}`);
   const file = path.resolve(input);
@@ -902,6 +955,7 @@ async function main() {
   const src = await openSource(file, o);
   try {
     if (src.kind === "video" && o.fps !== undefined) console.warn(`note: a video keeps its own ${fmtFps(src.fps)} fps; --fps applies to pages`);
+    if (cmd === "audit") return await audit(src, o);
     await { sheet, onion, graph }[cmd](src, o);
   } finally {
     await src.close();
@@ -913,6 +967,10 @@ async function main() {
 function checkEarly(cmd, file, o) {
   if (!fs.existsSync(file) || fs.statSync(file).isDirectory()) fail(`no such file: ${file}`);
   if (cmd === "graph" && !isPagePath(file)) fail("graph reads the element from the page's DOM, so it needs the page (.html), not a video");
+  if (cmd === "audit") {
+    if (!isPagePath(file)) fail("audit runs the page's own checks, so it needs the page (.html)");
+    return;
+  }
   outPath(o);
   if (cmd === "graph" && !o.select) fail('--select "<css selector>" is required');
   if ((cmd === "onion" || cmd === "graph") && (o.from === undefined || o.to === undefined)) fail("--from and --to (seconds) are required");
