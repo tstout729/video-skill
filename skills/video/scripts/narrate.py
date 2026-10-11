@@ -1,6 +1,6 @@
 # /// script
 # requires-python = ">=3.11"
-# dependencies = ["requests"]
+# dependencies = ["requests", "num2words"]
 # ///
 """Generate per-scene narration with ElevenLabs and verify each take with Scribe.
 
@@ -49,8 +49,30 @@ def auth(key: str) -> dict:
     return {"xi-api-key": key} if key else {}
 
 
-def normalize(text: str) -> list[str]:
+def spell_numbers(text: str, lang: str) -> str:
+    """Write digits as words ("71%" -> "seventy one percent"), as the script spells them.
+
+    The transcriber writes numbers as digits, so without this a correct take of "seventy-one"
+    scores as a mismatch and is recorded again for nothing.
+    """
+    from num2words import num2words
+
+    def say(m: re.Match) -> str:
+        num, pct = m.group(1).replace(",", ""), m.group(2)
+        try:
+            words = num2words(float(num) if "." in num else int(num), lang=lang)
+        except (NotImplementedError, ValueError, OverflowError):
+            return m.group(0)
+        return words + (" percent" if pct and lang == "en" else "")
+
+    return re.sub(r"(?<![\w.])(\d+(?:,\d{3})*(?:\.\d+)?)(%?)", say, text)
+
+
+def normalize(text: str, lang: str = "en") -> list[str]:
     """Words without case, accents or punctuation, so any language compares fairly."""
+    text = spell_numbers(text, lang).replace(" and ", " ")
+    # "zero point five" and "point five" are the same number said two ways.
+    text = re.sub(r"\bzero point\b", "point", text, flags=re.IGNORECASE)
     text = unicodedata.normalize("NFKD", text.lower().replace("-", " ").replace("\u2019", "'"))
     words = re.findall(r"[\w']+", "".join(c for c in text if not unicodedata.combining(c)))
     # Scripts written without spaces (Thai, Lao, Myanmar, Khmer, Japanese, Chinese) compare by character.
@@ -145,7 +167,8 @@ def main() -> None:
         for attempt in range(1, args.tries + 1):
             audio, words = synthesize(key, cfg, text)
             heard = transcribe(key, audio)
-            ratio = difflib.SequenceMatcher(None, normalize(text), normalize(heard)).ratio()
+            lang = cfg.get("language", "en")
+            ratio = difflib.SequenceMatcher(None, normalize(text, lang), normalize(heard, lang)).ratio()
             print(f"{sid}: take {attempt} match {ratio:.3f}")
             if best is None or ratio > best[0]:
                 best = (ratio, audio, words, heard)
