@@ -10,14 +10,34 @@
 Reads <project>/narration.json and audio/timings.json (from narrate.py).
 Writes:
   audio/narration.wav   all takes in order, `gap` seconds of silence between scenes
-  words.js              window.WORDS (global word times), window.SCENES, window.NARRATION
+  words.js              window.WORDS (global word times), window.SCENES, window.NARRATION,
+                        window.CAPTIONS (the .srt's caption lines, each with its word times)
 The page loads words.js before its own script and times everything with cue("phrase").
 """
 
 import argparse
 import json
 import subprocess
+import sys
 from pathlib import Path
+
+# Caption lines break exactly as in the .srt that mux.py writes: both use assemble.py's breaking.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from assemble import caption_lines  # noqa: E402
+
+
+def caption_data(words: list[dict]) -> list[dict]:
+    """The caption lines over the global word times, each with the words it shows."""
+    lines, k = [], 0
+    for start, end, text in caption_lines(words):
+        part = []
+        while k < len(words) and " ".join(w["word"] for w in part) != text:
+            part.append({"word": words[k]["word"], "start": words[k]["start"], "end": words[k]["end"]})
+            k += 1
+        if " ".join(w["word"] for w in part) != text:
+            raise SystemExit(f"caption line {text!r} does not match the word list")
+        lines.append({"start": start, "end": end, "text": text, "words": part})
+    return lines
 
 
 def main() -> None:
@@ -59,6 +79,7 @@ def main() -> None:
         f"window.WORDS = {json.dumps(words, ensure_ascii=False)};\n"
         f"window.SCENES = {json.dumps(scenes)};\n"
         f"window.NARRATION = {{duration: {total:.3f}}};\n"
+        f"window.CAPTIONS = {json.dumps(caption_data(words), ensure_ascii=False)};\n"
     )
     print(f"{out}  {total:.1f}s  {len(words)} words  scenes: {', '.join(scenes)}")
 

@@ -9,10 +9,13 @@
 // Normalized step response of a damped spring: 0 at t<=0, settles at 1.
 // `duration` is the perceptual length (seconds); `bounce` 0..0.3 is overshoot
 // (0 = critically damped). `v0` is initial velocity in units of the step per second.
-export function springStep(t, { duration = 0.5, bounce = 0.08, v0 = 0 } = {}) {
+// `damping` is the damping ratio ζ, an alternative to bounce (bounce = 1 − ζ); it wins if both
+// are given. ζ 1 = no bounce (bounce 0), 0.85–0.7 premium (0.15–0.3), 0.6–0.4 playful (0.4–0.6).
+// ζ above 1 is treated as 1.
+export function springStep(t, { duration = 0.5, bounce = 0.08, damping, v0 = 0 } = {}) {
   if (t <= 0) return 0;
   const w0 = (2 * Math.PI) / duration;
-  const zeta = 1 - bounce;
+  const zeta = damping ?? (1 - bounce);
   if (zeta < 1) {
     const wd = w0 * Math.sqrt(1 - zeta * zeta);
     const a = zeta * w0;
@@ -111,6 +114,89 @@ function hex(h) {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
+// ---------- seeded randomness & loops ----------
+
+// rand(seed) returns a generator of numbers in [0, 1), the same sequence on every run
+// (mulberry32). The seed is a number or a string. Never use Math.random(). Draw values while
+// building, not inside seek(): frames render out of order, so a shared generator would give
+// each frame different numbers. Inside seek(), make a fresh rand(seed) per call instead.
+export function rand(seed) {
+  let a = Number.isInteger(seed) ? seed >>> 0 : hashString(String(seed));
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let x = Math.imul(a ^ (a >>> 15), 1 | a);
+    x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x;
+    return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function hashString(s) { // FNV-1a
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 0x01000193);
+  return h >>> 0;
+}
+
+// A loop of N frames renders frames 0..N-1; frame N is frame 0 again. Drive everything that
+// repeats by phase(), with a whole number of cycles per loop (period = LOOP / n), so the last
+// frame flows into the first. phase(t, period) is the fraction of the cycle, in [0, 1);
+// it is exactly 0 at every multiple of the period.
+export function phase(t, period) {
+  const p = (t / period) % 1;
+  return p < 0 ? (p + 1) % 1 : Math.abs(p); // abs turns -0 into 0
+}
+
+// Smooth noise in [-1, 1] that repeats exactly every `period` seconds: gradient noise sampled
+// along a circle, so each cycle returns to where it started. One octave makes about two slow
+// swells per period; each extra octave adds detail at twice the rate and half the size. Most
+// values fall within ±0.7. Use a different seed for each axis or element.
+const NOISE_RADIUS = 0.45; // circle radius in noise cells: larger is busier
+export function loopNoise(t, period, seed, octaves = 2) {
+  const field = noiseField(seed);
+  const a = 2 * Math.PI * phase(t, period);
+  const c = Math.cos(a), s = Math.sin(a);
+  let sum = 0, total = 0, amp = 1, r = NOISE_RADIUS;
+  for (let o = 0; o < octaves; o++) {
+    const [cx, cy] = field.center(o); // each octave reads its own patch of the field
+    sum += amp * gradNoise(field.perm, cx + r * c, cy + r * s);
+    total += amp;
+    amp /= 2;
+    r *= 2;
+  }
+  // 2D gradient noise peaks at ±√½. tanh widens the typical swing smoothly and stays inside ±1.
+  return Math.tanh(1.75 * (sum / total / Math.SQRT1_2));
+}
+
+const fields = new Map();
+function noiseField(seed) {
+  if (fields.has(seed)) return fields.get(seed);
+  const next = rand(seed);
+  const perm = Uint8Array.from({ length: 256 }, (_, i) => i);
+  for (let i = 255; i > 0; i--) {
+    const j = Math.floor(next() * (i + 1));
+    [perm[i], perm[j]] = [perm[j], perm[i]];
+  }
+  // Centers are drawn in octave order, after the permutation, so each is the same on every run.
+  const centers = [];
+  const center = (o) => {
+    while (centers.length <= o) centers.push([8 + next() * 200, 8 + next() * 200]);
+    return centers[o];
+  };
+  const field = { perm, center };
+  fields.set(seed, field);
+  return field;
+}
+const S = Math.SQRT1_2;
+const GRAD = [[1, 0], [-1, 0], [0, 1], [0, -1], [S, S], [-S, S], [S, -S], [-S, -S]];
+const fade = (x) => x * x * x * (x * (x * 6 - 15) + 10);
+function gradNoise(perm, x, y) {
+  const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi;
+  const dot = (i, j) => {
+    const g = GRAD[perm[(perm[(xi + i) & 255] + yi + j) & 255] & 7];
+    return g[0] * (xf - i) + g[1] * (yf - j);
+  };
+  const u = fade(xf);
+  return lerp(lerp(dot(0, 0), dot(1, 0), u), lerp(dot(0, 1), dot(1, 1), u), fade(yf));
+}
+
 // ---------- content swaps ----------
 
 // A swap inside a morphing container. The old content exits first (fade + blur + slight
@@ -163,6 +249,9 @@ export function style(el, look = {}, css = {}) {
 // window.WORDS = [{word, start, end}] in global seconds (written by timeline.py).
 // cue("phrase") returns the start of the next occurrence after the previous cue,
 // like the explainer's play_at. Throws if missing, so typos fail loudly.
+// Each cue is recorded in window.CUE_TIMES as {phrase, t}, so review tools and the
+// ?debug=1 overlay can show which cue is active at a time.
+window.CUE_TIMES = window.CUE_TIMES || [];
 let cueCursor = 0;
 // Accents are stripped, so a cue matches however the transcript spells it ("huésped" == "huesped").
 // Letters and digits of any script, without case or accents.
@@ -178,7 +267,9 @@ export function cue(phrase, lead = 0.12) {
     if (idx < cueCursor) continue;
     if (target.every((w, j) => tokens[k + j][0] === w)) {
       cueCursor = idx + 1;
-      return words[idx].start - lead;
+      const t = words[idx].start - lead;
+      window.CUE_TIMES.push({ phrase, t });
+      return t;
     }
   }
   throw new Error(`cue ${JSON.stringify(phrase)} not found after word ${cueCursor}`);
@@ -191,6 +282,84 @@ export const sceneEnd = (id) => window.SCENES[id].end;
 export function beat(n) {
   const b = window.BEATS;
   return b.first + (n * 60) / b.bpm;
+}
+
+// ---------- burned-in captions ----------
+
+// Feeds autoplay muted, so a narrated feed video burns its captions in. window.CAPTIONS
+// (timeline.py) holds the .srt's own lines, [{start, end, text, words: [{word, start, end}]}]
+// in global seconds; never re-break them here. captions(el, t) shows the line on screen at t,
+// with the same timing as the .srt: from its first word until 0.25 s after its last word, or
+// the next line's start. Lines fade in over 120 ms and out over 80 ms, without bounce.
+// Each word is a .caption-word with .caption-past, .caption-active (being spoken) or
+// .caption-upcoming. `variant` "pill" puts the line on a dark rounded pill; "shadow" is plain
+// text with a shadow, for footage. The default CSS has zero specificity, so any page rule wins:
+// set --caption-size, --caption-color, --caption-accent, --caption-bg, or position el yourself
+// (default: bottom center, higher on a 9:16 frame to stay clear of the app's buttons).
+export function captions(el, t, { lines = window.CAPTIONS || [], variant = "pill", hold = 0.25,
+  fadeIn = 0.12, fadeOut = 0.08, rise = 6 } = {}) {
+  if (typeof el === "string") el = $(el);
+  if (!el) return;
+  captionCSS();
+  let s = captionState.get(el);
+  if (!s) {
+    s = { line: document.createElement("div"), index: -1, words: [] };
+    s.line.className = "caption-line";
+    el.replaceChildren(s.line);
+    captionState.set(el, s);
+  }
+  el.classList.add("captions");
+  el.classList.toggle("captions-pill", variant === "pill");
+  el.classList.toggle("captions-shadow", variant === "shadow");
+
+  // The latest line that has started, if it is still showing.
+  let i = -1;
+  while (i + 1 < lines.length && lines[i + 1].start <= t) i++;
+  const line = lines[i];
+  const until = !line ? -Infinity : i + 1 < lines.length ? Math.min(line.end + hold, lines[i + 1].start) : line.end + hold;
+  if (!line || t >= until) {
+    s.line.style.opacity = "0";
+    return;
+  }
+  if (s.index !== i || !s.fit) {
+    s.index = i;
+    s.words = line.words.map((w) => Object.assign(document.createElement("span"), { textContent: w.word }));
+    s.line.replaceChildren(...s.words.flatMap((w, k) => (k ? [" ", w] : [w])));
+    // text-wrap: balance leaves the box at full width; shrink it to the widest row so a pill hugs
+    // the text. Layout offsets ignore transforms, so a scaled parent does not change the result.
+    s.line.style.width = "";
+    const left = Math.min(...s.words.map((w) => w.offsetLeft));
+    const right = Math.max(...s.words.map((w) => w.offsetLeft + w.offsetWidth));
+    Object.assign(s.line.style, { boxSizing: "content-box", width: `${right - left + 1}px` });
+    s.fit = document.fonts.status === "loaded"; // measure again once a loading font arrives
+  }
+  let active = -1;
+  while (active + 1 < line.words.length && line.words[active + 1].start <= t) active++;
+  s.words.forEach((w, k) => {
+    w.className = `caption-word caption-${k < active ? "past" : k === active ? "active" : "upcoming"}`;
+  });
+  const pin = fadeIn > 0 ? easeOut(progress(t, line.start, line.start + fadeIn)) : 1;
+  const pout = fadeOut > 0 ? progress(t, until - fadeOut, until) : 0;
+  s.line.style.opacity = (pin * (1 - pout)).toFixed(4);
+  s.line.style.transform = `translateY(${(rise * (1 - pin)).toFixed(2)}px)`;
+}
+const captionState = new WeakMap();
+let captionStyled = false;
+function captionCSS() {
+  if (captionStyled) return;
+  captionStyled = true;
+  const css = document.createElement("style");
+  css.textContent = `
+:where(.captions) { position: absolute; left: 6%; right: 6%; bottom: 7%; z-index: 100; text-align: center;
+  pointer-events: none; font-size: var(--caption-size, 4.4vmin); font-weight: 600; line-height: 1.24;
+  letter-spacing: -0.01em; color: var(--caption-color, #fff); }
+@media (max-aspect-ratio: 3/4) { :where(.captions) { bottom: 22%; } }
+:where(.captions .caption-line) { display: inline-block; max-width: 100%; text-wrap: balance; }
+:where(.captions-pill .caption-line) { padding: 0.26em 0.62em 0.32em; border-radius: 0.5em;
+  background: var(--caption-bg, rgba(22, 22, 24, 0.86)); }
+:where(.captions-shadow .caption-line) { text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6), 0 2px 14px rgba(0, 0, 0, 0.45); }
+:where(.captions .caption-active) { color: var(--caption-accent, #ffd23f); }`;
+  document.head.prepend(css); // first in <head>, so the page's own rules come later and win
 }
 
 // ---------- sound effects ----------
@@ -240,4 +409,102 @@ export function pointer(x0, y0, { travel = 0.5 } = {}) {
     hide(t) { show.to(t, 0, SPRING.snappy); return api; },
   };
   return api;
+}
+
+// ---------- image-sequence clips ----------
+
+// Playwright's Chromium cannot decode H.264, and a <video> cannot seek to an exact frame, so
+// a clip plays from the JPEG sequence that scripts/clip.py writes (000001.jpg..., clip.json).
+// frames(img, {dir, fps, count}) returns show(t): it puts the frame for clip time t (clamped
+// to the clip) into img and resolves once it is decoded. Return its promise from seek:
+//   const clip = frames($("#clip"), { dir: "clip", ...(await (await fetch("clip/clip.json")).json()) });
+//   window.seek = (t) => { ...; return clip(t - 4); };   // the clip starts at 4 s
+export function frames(img, { dir, fps, count, ext = "jpg" }) {
+  if (typeof img === "string") img = $(img);
+  const base = dir.replace(/\/+$/, "");
+  let shown = -1, ready = Promise.resolve();
+  return (t) => {
+    if (Number.isNaN(t)) throw new Error("frames: clip time is NaN");
+    // Frame k covers [k/fps, (k+1)/fps). The epsilon keeps 0.29 * 100 = 28.999... on frame 29.
+    const k = clamp(Math.floor(t * fps + 1e-6), 0, count - 1);
+    if (k === shown) return ready;
+    shown = k;
+    img.src = `${base}/${String(k + 1).padStart(6, "0")}.${ext}`;
+    ready = img.decode().catch((e) => {
+      // A later frame replaced this one before it decoded; only a failure of the current frame counts.
+      if (shown === k) throw new Error(`frames: cannot show ${img.src} (${e.message})`);
+    });
+    return ready;
+  };
+}
+
+// ---------- preview & debug ----------
+
+// URL parameters for previews (render.mjs --serve) and drafts; without them nothing here runs,
+// and window.seek is left exactly as the page defines it.
+//   ?t=12.5    seek to 12.5 s once the page has defined window.seek
+//   ?debug=1   a small overlay with the frame number (at 60 fps), the time, the latest cue at or
+//              before t and the narration scene, updated on every seek (render.mjs --debug)
+// Both wrap window.seek when the page assigns it, so pages need no code for them. An async
+// seek's promise is passed through for the caller to await.
+const params = new URLSearchParams(typeof location === "undefined" ? "" : location.search);
+const previewAt = params.has("t") ? Number(params.get("t")) : NaN;
+const debug = params.has("debug") && params.get("debug") !== "0";
+if (debug || Number.isFinite(previewAt)) {
+  const wrap = (fn) => (typeof fn !== "function" ? fn : function (t, ...rest) {
+    const result = fn.call(this, t, ...rest);
+    if (debug) drawDebug(t);
+    return result;
+  });
+  // After the page's module finishes and its fonts load, so its own first seek comes before ours.
+  const preview = () => Number.isFinite(previewAt) &&
+    Promise.resolve().then(() => document.fonts.ready).then(() => window.seek(previewAt));
+  let seek = wrap(window.seek);
+  Object.defineProperty(window, "seek", {
+    configurable: true, enumerable: true,
+    get: () => seek,
+    set(fn) { seek = wrap(fn); if (typeof fn === "function") preview(); },
+  });
+  if (typeof seek === "function") preview();
+}
+
+let hud = null;
+function drawDebug(t) {
+  if (!hud) {
+    const el = (tag, css, parent) => parent.appendChild(Object.assign(document.createElement(tag), { style: css }));
+    const box = el("div", "position:fixed;left:14px;top:14px;z-index:2147483647;pointer-events:none;" +
+      "display:block;margin:0;padding:9px 14px 10px;border-radius:10px;background:rgba(10,10,12,0.88);" +
+      "box-shadow:0 0 0 1px rgba(255,255,255,0.14);color:#fff;text-align:left;white-space:pre;" +
+      "font:500 20px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;" +
+      "font-variant-numeric:tabular-nums;letter-spacing:0;opacity:1;filter:none;transform:none;",
+      document.body || document.documentElement);
+    box.id = "motion-debug";
+    const row = () => el("span", "display:block", box);
+    const part = (r, label, color = "#fff") => {
+      const pair = el("span", "", r);
+      el("span", "color:#9a9aa2", pair).textContent = label;
+      return el("span", `color:${color}`, pair);
+    };
+    const top = row(), bottom = row();
+    hud = { bottom, frame: part(top, "frame "), time: part(top, "  t "),
+      scene: part(bottom, "scene "), cue: part(bottom, "  cue ", "#ffd23f"), cueAt: part(bottom, "", "#9a9aa2") };
+  }
+  hud.frame.textContent = String(Math.round(t * 60));
+  hud.time.textContent = `${t.toFixed(3)} s`;
+
+  // The narration scene that contains t, or the last one that has ended.
+  let scene = "";
+  for (const [id, sc] of Object.entries(window.SCENES || {})) {
+    if (sc.start <= t) scene = t <= sc.end ? id : `after ${id}`;
+  }
+  let last = null;
+  for (const c of window.CUE_TIMES || []) if (c.t <= t && (!last || c.t >= last.t)) last = c;
+  const phrase = last && (last.phrase.length > 28 ? `${last.phrase.slice(0, 27)}…` : last.phrase);
+  hud.scene.parentNode.style.display = scene ? "" : "none";
+  hud.scene.textContent = scene;
+  hud.cue.parentNode.style.display = hud.cueAt.parentNode.style.display = last ? "" : "none";
+  hud.cue.previousSibling.textContent = scene ? "  cue " : "cue ";
+  hud.cue.textContent = last ? `“${phrase}”` : "";
+  hud.cueAt.textContent = last ? ` @ ${last.t.toFixed(2)}` : "";
+  hud.bottom.style.display = scene || last ? "block" : "none";
 }
