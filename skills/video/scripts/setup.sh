@@ -77,7 +77,7 @@ if command -v node >/dev/null; then
     elif (( check_only )); then
       bad "Chromium for Playwright not installed (run this script without --check)"
     else
-      echo "  downloading Chromium for Playwright (about 170 MB) ..."
+      echo "  downloading Chromium for Playwright (about 300 MB) ..."
       node "$pwdir/cli.js" install chromium 2>&1 | grep -v -E "^\s*$" | tail -n 3
       # Linux also needs Chromium's system libraries; install them when sudo needs no password.
       if [[ "$os" == Linux ]] && ! node -e "$launch" "$pwdir" >/dev/null 2>&1 && sudo -n true 2>/dev/null; then

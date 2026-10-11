@@ -206,7 +206,16 @@ export function pointer(x0, y0, { travel = 0.5 } = {}) {
   const x = track(x0), y = track(y0), press = track(0), show = track(0);
   const api = {
     x, y, press, show,
-    moveTo(t, nx, ny, spring = SPRING.smooth) { x.to(t, nx, spring); y.to(t, ny, spring); return api; },
+    // Without a spring, the pointer travels on an arc: the axis that moves farther gets a
+    // slightly faster spring, so the path bows. The slower axis keeps SPRING.smooth's timing.
+    moveTo(t, nx, ny, spring) {
+      if (spring) { x.to(t, nx, spring); y.to(t, ny, spring); return api; }
+      const fast = { duration: 0.45, bounce: 0.02 };
+      const wide = Math.abs(nx - x.target()) >= Math.abs(ny - y.target());
+      x.to(t, nx, wide ? fast : SPRING.smooth);
+      y.to(t, ny, wide ? SPRING.smooth : fast);
+      return api;
+    },
     tap(t, nx, ny, sound = "tap") {
       api.moveTo(t - travel, nx, ny);
       press.to(t - 0.06, 1, { duration: 0.12, bounce: 0 }).to(t + 0.08, 0, SPRING.snappy);

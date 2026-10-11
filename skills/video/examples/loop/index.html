@@ -1,0 +1,261 @@
+<!doctype html>
+<!--
+  Loop example: one shape morphs through a card payment and comes back to where it started.
+  1080x1080, 16 s, no voice. UI sounds only. Copy this folder to start your own loop.
+
+  Beat plan. 120 BPM, so one beat is 0.5 s, and beat(n) = 0.5 s + n beats.
+  The loop is 32 beats (16 s), so the beat grid carries on across the loop point.
+
+  beat  time    change
+    -    0.0    "Pay $48.00" button, pointer at rest. The last frame matches this one.
+    0    0.5    pointer leaves rest on an arc
+    2    1.5    tap Pay: the button grows into the card sheet
+    2.5  1.75   pointer follows to the sheet's Pay button and waits there
+    9    5.0    tap Pay: the sheet folds into a processing ring
+   10    5.5    pointer goes back to rest
+   13    7.0    ring closes and fills with a green check (success sound)
+   18    9.5    the check rises and the shape opens into the receipt
+   25   13.0    pointer leaves rest for Done
+   27   14.0    tap Done: the receipt shrinks, staying white; at 14.55 it turns ink as the label arrives
+   28   14.5    pointer goes back to rest. Everything settles by about 15.4 s.
+   32   16.0    loop point (the same picture as 0.0)
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Checkout loop</title>
+<style>
+  @font-face { font-family: Geist; font-weight: 100 900;
+    src: url(/_skill/assets/fonts/geist-latin-wght-normal.woff2) format("woff2"); }
+  * { box-sizing: border-box; margin: 0; }
+  body { width: 1080px; height: 1080px; overflow: hidden; background: #ece9e4;
+    font-family: Geist, sans-serif; color: #17171a; font-variant-numeric: tabular-nums; }
+  #stage { position: absolute; inset: 0; overflow: hidden; }
+
+  /* The one shape. seek() sets its size, corner radius and color on every frame. */
+  #shape { position: absolute; overflow: hidden;
+    box-shadow: 0 1px 2px rgba(40, 32, 24, 0.06), 0 14px 36px rgba(40, 32, 24, 0.10); }
+
+  /* Each state's content is laid out at that state's final size, centered in the shape.
+     The shape clips it, so content is revealed as the shape grows. */
+  .layer { position: absolute; left: 50%; top: 50%; }
+  #payLayer { width: 460px; height: 128px; margin: -64px 0 0 -230px; }
+  #sheet { width: 640px; height: 560px; margin: -280px 0 0 -320px; padding: 40px; }
+  #receipt { width: 560px; height: 540px; margin: -270px 0 0 -280px; padding: 40px;
+    display: flex; flex-direction: column; align-items: center; }
+
+  .label { height: 100%; display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 42px; font-weight: 600; letter-spacing: -0.01em; }
+  .btn { width: 100%; height: 112px; border-radius: 56px; display: flex; align-items: center;
+    justify-content: center; font-size: 40px; font-weight: 600; letter-spacing: -0.01em; }
+  .btn.dark { background: #17171a; color: #fff; }
+  .btn.light { background: #f1eee9; color: #17171a; height: 104px; }
+
+  #card { position: relative; height: 336px; margin-bottom: 32px; border-radius: 28px;
+    background: #2b4773; color: #fff; }
+  #card .chip { position: absolute; left: 44px; top: 48px; width: 68px; height: 52px;
+    border-radius: 10px; background: #d9c48f; box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.08); }
+  #card .num { position: absolute; left: 44px; bottom: 40px; font-size: 38px;
+    font-weight: 500; letter-spacing: 0.04em; }
+  #card .exp { position: absolute; right: 44px; bottom: 44px; font-size: 28px;
+    font-weight: 500; opacity: 0.72; }
+
+  #ring { position: absolute; left: 50%; top: 50%; width: 120px; height: 120px; margin: -60px 0 0 -60px; }
+  #badge { position: absolute; left: 50%; top: 50%; border-radius: 50%; background: #1f8a5b; }
+  #badge svg { width: 100%; height: 100%; display: block; }
+  #badgeSlot { width: 112px; height: 112px; flex: none; }
+  #amount { margin-top: 28px; font-size: 76px; font-weight: 650; letter-spacing: -0.03em; line-height: 1; }
+  #paidTo { margin-top: 14px; font-size: 32px; font-weight: 450; color: #77716a; }
+  #rule { margin: 36px 0 34px; flex: none; }
+
+  #cursor { position: absolute; width: 46px; height: 62px; transform-origin: 3px 3px;
+    filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.22)); }
+</style>
+<script>window.BEATS = { bpm: 120, first: 0.5 };</script>
+</head>
+<body>
+<div id="stage">
+  <div id="shape">
+    <!-- 1. The Pay button -->
+    <div class="layer" id="payLayer"><div class="label" id="payLabel">Pay $48.00</div></div>
+
+    <!-- 2. The card sheet -->
+    <div class="layer" id="sheet">
+      <div id="card"><div class="chip"></div><div class="num">•••• 4242</div><div class="exp">08/28</div></div>
+      <div class="btn dark" id="sheetPay">Pay $48.00</div>
+    </div>
+
+    <!-- 3. The processing ring -->
+    <svg id="ring" viewBox="0 0 120 120">
+      <circle cx="60" cy="60" r="52" fill="none" stroke="#ebe7e1" stroke-width="9"/>
+      <circle id="arc" cx="60" cy="60" r="52" fill="none" stroke="#17171a" stroke-width="9"
+        stroke-linecap="round" pathLength="1"/>
+    </svg>
+
+    <!-- 4. The success check. It becomes the badge at the top of the receipt. -->
+    <div id="badge"><svg viewBox="0 0 100 100"><path id="check" d="M30 51 L44 65 L71 37" fill="none"
+      stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" pathLength="1"/></svg></div>
+
+    <!-- 5. The receipt -->
+    <div class="layer" id="receipt">
+      <div id="badgeSlot"></div>
+      <div id="amount">$48.00</div>
+      <div id="paidTo">Paid to Acme Coffee</div>
+      <svg id="rule" width="480" height="2"><line x1="1" y1="1" x2="479" y2="1" stroke="#ddd7cf"
+        stroke-width="2" stroke-dasharray="8 8" stroke-linecap="round"/></svg>
+      <div class="btn light" id="done">Done</div>
+    </div>
+  </div>
+
+  <svg id="cursor" viewBox="0 0 23 31"><path d="M1.5 1.5 V24 L7 18.8 L10.8 27.6 L14.6 26 L10.9 17.4 H18.2 Z"
+    fill="#17171a" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg>
+</div>
+
+<script type="module">
+import { track, SPRING, presence, progress, clamp, easeOut, easeInOut, mix, style, pointer, sfx, beat, $ }
+  from "/_skill/runtime/motion.js";
+
+await document.fonts.load("600 42px Geist");
+
+const LOOP = (32 * 60) / BEATS.bpm;   // 32 beats = 16 s
+const CX = 540, CY = 540;            // the shape stays centered; it only changes size
+const INK = "#17171a", WHITE = "#ffffff";
+const SIZE = {
+  pay:     { w: 460, h: 128, r: 64 },
+  sheet:   { w: 640, h: 560, r: 44 },
+  ring:    { w: 220, h: 220, r: 110 },
+  receipt: { w: 560, h: 540, r: 44 },
+};
+const TIP = 3; // the cursor's tip, in its own pixels
+// Ink and white swap in a few frames, so the gray in between barely shows.
+const RECOLOR = { duration: 0.2, bounce: 0 };
+
+// ---------- Measure once, before anything moves ----------
+// An empty shape at the center puts every state's layer where it will be.
+style("#shape", {}, { left: CX, top: CY, width: 0, height: 0 });
+function center(sel, dx = 0, dy = 0) {
+  const r = $(sel).getBoundingClientRect();
+  return [r.x + r.width / 2 + dx, r.y + r.height / 2 + dy];
+}
+const AT = {
+  rest: [866, 900],                       // outside every state, lower right
+  pay: center("#payLabel", 44, 10),       // on the label
+  sheetPay: center("#sheetPay", 150, 12), // right of the label, so it stays readable
+  done: center("#done", 12, 12),
+};
+const BADGE_Y = center("#badgeSlot")[1] - CY; // where the check sits on the receipt
+
+// ---------- Tracks ----------
+const W = track(SIZE.pay.w), H = track(SIZE.pay.h), R = track(SIZE.pay.r);
+const dark = track(1);                      // shape color: 1 = ink, 0 = white
+const squash = track(1);                    // press on the whole shape
+const sheetPress = track(1), donePress = track(1);
+const badgeSize = track(120), badgeY = track(0);
+const P = pointer(...AT.rest);
+
+// A layout change. The trailing side starts 60 ms later and so finishes later.
+function morph(t, size, trail = "h") {
+  W.to(t + (trail === "w" ? 0.06 : 0), size.w, SPRING.gentle);
+  H.to(t + (trail === "h" ? 0.06 : 0), size.h, SPRING.gentle);
+  R.to(t, size.r, SPRING.gentle);
+}
+// A press, in time with the pointer's own press.
+function press(tr, t) {
+  tr.to(t - 0.06, 0.97, { duration: 0.12, bounce: 0 }).to(t + 0.08, 1, SPRING.snappy);
+}
+// Travel on an arc: y settles faster than x, so the path curves.
+function arcTo(t, [x, y]) {
+  P.x.to(t, x, SPRING.gentle);
+  P.y.to(t, y, SPRING.smooth);
+}
+
+// ---------- Timeline (call in time order) ----------
+const T1 = beat(2), T2 = beat(9), T3 = beat(13), T4 = beat(18), T5 = beat(27);
+
+// 1. Pay button -> card sheet
+arcTo(beat(0), AT.pay);
+P.tap(T1, ...AT.pay);            // tap() also declares the tap sound
+press(squash, T1);
+morph(T1 + 0.1, SIZE.sheet);
+dark.to(T1 + 0.1, 0, RECOLOR);
+arcTo(beat(2.5), AT.sheetPay);
+
+// 2. Card sheet -> processing ring
+P.tap(T2, ...AT.sheetPay);
+press(sheetPress, T2);
+morph(T2 + 0.12, SIZE.ring, "w");
+arcTo(beat(10), AT.rest);
+
+// 3. Ring -> success check. No tap: the payment finishes on its own.
+badgeSize.to(T3 + 0.25, SIZE.ring.w, SPRING.snappy);
+sfx(T3 + 0.4, "success");
+
+// 4. Check -> receipt. The check shrinks into the receipt's badge.
+morph(T4, SIZE.receipt);
+badgeSize.to(T4, 112, SPRING.gentle);
+badgeY.to(T4, BADGE_Y, SPRING.gentle);
+sfx(T4 + 0.2, "whoosh", 0.5);
+
+// 5. Receipt -> Pay button, then back to the first frame
+arcTo(beat(25), AT.done);
+P.tap(T5, ...AT.done);
+press(donePress, T5);
+morph(T5 + 0.12, SIZE.pay, "w");
+dark.to(T5 + 0.55, 1, RECOLOR);  // white until the shape has mostly shrunk, then ink
+arcTo(beat(28), AT.rest);
+badgeSize.set(T5 + 1, 120);      // reset while hidden, ready for the next loop
+badgeY.set(T5 + 1, 0);
+
+// ---------- Draw one frame ----------
+// The look from whichever window is showing (the windows never overlap).
+const either = (...looks) => looks.reduce((a, b) => (b.opacity > a.opacity ? b : a));
+
+window.seek = (t) => {
+  const w = W(t), h = H(t);
+  style("#shape", { scale: squash(t) }, {
+    left: CX - w / 2, top: CY - h / 2, width: w, height: h,
+    borderRadius: Math.min(R(t), w / 2, h / 2),
+    background: mix(WHITE, INK, dark(t)),
+  });
+
+  // The label rides on the color: it shows only as much as the shape is ink,
+  // so the pill is never an empty gray on the way in or out.
+  const label = either(presence(t, -1, T1 + 0.1), presence(t, T5 + 0.55));
+  style("#payLabel", { ...label, opacity: Math.min(label.opacity, clamp(dark(t))) });
+
+  style("#card", presence(t, T1 + 0.4, T2 + 0.1));
+  style("#sheetPay", { ...presence(t, T1 + 0.47, T2 + 0.12), scale: sheetPress(t) });
+
+  // A spinner is a steady process, so it turns at a constant speed. At T3 the arc closes.
+  style("#ring", presence(t, T2 + 0.4, T3 + 0.4, { enter: 0.3 }));
+  const arc = $("#arc");
+  arc.setAttribute("stroke-dasharray", `${0.26 + 0.74 * easeInOut(progress(t, T3, T3 + 0.3))} 1`);
+  arc.setAttribute("transform", `rotate(${-90 + 330 * (t - T2)} 60 60)`);
+
+  const b = badgeSize(t);
+  style("#badge", presence(t, T3 + 0.25, T5 + 0.1, { enter: 0.1, dist: 0 }),
+    { width: b, height: b, marginLeft: -b / 2, marginTop: -b / 2 + badgeY(t) });
+  $("#check").setAttribute("stroke-dashoffset", 1 - easeOut(progress(t, T3 + 0.35, T3 + 0.7)));
+  $("#check").setAttribute("stroke-dasharray", "1 1");
+
+  style("#amount", presence(t, T4 + 0.45, T5 + 0.1));
+  style("#paidTo", presence(t, T4 + 0.52, T5 + 0.1));
+  style("#rule", presence(t, T4 + 0.59, T5 + 0.1));
+  style("#done", { ...presence(t, T4 + 0.66, T5 + 0.1), scale: donePress(t) });
+
+  style("#cursor", {}, {
+    left: P.x(t) - TIP, top: P.y(t) - TIP,
+    transform: `scale(${(1 - 0.12 * P.press(t)).toFixed(4)})`,
+  });
+};
+
+window.VIDEO = {
+  width: 1080, height: 1080, duration: LOOP,
+  stills: [0, 1.45, 1.85, 2.3, 3.5, 5.3, 5.7, 6.4, 7.15, 7.35, 7.55, 8.5, 9.8, 10.1, 12, 14.3, 14.7, 15.2, 15.98],
+};
+
+// Preview one moment with ?t=12.5 (render.mjs --serve).
+window.seek(Number(new URLSearchParams(location.search).get("t")) || 0);
+</script>
+</body>
+</html>

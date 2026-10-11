@@ -11,7 +11,7 @@ Every video here is drawn in code. The result is one MP4 (H.264, AAC at −16 LU
 
 1. **Check the machine** once: `bash <skill>/scripts/setup.sh`. It installs Playwright and Chromium into a private cache folder. It also checks ffmpeg, Node, uv, Manim and the ElevenLabs key. Fix anything marked ✗ before you render.
 2. **Read the user's preferences**, if they exist: `VIDEO.md` in the current project, then `~/.config/video-skill/preferences.md`. The project file wins. Preferences can set the voice, languages, output folder, brand colors and fonts, delivery steps, and whether to make a video on their own initiative. They change defaults. They never relax the privacy and accuracy rules below.
-3. **Pick a folder**: the one the user names, else `videos/<slug>/` in the current directory. In a git repository, add `media/`, `render/`, `qa/` and `out/` to `.gitignore`.
+3. **Pick a folder**: the one the user names, else `videos/<slug>/` in the current directory. In a git repository, add `media/`, `render/`, `sfx/`, `qa/`, `out/` and `audio/narration.wav` to `.gitignore`.
 
 Make a video when the user asks for one, or when their preferences say to. Do not make one on your own initiative otherwise: narration costs the user ElevenLabs credits.
 
@@ -129,7 +129,7 @@ Pipeline:
 - `track(v).to(t, value, spring)`: each change adds one closed-form spring, so values stay pure functions of time even when targets change mid-motion. Read a track with `x(t)`. `.set(t, v)` jumps. `.drag(t0, t1, fn)` follows the pointer directly; the next spring starts from the release point and carries its velocity.
 - `swap(t, at)` gives `{out, in}` looks with separate exit and enter timing. `presence(t, on, off)` fades an element in and out. Apply looks with `style(el, look, css)`.
 - `cue("phrase")` returns the time just before the narrator says the phrase. Cues search forward, like the explainer's `play_at`, and a missing cue throws.
-- `pointer(x, y)`: `.tap(t, x, y, sound)`, `.drag(t0, t1, path)`, `.appear(t)`, `.hide(t)`. Taps declare sounds automatically.
+- `pointer(x, y)`: `.tap(t, x, y, sound)`, `.moveTo(t, x, y)`, `.drag(t0, t1, path)`, `.appear(t)`, `.hide(t)`. Moves travel on a gentle arc unless you pass a spring, and taps declare sounds automatically.
 - `sfx(t, kind)` declares a UI sound (`tap`, `key`, `toggle`, `whoosh`, `success`, `pop`; `sfx.py` synthesizes the kit, so there is nothing to license). `mux.py` places each sound's measured peak on its time.
 - For a "liquid" indicator (tab, toggle, language pill), give each edge its own track: the leading edge gets a faster spring than the trailing edge.
 
@@ -138,7 +138,7 @@ Gotchas:
 - Never put `will-change` on anything the camera scales, or text renders blurry.
 - No CSS transitions, animations, timers or state carried between frames. The renderer splits time into chunks across several pages, so every frame must be computable on its own.
 - `progress()` treats an infinite end as "never", so `presence(t, on, Infinity)` stays visible. Do not pass `NaN` to styles; a `NaN` opacity silently renders at full opacity.
-- Pages load over the renderer's local server, because ES modules do not load from `file://`. `node <skill>/scripts/render.mjs index.html --serve` serves the page for a browser preview; add `?t=12.5` to see one moment.
+- Pages load over the renderer's local server, because ES modules do not load from `file://`. `node <skill>/scripts/render.mjs index.html --serve` serves the page for a browser preview. To open it at one moment with `?t=12.5`, the page must read that parameter and call `seek`, as `examples/walkthrough` does.
 - Put the camera inside a clipped stage when there is a side panel, and keep the zoomed focus inside a phone's edges, or a zoom shows the canvas past the screen's edge.
 - For a seamless loop, the last frame must match the first, including the pointer's position and speed. Leave about 1.5 seconds after the final morph for springs to settle.
 - Playwright is loaded only from `$PLAYWRIGHT_DIR`, the skill's cache folder (`setup.sh` installs it there), or the global npm root, never from the current folder. Where Playwright cannot download its browser (some cloud sandboxes), set `CHROMIUM_PATH` to an installed Chromium. `RENDER_WORKERS` limits the parallel pages on a busy machine.

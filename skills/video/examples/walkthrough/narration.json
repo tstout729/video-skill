@@ -1,0 +1,16 @@
+{
+  "title": "Invite a teammate",
+  "voice_id": "JBFqnCBsd6RMkjVDRZzb",
+  "model_id": "eleven_v4",
+  "voice_settings": {"stability": 0.5, "similarity_boost": 0.75},
+  "language": "en",
+  "timeline": {"gap": 1.2, "lead_in": 2.0, "tail": 2.5},
+  "scenes": [
+    {"id": "s01", "text": "Let's invite a teammate to your Acme workspace. It takes five steps."},
+    {"id": "s02", "text": "First, open Settings in the sidebar. Then click Members. This list shows everyone in your workspace."},
+    {"id": "s03", "text": "Next, click Invite. Type your teammate's email address."},
+    {"id": "s04", "text": "Now choose a role. Most teammates need Member. Admins can also manage billing."},
+    {"id": "s05", "text": "Click Send invite. The invite now shows in the list, marked Pending."},
+    {"id": "s06", "text": "To recap: invites start in Settings, under Members. Pick the role before you send. Pending means they have not joined yet."}
+  ]
+}

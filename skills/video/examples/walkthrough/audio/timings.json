@@ -1,0 +1,454 @@
+{
+ "s01": {
+  "digest": "f1c2a63c5edc6c69",
+  "duration": 4.72,
+  "match": 1.0,
+  "words": [
+   {
+    "word": "Let's",
+    "start": 0.0,
+    "end": 0.28
+   },
+   {
+    "word": "invite",
+    "start": 0.32,
+    "end": 0.64
+   },
+   {
+    "word": "a",
+    "start": 0.72,
+    "end": 0.8
+   },
+   {
+    "word": "teammate",
+    "start": 0.88,
+    "end": 1.36
+   },
+   {
+    "word": "to",
+    "start": 1.44,
+    "end": 1.52
+   },
+   {
+    "word": "your",
+    "start": 1.6,
+    "end": 1.68
+   },
+   {
+    "word": "Acme",
+    "start": 1.76,
+    "end": 2.08
+   },
+   {
+    "word": "workspace.",
+    "start": 2.4,
+    "end": 3.2
+   },
+   {
+    "word": "It",
+    "start": 3.24,
+    "end": 3.28
+   },
+   {
+    "word": "takes",
+    "start": 3.36,
+    "end": 3.68
+   },
+   {
+    "word": "five",
+    "start": 3.8,
+    "end": 3.92
+   },
+   {
+    "word": "steps.",
+    "start": 4.0,
+    "end": 4.8
+   }
+  ]
+ },
+ "s02": {
+  "digest": "e16cb01ba40f1a6b",
+  "duration": 7.92,
+  "match": 1.0,
+  "words": [
+   {
+    "word": "First,",
+    "start": 0.0,
+    "end": 0.8
+   },
+   {
+    "word": "open",
+    "start": 0.88,
+    "end": 1.2
+   },
+   {
+    "word": "Settings",
+    "start": 1.28,
+    "end": 1.76
+   },
+   {
+    "word": "in",
+    "start": 1.84,
+    "end": 1.92
+   },
+   {
+    "word": "the",
+    "start": 2.0,
+    "end": 2.04
+   },
+   {
+    "word": "sidebar.",
+    "start": 2.08,
+    "end": 2.72
+   },
+   {
+    "word": "Then",
+    "start": 3.2,
+    "end": 3.44
+   },
+   {
+    "word": "click",
+    "start": 3.68,
+    "end": 3.92
+   },
+   {
+    "word": "Members.",
+    "start": 4.08,
+    "end": 4.92
+   },
+   {
+    "word": "This",
+    "start": 5.2,
+    "end": 5.44
+   },
+   {
+    "word": "list",
+    "start": 5.6,
+    "end": 5.76
+   },
+   {
+    "word": "shows",
+    "start": 5.84,
+    "end": 6.16
+   },
+   {
+    "word": "everyone",
+    "start": 6.24,
+    "end": 6.72
+   },
+   {
+    "word": "in",
+    "start": 6.8,
+    "end": 6.88
+   },
+   {
+    "word": "your",
+    "start": 6.92,
+    "end": 6.96
+   },
+   {
+    "word": "workspace.",
+    "start": 7.04,
+    "end": 8.0
+   }
+  ]
+ },
+ "s03": {
+  "digest": "9b5869804187c7ac",
+  "duration": 4.4,
+  "match": 1.0,
+  "words": [
+   {
+    "word": "Next,",
+    "start": 0.0,
+    "end": 0.64
+   },
+   {
+    "word": "click",
+    "start": 0.72,
+    "end": 0.96
+   },
+   {
+    "word": "Invite.",
+    "start": 1.2,
+    "end": 2.04
+   },
+   {
+    "word": "Type",
+    "start": 2.32,
+    "end": 2.56
+   },
+   {
+    "word": "your",
+    "start": 2.64,
+    "end": 2.72
+   },
+   {
+    "word": "teammate's",
+    "start": 2.8,
+    "end": 3.36
+   },
+   {
+    "word": "email",
+    "start": 3.52,
+    "end": 3.68
+   },
+   {
+    "word": "address.",
+    "start": 3.92,
+    "end": 4.48
+   }
+  ]
+ },
+ "s04": {
+  "digest": "4550d46bb3b271a2",
+  "duration": 6.08,
+  "match": 1.0,
+  "words": [
+   {
+    "word": "Now",
+    "start": 0.0,
+    "end": 0.32
+   },
+   {
+    "word": "choose",
+    "start": 0.48,
+    "end": 0.72
+   },
+   {
+    "word": "a",
+    "start": 0.76,
+    "end": 0.8
+   },
+   {
+    "word": "role.",
+    "start": 0.88,
+    "end": 1.48
+   },
+   {
+    "word": "Most",
+    "start": 1.76,
+    "end": 2.0
+   },
+   {
+    "word": "teammates",
+    "start": 2.04,
+    "end": 2.56
+   },
+   {
+    "word": "need",
+    "start": 2.64,
+    "end": 2.8
+   },
+   {
+    "word": "Member.",
+    "start": 2.96,
+    "end": 3.64
+   },
+   {
+    "word": "Admins",
+    "start": 3.92,
+    "end": 4.48
+   },
+   {
+    "word": "can",
+    "start": 4.56,
+    "end": 4.64
+   },
+   {
+    "word": "also",
+    "start": 4.72,
+    "end": 5.04
+   },
+   {
+    "word": "manage",
+    "start": 5.12,
+    "end": 5.36
+   },
+   {
+    "word": "billing.",
+    "start": 5.44,
+    "end": 6.16
+   }
+  ]
+ },
+ "s05": {
+  "digest": "65d9b24634eb6fce",
+  "duration": 5.36,
+  "match": 1.0,
+  "words": [
+   {
+    "word": "Click",
+    "start": 0.0,
+    "end": 0.32
+   },
+   {
+    "word": "Send",
+    "start": 0.48,
+    "end": 0.8
+   },
+   {
+    "word": "invite.",
+    "start": 0.88,
+    "end": 1.76
+   },
+   {
+    "word": "The",
+    "start": 2.08,
+    "end": 2.16
+   },
+   {
+    "word": "invite",
+    "start": 2.24,
+    "end": 2.64
+   },
+   {
+    "word": "now",
+    "start": 2.72,
+    "end": 2.96
+   },
+   {
+    "word": "shows",
+    "start": 3.04,
+    "end": 3.28
+   },
+   {
+    "word": "in",
+    "start": 3.32,
+    "end": 3.36
+   },
+   {
+    "word": "the",
+    "start": 3.44,
+    "end": 3.52
+   },
+   {
+    "word": "list,",
+    "start": 3.72,
+    "end": 4.08
+   },
+   {
+    "word": "marked",
+    "start": 4.16,
+    "end": 4.48
+   },
+   {
+    "word": "Pending.",
+    "start": 4.64,
+    "end": 5.44
+   }
+  ]
+ },
+ "s06": {
+  "digest": "847ca6c5eacff64d",
+  "duration": 9.44,
+  "match": 1.0,
+  "words": [
+   {
+    "word": "To",
+    "start": 0.0,
+    "end": 0.16
+   },
+   {
+    "word": "recap:",
+    "start": 0.24,
+    "end": 0.8
+   },
+   {
+    "word": "invites",
+    "start": 1.28,
+    "end": 1.84
+   },
+   {
+    "word": "start",
+    "start": 2.0,
+    "end": 2.32
+   },
+   {
+    "word": "in",
+    "start": 2.4,
+    "end": 2.48
+   },
+   {
+    "word": "Settings,",
+    "start": 2.64,
+    "end": 3.28
+   },
+   {
+    "word": "under",
+    "start": 3.36,
+    "end": 3.6
+   },
+   {
+    "word": "Members.",
+    "start": 3.68,
+    "end": 4.24
+   },
+   {
+    "word": "Pick",
+    "start": 4.72,
+    "end": 4.96
+   },
+   {
+    "word": "the",
+    "start": 5.0,
+    "end": 5.04
+   },
+   {
+    "word": "role",
+    "start": 5.12,
+    "end": 5.44
+   },
+   {
+    "word": "before",
+    "start": 5.52,
+    "end": 5.84
+   },
+   {
+    "word": "you",
+    "start": 5.92,
+    "end": 6.0
+   },
+   {
+    "word": "send.",
+    "start": 6.08,
+    "end": 6.76
+   },
+   {
+    "word": "Pending",
+    "start": 7.04,
+    "end": 7.6
+   },
+   {
+    "word": "means",
+    "start": 7.68,
+    "end": 7.92
+   },
+   {
+    "word": "they",
+    "start": 8.0,
+    "end": 8.08
+   },
+   {
+    "word": "have",
+    "start": 8.16,
+    "end": 8.24
+   },
+   {
+    "word": "not",
+    "start": 8.32,
+    "end": 8.48
+   },
+   {
+    "word": "joined",
+    "start": 8.56,
+    "end": 8.88
+   },
+   {
+    "word": "yet.",
+    "start": 9.04,
+    "end": 9.52
+   }
+  ]
+ }
+}
