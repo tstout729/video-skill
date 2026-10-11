@@ -7,7 +7,7 @@
 set -uo pipefail
 check_only=0; [[ "${1:-}" == --check ]] && check_only=1
 cache="${VIDEO_SKILL_HOME:-${XDG_CACHE_HOME:-$HOME/.cache}/video-skill}"
-pw_version="${PLAYWRIGHT_VERSION:-1.58.2}"
+pw_version="${PLAYWRIGHT_VERSION:-1.64.0}"
 missing=0
 ok()   { printf '  \033[32m✓\033[0m %s\n' "$1"; }
 warn() { printf '  \033[33m!\033[0m %s\n' "$1"; }
@@ -77,11 +77,21 @@ if command -v node >/dev/null; then
     elif (( check_only )); then
       bad "Chromium for Playwright not installed (run this script without --check)"
     else
-      echo "  downloading Chromium for Playwright ..."
-      if node "$pwdir/cli.js" install chromium >/dev/null 2>&1 && node -e "$launch" "$pwdir" >/dev/null 2>&1; then
+      echo "  downloading Chromium for Playwright (about 170 MB) ..."
+      node "$pwdir/cli.js" install chromium 2>&1 | grep -v -E "^\s*$" | tail -n 3
+      # Linux also needs Chromium's system libraries; install them when sudo needs no password.
+      if [[ "$os" == Linux ]] && ! node -e "$launch" "$pwdir" >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
+        echo "  installing Chromium's system libraries ..."
+        sudo -n env PATH="$PATH" node "$pwdir/cli.js" install-deps chromium >/dev/null 2>&1
+      fi
+      if node -e "$launch" "$pwdir" >/dev/null 2>&1; then
         ok "Playwright $pwver with Chromium"
       else
-        bad "Chromium download failed. On Linux, run: node $pwdir/cli.js install --with-deps chromium"
+        if [[ "$os" == Linux ]]; then
+          bad "Chromium will not start. Run: sudo node $pwdir/cli.js install-deps chromium"
+        else
+          bad "Chromium will not start. Run: node $pwdir/cli.js install chromium   and read its error"
+        fi
       fi
     fi
   fi

@@ -3,7 +3,8 @@ __pycache__/
 .DS_Store
 node_modules/
 **/media/
-**/render/*.mp4
+**/render/
+**/sfx/
 **/qa/
 **/out/
 **/audio/narration.wav

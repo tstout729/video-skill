@@ -19,7 +19,7 @@ Make a video when the user asks for one, or when their preferences say to. Do no
 
 - **Explainer.** How a system, process or idea works: narrated diagrams in Manim, in the style of 3Blue1Brown, with every animation timed to the narrator's words. Build it with [Explainer (Manim)](#explainer-manim). Copy from `examples/explainer/`.
 - **Walkthrough.** A real screen used step by step, with a pointer that clicks each control as the narrator names it. Use it for product demos, feature tours, training and onboarding. A step list on the left and the app on the right work well for training; a full-frame app works for demos. Build it with [UI motion (HTML)](#ui-motion-html). Copy from `examples/walkthrough/`.
-- **Loop.** No voice. One shape morphs through 6–12 UI states and the last frame matches the first, for social posts and feature teasers. Each change lands on a beat, but not on every beat: change state about every 2–4 beats (1–2 s at 120 BPM). Use the beats in between for the pointer's approach and small reactions. Build it with [UI motion (HTML)](#ui-motion-html). Copy from `examples/loop/`.
+- **Loop.** No voice. One shape morphs through 6–12 UI states and the last frame matches the first, for social posts and feature teasers. Each change lands on a beat, but not on every beat: change state about every 4–8 beats (2–4 s at 120 BPM), so each state holds long enough to read. Use the beats in between for the pointer's approach and small reactions. Build it with [UI motion (HTML)](#ui-motion-html). Copy from `examples/loop/`.
 
 Pick the frame for where the video will play:
 

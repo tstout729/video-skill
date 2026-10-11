@@ -91,6 +91,7 @@ def main() -> None:
     ap.add_argument("--sfx-db", type=float, default=-14.0)
     ap.add_argument("--title", default="")
     args = ap.parse_args()
+    args.out.parent.mkdir(parents=True, exist_ok=True)
 
     duration = probe(args.video)
     sfx_json = Path(str(args.video).removesuffix(".mp4") + ".sfx.json")
@@ -98,12 +99,18 @@ def main() -> None:
     if any(not (args.sfx_dir / f"{e['kind']}.wav").exists() for e in events):
         subprocess.run([sys.executable, str(HERE / "sfx.py"), str(args.sfx_dir)], check=True)
 
+    # Sounds alone are not speech, so loudness normalization would flatten their relative levels.
+    # Scale them to a fixed peak instead.
+    sfx_only = bool(events) and not args.narration and not args.music
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
         inputs, chains, mix = ["-i", str(args.video)], [], []
         n = 1
         if events:
-            write_wav(tmp / "sfx.wav", sfx_track(events, args.sfx_dir, duration, args.sfx_db))
+            track = sfx_track(events, args.sfx_dir, duration, args.sfx_db)
+            if sfx_only and np.abs(track).max() > 0:
+                track = track * (10 ** (-6 / 20) / np.abs(track).max())
+            write_wav(tmp / "sfx.wav", track)
             inputs += ["-i", str(tmp / "sfx.wav")]
             chains.append(f"[{n}:a]aresample={SR}[sfx]")
             mix.append("[sfx]")
@@ -129,8 +136,9 @@ def main() -> None:
             chains.append("[key]anullsink")
         if not mix:
             raise SystemExit("nothing to mix: pass --narration, --music, or render with SFX")
+        level = "" if sfx_only else ",loudnorm=I=-16:TP=-1.5:LRA=11"
         chains.append(f"{''.join(mix)}amix=inputs={len(mix)}:normalize=0:duration=longest,"
-                      f"atrim=0:{duration:.3f},loudnorm=I=-16:TP=-1.5:LRA=11[a]")
+                      f"atrim=0:{duration:.3f}{level}[a]")
 
         cmd = ["ffmpeg", "-v", "error", "-y", *inputs]
         srt_path = None
@@ -142,7 +150,6 @@ def main() -> None:
             for k, (start, end, text) in enumerate(lines):
                 hold = min(end + 0.25, lines[k + 1][0]) if k + 1 < len(lines) else end + 0.25
                 srt.append(f"{k + 1}\n{stamp(start)} --> {stamp(hold)}\n{text}\n")
-            args.out.parent.mkdir(parents=True, exist_ok=True)
             srt_path.write_text("\n".join(srt))
             cmd += ["-i", str(srt_path)]
         cmd += ["-filter_complex", ";".join(chains), "-map", "0:v", "-map", "[a]"]
