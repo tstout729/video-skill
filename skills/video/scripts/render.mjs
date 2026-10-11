@@ -165,13 +165,16 @@ let done = 0;
 async function renderChunk(index, ctx) {
   const k0 = index * per, k1 = Math.min(frames, k0 + per);
   const file = path.join(tmp, `c${String(index).padStart(3, "0")}.mp4`);
-  const filter = sub > 1
-    ? `tmix=frames=${sub},select='eq(mod(n\\,${sub})\\,${sub - 1})',setpts=N/(${fps}*TB)`
-    : "null";
+  const blur = sub > 1
+    ? `tmix=frames=${sub},select='eq(mod(n\\,${sub})\\,${sub - 1})',setpts=N/(${fps}*TB),`
+    : "";
+  // Screenshots are full-range JPEG. Convert to standard (limited) range, which every player,
+  // including iPhones and Safari, decodes the same way.
+  const filter = `${blur}scale=in_range=pc:out_range=tv,format=yuv420p`;
   const ff = spawn("ffmpeg", [
     "-v", "error", "-y", "-f", "image2pipe", "-framerate", String(fps * sub), "-c:v", "mjpeg", "-i", "-",
     "-vf", filter, "-r", String(fps), "-c:v", "libx264", "-preset", "medium", "-crf", "15",
-    "-pix_fmt", "yuv420p", "-color_primaries", "bt709", "-color_trc", "bt709", "-colorspace", "bt709", file,
+    "-color_range", "tv", "-color_primaries", "bt709", "-color_trc", "bt709", "-colorspace", "bt709", file,
   ], { stdio: ["pipe", "inherit", "inherit"] });
   const closed = new Promise((res, rej) => ff.on("close", (c) => (c ? rej(new Error(`ffmpeg ${c}`)) : res())));
   for (let k = k0; k < k1; k++) {

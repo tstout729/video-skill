@@ -1,0 +1,79 @@
+WEBVTT
+
+00:01.000 --> 00:03.320
+Ask an AI to animate something,
+
+00:03.320 --> 00:05.560
+and it usually moves too fast.
+
+00:05.560 --> 00:07.320
+Everything happens at once,
+
+00:07.320 --> 00:09.970
+and nothing stays still long enough to read.
+
+00:11.040 --> 00:13.850
+Here is the same animation, slowed down.
+
+00:14.080 --> 00:15.770
+One change at a time.
+
+00:16.000 --> 00:18.970
+Each step holds, so you can follow it.
+
+00:20.040 --> 00:21.810
+This is the video skill,
+
+00:21.960 --> 00:23.800
+a free, open-source skill
+
+00:23.800 --> 00:27.120
+for coding agents like Claude Code and Codex.
+
+00:27.120 --> 00:28.760
+You ask for a video.
+
+00:28.760 --> 00:30.680
+Your agent writes the script,
+
+00:30.680 --> 00:34.200
+records the voice, and animates every frame in code,
+
+00:34.200 --> 00:36.050
+in time with the narrator.
+
+00:37.120 --> 00:39.210
+It makes three kinds of video.
+
+00:39.440 --> 00:42.530
+Explainers that draw how a system works.
+
+00:42.560 --> 00:44.320
+Walkthroughs of a real app,
+
+00:44.320 --> 00:47.210
+with a pointer that clicks as the narrator speaks.
+
+00:47.440 --> 00:50.250
+And motion loops for social posts.
+
+00:51.320 --> 00:55.090
+Every video follows the classic principles of animation.
+
+00:55.160 --> 00:57.800
+Then the agent checks its own work.
+
+00:57.800 --> 00:59.520
+It looks at every frame,
+
+00:59.520 --> 01:01.730
+and it measures every pause.
+
+01:02.800 --> 01:05.760
+Captions are included, in any language.
+
+01:05.760 --> 01:07.680
+No video editor needed.
+
+01:07.680 --> 01:10.010
+It's free, and the link is below.

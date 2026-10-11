@@ -2,9 +2,9 @@
 
 **Make narrated explainers, app walkthroughs, training videos and motion loops entirely in code, with your coding agent.**
 
-<a href="docs/demo.mp4"><img src="docs/demo.jpg" alt="Watch the 74-second demo: the same animation rushed, then slowed down, and what the skill makes" width="540"></a>
+<a href="https://tstout729.github.io/video-skill/"><img src="docs/demo.jpg" alt="Watch the 74-second demo: the same animation rushed, then slowed down, and what the skill makes" width="540"></a>
 
-*Click to watch the demo. It was made with this skill; its source is in [`demo/`](demo/).*
+*[Watch the demo](https://tstout729.github.io/video-skill/) in your browser, with the examples. It was made with this skill; its source is in [`demo/`](demo/).*
 
 You ask for a video. Your agent writes the script, records the voice, animates every frame in code in time with the narrator, checks its own pacing, and hands you an MP4 with captions. There's no video editor, timeline or After Effects.
 
@@ -14,9 +14,9 @@ It works in [Claude Code](https://claude.com/claude-code), [Codex](https://opena
 
 | | Kind | Good for | Built with |
 | --- | --- | --- | --- |
-| <a href="docs/examples/explainer.mp4"><img src="docs/examples/explainer.jpg" width="240" alt="Explainer example"></a> | **Explainer** | How a system, process or idea works: narrated, animated diagrams | [Manim](https://www.manim.community) |
-| <a href="docs/examples/walkthrough.mp4"><img src="docs/examples/walkthrough.jpg" width="240" alt="Walkthrough example"></a> | **Walkthrough** | Product demos, feature tours, training and onboarding: a real screen used step by step, with a pointer that clicks as the narrator speaks | HTML + springs, rendered by [Playwright](https://playwright.dev) |
-| <a href="docs/examples/loop.mp4"><img src="docs/examples/loop.jpg" width="240" alt="Loop example"></a> | **Loop** | Social posts and feature teasers: one shape morphing through UI states, timed to a beat | HTML + springs |
+| <a href="https://tstout729.github.io/video-skill/#explainer"><img src="docs/examples/explainer.jpg" width="240" alt="Explainer example"></a> | **Explainer** | How a system, process or idea works: narrated, animated diagrams | [Manim](https://www.manim.community) |
+| <a href="https://tstout729.github.io/video-skill/#walkthrough"><img src="docs/examples/walkthrough.jpg" width="240" alt="Walkthrough example"></a> | **Walkthrough** | Product demos, feature tours, training and onboarding: a real screen used step by step, with a pointer that clicks as the narrator speaks | HTML + springs, rendered by [Playwright](https://playwright.dev) |
+| <a href="https://tstout729.github.io/video-skill/#loop"><img src="docs/examples/loop.jpg" width="240" alt="Loop example"></a> | **Loop** | Social posts and feature teasers: one shape morphing through UI states, timed to a beat | HTML + springs |
 
 Every video gets:
 
