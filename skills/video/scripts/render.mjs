@@ -69,7 +69,14 @@ const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; ch
   ".woff2": "font/woff2", ".json": "application/json; charset=utf-8", ".svg": "image/svg+xml", ".png": "image/png",
   ".jpg": "image/jpeg", ".mp3": "audio/mpeg", ".wav": "audio/wav" };
 const server = http.createServer((req, res) => {
-  const url = decodeURIComponent(new URL(req.url, "http://x").pathname);
+  // Answer only requests addressed to this machine by name or IP: a web page that rebinds
+  // its own domain to 127.0.0.1 (DNS rebinding) still sends its domain as the Host.
+  if (!/^(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/.test(req.headers.host || "")) {
+    res.writeHead(403).end();
+    return;
+  }
+  let url;
+  try { url = decodeURIComponent(new URL(req.url, "http://x").pathname); } catch { res.writeHead(400).end(); return; }
   const [root, rel] = url.startsWith("/_skill/") ? [SKILL, url.slice(8)] : [path.dirname(page), url.slice(1)];
   const file = path.resolve(root, rel || path.basename(page));
   if ((file !== root && !file.startsWith(root + path.sep)) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
