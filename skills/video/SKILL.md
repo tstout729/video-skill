@@ -1,6 +1,6 @@
 ---
 name: video
-description: Make videos entirely in code - narrated explainers with animated diagrams (Manim), walkthroughs of a real app screen with a moving pointer for product demos and training (HTML + springs, rendered with Playwright and ffmpeg), and beat-synced UI motion loops. Writes the script, records an ElevenLabs voice, times every motion to the narrator's words, adds captions, and paces the motion by the classic principles of animation. Use when the user asks for an explainer video, animated diagram, product demo, app walkthrough, training or onboarding video, feature teaser, UI animation or motion design. Not for AI-generated footage (Sora, Veo, Runway) or for editing camera footage.
+description: Make videos entirely in code from a directed brief - narrated explainers with animated diagrams (Manim), walkthroughs of a real app screen for product demos and training, launch films that mix kinetic type, real UI, 3D objects (three.js) and clips, and beat-synced UI motion loops (HTML + springs, rendered with Playwright and ffmpeg). Writes the script, records an ElevenLabs voice, times every motion to the narrator's words, burns in captions, scores it, and reviews its own frames like an animator (contact sheets, onion skins, speed graphs). Use when the user asks for an explainer video, animated diagram, product demo, app walkthrough, training or onboarding video, launch or feature video, social video, 3D product shot, UI animation or motion design. Not for AI-generated footage (Sora, Veo, Runway) or for editing camera footage.
 ---
 
 # Video
@@ -19,6 +19,7 @@ Make a video when the user asks for one, or when their preferences say to. Do no
 
 - **Explainer.** How a system, process or idea works: narrated diagrams in Manim, in the style of 3Blue1Brown, with every animation timed to the narrator's words. Build it with [Explainer (Manim)](#explainer-manim). Copy from `examples/explainer/`.
 - **Walkthrough.** A real screen used step by step, with a pointer that clicks each control as the narrator names it. Use it for product demos, feature tours, training and onboarding. A step list on the left and the app on the right work well for training; a full-frame app works for demos. Build it with [UI motion (HTML)](#ui-motion-html). Copy from `examples/walkthrough/`.
+- **Launch film.** A short narrated or music-driven piece for a launch or a social post: kinetic type, a redrawn UI, a 3D hero object ([3D with three.js](references/three.md)), real clips of other videos (`frames()`), burned-in captions and a music bed, all in one HTML page. The repository's `showcase/` project is a complete example, with its brief and review log.
 - **Loop.** No voice. One shape morphs through 6–12 UI states and the last frame matches the first, for social posts and feature teasers. Each change lands on a beat, but not on every beat: change state about every 4–8 beats (2–4 s at 120 BPM), so each state holds long enough to read. Use the beats in between for the pointer's approach and small reactions. Build it with [UI motion (HTML)](#ui-motion-html). Copy from `examples/loop/`.
 
 Pick the frame for where the video will play:
@@ -32,6 +33,16 @@ Pick the frame for where the video will play:
 
 Feeds autoplay without sound, so a feed video must make sense from its pictures and captions alone.
 
+## Direct it
+
+Write `brief.md` in the project folder before you animate, from the [directed brief](references/brief.md) template:
+- GOAL, TIME, OUTPUT and a shot list with frame ranges;
+- LOOK, MOTION, CAMERA, SOUND, BAN and QA.
+
+Every adjective in the request becomes a number, using the reference's tables. Start BAN with the reference's list, and add every default the model used anyway after the first render. Follow the reference's render contract. Show the brief to the user first when the request is open-ended.
+
+Keep a `log.md` beside it: one entry per review round, with notes tied to frame numbers. Most finished pieces take 2–4 rounds.
+
 ## Pace
 
 Slow down. Agent-made animation is usually too fast and shows too much at once. Read [animation principles](animation-principles.md) before you plan, and review the draft against it. In short: one change at a time, each settled state held at least 1.5 s plus reading time, and more time for bigger moves.
@@ -39,8 +50,16 @@ Slow down. Agent-made animation is usually too fast and shows too much at once. 
 ## Shared steps
 
 - **Research.** Read the real sources: the code, the docs, the data. Every number, name and example on screen, and every fact the narrator says, must be true. Use the product's real labels and a realistic example with sample data. Never show passwords, keys, access codes or personal data; mask a code as `• • • •`, and use made-up names.
+- **Direct.** Write `brief.md` and start `log.md` ([Direct it](#direct-it)).
 - **Script.** Write `narration.json` (format below) in [plain writing](references/plain-writing.md): short sentences, one idea each, the same word for the same thing. Plan one visual per sentence. Narration runs about 130 words per minute. A full explainer usually has 6–10 scenes of 15–30 seconds; a short one, like `examples/explainer`, can have 4. A walkthrough opens with the situation, does the task step by step, and ends with a one-line recap.
 - **Narrate.** `uv run --script <skill>/scripts/narrate.py <project>`. It records one unedited ElevenLabs take per scene, transcribes each take, and retries below a 0.93 match, because a take sometimes repeats or drops a phrase. Re-runs only record scenes whose text changed. The key comes from `ELEVENLABS_API_KEY` or a line `ELEVENLABS_API_KEY=...` in `~/.config/elevenlabs/env`. Never print it. Each take uses the user's ElevenLabs credits, so say roughly how much narration you will record.
+- **Review.** Look at frames before you change anything, and give yourself one or two notes per round, tied to frame numbers ([review loop](animation-principles.md#review)). `node <skill>/scripts/review.mjs` makes:
+  - `sheet`: a labeled contact sheet of a page or MP4;
+  - `onion`: an onion skin of one move;
+  - `graph`: a speed graph of an element, with a soft or hard start and stop;
+  - `holds`: holds per scene.
+
+  Run `--help` for the options.
 - **Deliver.** Put the MP4 and `.srt` in the project's `out/` folder, or where the user's preferences say. Re-rendering replaces the project's own `out/` files; when you copy a video anywhere else, never overwrite an existing file (`cp -n`). Report the path, the length and the voice, and anything you simplified. For a walkthrough, say that the screen is a redraw with sample data.
 
 ```json
@@ -52,6 +71,21 @@ Slow down. Agent-made animation is usually too fast and shows too much at once. 
 Optional fields: `language` (ISO 639-1, default `en`; it labels the caption track) and, for HTML videos, `timeline` (`{"gap": 1.0, "lead_in": 1.0, "tail": 2.0}` in seconds: the silence between, before and after scenes).
 
 Voices: George (`JBFqnCBsd6RMkjVDRZzb`, a warm storyteller) is the default. Calm alternatives: Daniel `onwK4e9ZLuTAKqWW03F9`, Alice `Xb7hH8MSUJpSbSDYk0k2`. Any voice in the user's ElevenLabs library works; ask before using a cloned voice of a real person. Keep one voice per series. If the user's plan has no access to `eleven_v4`, set `model_id` to a model it has, such as `eleven_multilingual_v2`.
+
+## Sound
+
+- **Picture first.** Feeds autoplay muted, so the picture and burned-in captions (`captions()`) must tell the story alone.
+- **Music.** Use the user's licensed track, or generate a royalty-free bed on the beat grid: `uv run --script <skill>/scripts/bed.py --out bed.wav --bpm 120 --bars 16 --mood calm|drive --beats beats.js`. Its `beats.js` is exact, so `beat(n)` lines up with every kick. For a loop, add `--loop` to both `bed.py` and `mux.py`: the bed repeats without fades, and sounds that ring past the end wrap to the start. Most phone speakers play little below about 100 Hz, so for feeds, prefer the calm mood or keep the bed's weight above that.
+- **UI sounds** come from `sfx()`. `mux.py` places each one a frame after its picture (`--sfx-lag 1`), because sound that arrives before its picture feels wrong sooner than sound that is slightly late.
+- **Loudness.** Mix to −14 LUFS for social video (`mux.py --social`), and −16 for training and the web (the default). True peak stays at or below −1 dBTP.
+- **The model can't hear, so measure.** `uv run --script <skill>/scripts/check_sync.py out/<Title>.mp4 --sfx render/video.sfx.json` reports each sound's offset in frames, the loudness, the peak, and the share of energy below 60 Hz, which phone speakers can't play.
+
+## Export
+
+`uv run --script <skill>/scripts/export.py` prepares the finished video for where it will be posted:
+- `--platform linkedin|x|instagram|reels|youtube|web --out post.mp4`: a web-ready MP4 that every phone plays, with a warning if the frame doesn't suit the platform;
+- `--gif loop.gif`: one palette for the whole clip, at 25 fps (exact in GIF timing); `--x` checks X's 350-frame limit;
+- `--poster 12.5 --out poster.jpg`: a poster frame.
 
 ## Other languages
 
@@ -107,7 +141,7 @@ Look:
 
 - One shape, no cuts. Each state is the same container changing size, corner radius and color while its content swaps with a quick blur (`swap`, `presence`).
 - A pointer (or a touch dot for phone screens) triggers every change with real taps and drags.
-- Springs throughout with only slight overshoot (`SPRING.*`, bounce at most about 0.14). Choose the spring by the size of the change: `snappy` only for presses and toggles, `smooth` for content swaps and short moves, `gentle` for layout changes, and `camera` (or slower) for zooms. The camera zooms so each state fills the frame, and moves only after the content has settled.
+- Springs throughout with only slight overshoot (`SPRING.*`, or a damping ratio of 0.8–0.85 for objects and 1.0 for text). Choose the spring by the size of the change: `snappy` only for presses and toggles, `smooth` for content swaps and short moves, `gentle` for layout changes, and `camera` (or slower) for zooms. The camera zooms so each state fills the frame, and moves only after the content has settled.
 - A light, warm-gray canvas, the app's own colors, and one UI font (Geist is bundled in `assets/fonts`).
 - Banned: bouncy easing, particle bursts, glows, gradients on UI chrome, mixed icon stroke widths, dead time, anything that looks like a template. A hold on a settled state that the viewer is reading is not dead time.
 - For a real product, redraw the real screen from its source code or screenshots: the same words, colors and layout. Read the component and copy its strings and hex colors. Use sample data and made-up names.
@@ -121,11 +155,11 @@ Pipeline:
    - Loop with music: `uv run --script <skill>/scripts/beats.py track.mp3 --out beats.js`, then use `beat(n)` for every action. Start on `BEATS.first` (a downbeat). Use only a track the user has the right to use (their own, or royalty-free with a license that allows it).
    - Silent loop: no audio step. Define `window.BEATS = {bpm: 120, first: 0.5}` in the page and use `beat(n)` the same way.
 4. **Build `index.html`.** Load `words.js` or `beats.js`, then `import {...} from "/_skill/runtime/motion.js"`. Build all tracks once at load, measure element positions with the camera at identity, then define `window.seek(t)` and finally `window.VIDEO = {width, height, duration, stills: [...]}`.
-5. **Check stills.** `node <skill>/scripts/render.mjs index.html --stills qa/stills` renders `VIDEO.stills` (or `--every 0.5`, `--at 3,7.5`). Tile them (`ffmpeg -pattern_type glob -i 'qa/stills/*.jpg' -vf "scale=480:-2,tile=4x5" -frames:v 1 qa/stills.png`) and look at every one: clipping, overlaps, unreadable text, empty frames, anything off the cue.
-6. **Draft.** `node <skill>/scripts/render.mjs index.html --out qa/draft.mp4 --fps 30 --sub 1 --scale 0.5` takes about 10 seconds per minute of video on a fast machine. Make 5 fps strips around each transition. Review the motion against [animation principles](animation-principles.md) and run its hold check.
+5. **Check stills.** `node <skill>/scripts/review.mjs sheet index.html --out qa/sheet.png --at stills` (or `--frames 12`, `--from`, `--to`) renders a labeled contact sheet. Look at every cell: clipping, overlaps, unreadable text, empty or gray frames, anything off the cue. Write your notes in `log.md` before you change code.
+6. **Draft.** `node <skill>/scripts/render.mjs index.html --out qa/draft.mp4 --fps 30 --sub 1 --scale 0.5 --debug` takes about 10 seconds per minute of video on a fast machine. `--debug` prints the frame, time and current cue on every frame. Graph each hero move (`review.mjs graph index.html --select "#card" --from 3 --to 5`), check the onion skin of anything that travels, and run `review.mjs holds`.
 7. **Final.** `node <skill>/scripts/render.mjs index.html --out render/video.mp4` (60 fps, 4 subframes; about 100 seconds per minute of 1080p). It also writes `render/video.sfx.json`.
-8. **Mix.** `uv run --script <skill>/scripts/mux.py render/video.mp4 --out "out/<Title>.mp4" --narration audio/narration.wav --words words.js --sfx-dir sfx`. Add `--music track.mp3` for a bed that ducks under the voice. A silent loop needs only `--sfx-dir sfx`, or `--music`. The output is normalized to −16 LUFS, with soft captions and a sidecar `.srt` when there is narration.
-9. **Deliver** (shared steps).
+8. **Mix.** `uv run --script <skill>/scripts/mux.py render/video.mp4 --out "out/<Title>.mp4" --narration audio/narration.wav --words words.js --sfx-dir sfx`. Add `--music bed.wav` for a bed that ducks under the voice, and `--social` for −14 LUFS. A silent loop needs only `--sfx-dir sfx`, or `--music`. The output gets soft captions and a sidecar `.srt` when there is narration. Then run `check_sync.py` ([Sound](#sound)).
+9. **Deliver** (shared steps), with `export.py` for each platform.
 
 `motion.js` in brief:
 
@@ -135,13 +169,18 @@ Pipeline:
 - `pointer(x, y)`: `.tap(t, x, y, sound)`, `.moveTo(t, x, y)`, `.drag(t0, t1, path)`, `.appear(t)`, `.hide(t)`. Moves travel on a gentle arc unless you pass a spring, and taps declare sounds automatically.
 - `sfx(t, kind)` declares a UI sound (`tap`, `key`, `toggle`, `whoosh`, `success`, `pop`; `sfx.py` synthesizes the kit, so there is nothing to license). `mux.py` places each sound's measured peak on its time.
 - For a "liquid" indicator (tab, toggle, language pill), give each edge its own track: the leading edge gets a faster spring than the trailing edge.
+- Springs take `{duration, damping}`, where damping is the damping ratio ζ (1 = no bounce, 0.8 premium), or the older `{duration, bounce}` (bounce = 1 − ζ).
+- **Randomness and loops.** `rand(seed)` gives a seeded random function; draw from it at load, never inside `seek`. `phase(t, period)` is a 0–1 loop phase. `loopNoise(t, period, seed)` is smooth noise that repeats exactly, for ambient drift.
+- **Captions.** `captions(el, t)` burns in the caption line from `window.CAPTIONS`, which `timeline.py` writes into `words.js` with the same line breaks as the `.srt`. Words get the classes `caption-past`, `caption-active` and `caption-upcoming`. Theme them with `--caption-size`, `--caption-color`, `--caption-accent` and `--caption-bg`.
+- **Clips.** `frames(img, {dir, fps, count})` plays an image sequence from `clip.py` (`uv run --script <skill>/scripts/clip.py video.mp4 --out clip --fps 30`) frame-exactly. It returns a function of time that returns a promise; `seek` must return or await it. Chromium in the renderer cannot decode H.264, so never use a `<video>` element.
+- **Preview and debug, in any page.** `?t=12.5` shows one moment, and `?debug=1` adds a frame, time, scene and cue overlay. `cue()` records `window.CUE_TIMES` for the review tools.
 
 Gotchas:
 
 - Never put `will-change` on anything the camera scales, or text renders blurry.
 - No CSS transitions, animations, timers or state carried between frames. The renderer splits time into chunks across several pages, so every frame must be computable on its own.
 - `progress()` treats an infinite end as "never", so `presence(t, on, Infinity)` stays visible. Do not pass `NaN` to styles; a `NaN` opacity silently renders at full opacity.
-- Pages load over the renderer's local server, because ES modules do not load from `file://`. `node <skill>/scripts/render.mjs index.html --serve` serves the page for a browser preview. To open it at one moment with `?t=12.5`, the page must read that parameter and call `seek`, as `examples/walkthrough` does.
+- Pages load over the renderer's local server, because ES modules do not load from `file://`. `node <skill>/scripts/render.mjs index.html --serve` serves the page for a browser preview (`?t=12.5`, `?debug=1`). If a page fails to load, the renderer prints its script errors and failed URLs.
 - Put the camera inside a clipped stage when there is a side panel, and keep the zoomed focus inside a phone's edges, or a zoom shows the canvas past the screen's edge.
 - For a seamless loop, the last frame must match the first, including the pointer's position and speed. Leave about 1.5 seconds after the final morph for springs to settle.
 - Playwright is loaded only from `$PLAYWRIGHT_DIR`, the skill's cache folder (`setup.sh` installs it there), or the global npm root, never from the current folder. Where Playwright cannot download its browser (some cloud sandboxes), set `CHROMIUM_PATH` to an installed Chromium. `RENDER_WORKERS` limits the parallel pages on a busy machine.
