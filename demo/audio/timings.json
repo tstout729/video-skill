@@ -1,0 +1,844 @@
+{
+ "s01": {
+  "digest": "39631c86b82e25c3",
+  "duration": 8.64,
+  "match": 1.0,
+  "words": [
+   {
+    "word": "Ask",
+    "start": 0.0,
+    "end": 0.32
+   },
+   {
+    "word": "an",
+    "start": 0.4,
+    "end": 0.48
+   },
+   {
+    "word": "AI",
+    "start": 0.56,
+    "end": 0.96
+   },
+   {
+    "word": "to",
+    "start": 1.04,
+    "end": 1.12
+   },
+   {
+    "word": "animate",
+    "start": 1.2,
+    "end": 1.6
+   },
+   {
+    "word": "something,",
+    "start": 1.84,
+    "end": 2.24
+   },
+   {
+    "word": "and",
+    "start": 2.32,
+    "end": 2.4
+   },
+   {
+    "word": "it",
+    "start": 2.48,
+    "end": 2.56
+   },
+   {
+    "word": "usually",
+    "start": 2.64,
+    "end": 2.96
+   },
+   {
+    "word": "moves",
+    "start": 3.12,
+    "end": 3.28
+   },
+   {
+    "word": "too",
+    "start": 3.36,
+    "end": 3.52
+   },
+   {
+    "word": "fast.",
+    "start": 3.6,
+    "end": 4.48
+   },
+   {
+    "word": "Everything",
+    "start": 4.56,
+    "end": 4.96
+   },
+   {
+    "word": "happens",
+    "start": 5.04,
+    "end": 5.36
+   },
+   {
+    "word": "at",
+    "start": 5.44,
+    "end": 5.52
+   },
+   {
+    "word": "once,",
+    "start": 5.6,
+    "end": 6.24
+   },
+   {
+    "word": "and",
+    "start": 6.32,
+    "end": 6.4
+   },
+   {
+    "word": "nothing",
+    "start": 6.56,
+    "end": 6.72
+   },
+   {
+    "word": "stays",
+    "start": 6.8,
+    "end": 7.12
+   },
+   {
+    "word": "still",
+    "start": 7.2,
+    "end": 7.44
+   },
+   {
+    "word": "long",
+    "start": 7.52,
+    "end": 7.68
+   },
+   {
+    "word": "enough",
+    "start": 7.72,
+    "end": 7.92
+   },
+   {
+    "word": "to",
+    "start": 8.0,
+    "end": 8.08
+   },
+   {
+    "word": "read.",
+    "start": 8.16,
+    "end": 8.72
+   }
+  ]
+ },
+ "s02": {
+  "digest": "7456aba277d0c654",
+  "duration": 7.6,
+  "match": 1.0,
+  "words": [
+   {
+    "word": "Here",
+    "start": 0.0,
+    "end": 0.24
+   },
+   {
+    "word": "is",
+    "start": 0.32,
+    "end": 0.4
+   },
+   {
+    "word": "the",
+    "start": 0.48,
+    "end": 0.56
+   },
+   {
+    "word": "same",
+    "start": 0.64,
+    "end": 0.88
+   },
+   {
+    "word": "animation,",
+    "start": 1.2,
+    "end": 1.68
+   },
+   {
+    "word": "slowed",
+    "start": 1.76,
+    "end": 2.08
+   },
+   {
+    "word": "down.",
+    "start": 2.28,
+    "end": 2.56
+   },
+   {
+    "word": "One",
+    "start": 3.04,
+    "end": 3.2
+   },
+   {
+    "word": "change",
+    "start": 3.36,
+    "end": 3.68
+   },
+   {
+    "word": "at",
+    "start": 3.76,
+    "end": 3.84
+   },
+   {
+    "word": "a",
+    "start": 3.92,
+    "end": 3.96
+   },
+   {
+    "word": "time.",
+    "start": 4.0,
+    "end": 4.48
+   },
+   {
+    "word": "Each",
+    "start": 4.96,
+    "end": 5.2
+   },
+   {
+    "word": "step",
+    "start": 5.28,
+    "end": 5.52
+   },
+   {
+    "word": "holds,",
+    "start": 5.6,
+    "end": 6.32
+   },
+   {
+    "word": "so",
+    "start": 6.4,
+    "end": 6.48
+   },
+   {
+    "word": "you",
+    "start": 6.56,
+    "end": 6.64
+   },
+   {
+    "word": "can",
+    "start": 6.72,
+    "end": 6.8
+   },
+   {
+    "word": "follow",
+    "start": 6.88,
+    "end": 7.12
+   },
+   {
+    "word": "it.",
+    "start": 7.2,
+    "end": 7.68
+   }
+  ]
+ },
+ "s03": {
+  "digest": "a1eb6d8f6c1d50fa",
+  "duration": 15.68,
+  "match": 1.0,
+  "words": [
+   {
+    "word": "This",
+    "start": 0.0,
+    "end": 0.35
+   },
+   {
+    "word": "is",
+    "start": 0.4,
+    "end": 0.52
+   },
+   {
+    "word": "the",
+    "start": 0.56,
+    "end": 0.667
+   },
+   {
+    "word": "video",
+    "start": 0.68,
+    "end": 0.976
+   },
+   {
+    "word": "skill,",
+    "start": 1.04,
+    "end": 1.52
+   },
+   {
+    "word": "a",
+    "start": 1.92,
+    "end": 2.0
+   },
+   {
+    "word": "free,",
+    "start": 2.08,
+    "end": 2.64
+   },
+   {
+    "word": "open-source",
+    "start": 2.8,
+    "end": 3.28
+   },
+   {
+    "word": "skill",
+    "start": 3.36,
+    "end": 3.68
+   },
+   {
+    "word": "for",
+    "start": 3.76,
+    "end": 3.84
+   },
+   {
+    "word": "coding",
+    "start": 3.92,
+    "end": 4.24
+   },
+   {
+    "word": "agents",
+    "start": 4.32,
+    "end": 4.64
+   },
+   {
+    "word": "like",
+    "start": 4.72,
+    "end": 4.96
+   },
+   {
+    "word": "Claude",
+    "start": 5.04,
+    "end": 5.28
+   },
+   {
+    "word": "Code",
+    "start": 5.44,
+    "end": 5.6
+   },
+   {
+    "word": "and",
+    "start": 5.68,
+    "end": 5.76
+   },
+   {
+    "word": "Codex.",
+    "start": 5.84,
+    "end": 6.96
+   },
+   {
+    "word": "You",
+    "start": 7.08,
+    "end": 7.2
+   },
+   {
+    "word": "ask",
+    "start": 7.32,
+    "end": 7.44
+   },
+   {
+    "word": "for",
+    "start": 7.52,
+    "end": 7.6
+   },
+   {
+    "word": "a",
+    "start": 7.68,
+    "end": 7.72
+   },
+   {
+    "word": "video.",
+    "start": 7.76,
+    "end": 8.48
+   },
+   {
+    "word": "Your",
+    "start": 8.72,
+    "end": 8.88
+   },
+   {
+    "word": "agent",
+    "start": 8.96,
+    "end": 9.28
+   },
+   {
+    "word": "writes",
+    "start": 9.36,
+    "end": 9.6
+   },
+   {
+    "word": "the",
+    "start": 9.68,
+    "end": 9.72
+   },
+   {
+    "word": "script,",
+    "start": 9.76,
+    "end": 10.4
+   },
+   {
+    "word": "records",
+    "start": 10.64,
+    "end": 10.88
+   },
+   {
+    "word": "the",
+    "start": 10.92,
+    "end": 10.96
+   },
+   {
+    "word": "voice,",
+    "start": 11.04,
+    "end": 11.6
+   },
+   {
+    "word": "and",
+    "start": 11.68,
+    "end": 11.76
+   },
+   {
+    "word": "animates",
+    "start": 11.84,
+    "end": 12.32
+   },
+   {
+    "word": "every",
+    "start": 12.4,
+    "end": 12.64
+   },
+   {
+    "word": "frame",
+    "start": 12.8,
+    "end": 13.12
+   },
+   {
+    "word": "in",
+    "start": 13.2,
+    "end": 13.28
+   },
+   {
+    "word": "code,",
+    "start": 13.36,
+    "end": 14.08
+   },
+   {
+    "word": "in",
+    "start": 14.16,
+    "end": 14.24
+   },
+   {
+    "word": "time",
+    "start": 14.32,
+    "end": 14.64
+   },
+   {
+    "word": "with",
+    "start": 14.72,
+    "end": 14.8
+   },
+   {
+    "word": "the",
+    "start": 14.84,
+    "end": 14.88
+   },
+   {
+    "word": "narrator.",
+    "start": 14.92,
+    "end": 15.76
+   }
+  ]
+ },
+ "s04": {
+  "digest": "10e1cc80da933694",
+  "duration": 12.8,
+  "match": 1.0,
+  "words": [
+   {
+    "word": "It",
+    "start": 0.0,
+    "end": 0.16
+   },
+   {
+    "word": "makes",
+    "start": 0.32,
+    "end": 0.48
+   },
+   {
+    "word": "three",
+    "start": 0.56,
+    "end": 0.8
+   },
+   {
+    "word": "kinds",
+    "start": 0.88,
+    "end": 1.2
+   },
+   {
+    "word": "of",
+    "start": 1.24,
+    "end": 1.28
+   },
+   {
+    "word": "video.",
+    "start": 1.36,
+    "end": 1.84
+   },
+   {
+    "word": "Explainers",
+    "start": 2.32,
+    "end": 3.04
+   },
+   {
+    "word": "that",
+    "start": 3.12,
+    "end": 3.2
+   },
+   {
+    "word": "draw",
+    "start": 3.28,
+    "end": 3.6
+   },
+   {
+    "word": "how",
+    "start": 3.68,
+    "end": 3.76
+   },
+   {
+    "word": "a",
+    "start": 3.8,
+    "end": 3.84
+   },
+   {
+    "word": "system",
+    "start": 3.92,
+    "end": 4.32
+   },
+   {
+    "word": "works.",
+    "start": 4.4,
+    "end": 5.16
+   },
+   {
+    "word": "Walkthroughs",
+    "start": 5.44,
+    "end": 6.08
+   },
+   {
+    "word": "of",
+    "start": 6.12,
+    "end": 6.16
+   },
+   {
+    "word": "a",
+    "start": 6.24,
+    "end": 6.32
+   },
+   {
+    "word": "real",
+    "start": 6.4,
+    "end": 6.64
+   },
+   {
+    "word": "app,",
+    "start": 6.76,
+    "end": 7.12
+   },
+   {
+    "word": "with",
+    "start": 7.2,
+    "end": 7.28
+   },
+   {
+    "word": "a",
+    "start": 7.32,
+    "end": 7.36
+   },
+   {
+    "word": "pointer",
+    "start": 7.44,
+    "end": 7.84
+   },
+   {
+    "word": "that",
+    "start": 7.92,
+    "end": 8.0
+   },
+   {
+    "word": "clicks",
+    "start": 8.08,
+    "end": 8.48
+   },
+   {
+    "word": "as",
+    "start": 8.56,
+    "end": 8.64
+   },
+   {
+    "word": "the",
+    "start": 8.72,
+    "end": 8.76
+   },
+   {
+    "word": "narrator",
+    "start": 8.8,
+    "end": 9.2
+   },
+   {
+    "word": "speaks.",
+    "start": 9.28,
+    "end": 9.84
+   },
+   {
+    "word": "And",
+    "start": 10.32,
+    "end": 10.56
+   },
+   {
+    "word": "motion",
+    "start": 10.72,
+    "end": 11.04
+   },
+   {
+    "word": "loops",
+    "start": 11.12,
+    "end": 11.44
+   },
+   {
+    "word": "for",
+    "start": 11.52,
+    "end": 11.6
+   },
+   {
+    "word": "social",
+    "start": 11.68,
+    "end": 12.0
+   },
+   {
+    "word": "posts.",
+    "start": 12.08,
+    "end": 12.88
+   }
+  ]
+ },
+ "s05": {
+  "digest": "819bbd28b979d2b5",
+  "duration": 10.08,
+  "match": 1.0,
+  "words": [
+   {
+    "word": "Every",
+    "start": 0.0,
+    "end": 0.32
+   },
+   {
+    "word": "video",
+    "start": 0.4,
+    "end": 0.8
+   },
+   {
+    "word": "follows",
+    "start": 0.88,
+    "end": 1.2
+   },
+   {
+    "word": "the",
+    "start": 1.28,
+    "end": 1.36
+   },
+   {
+    "word": "classic",
+    "start": 1.56,
+    "end": 1.76
+   },
+   {
+    "word": "principles",
+    "start": 1.84,
+    "end": 2.4
+   },
+   {
+    "word": "of",
+    "start": 2.48,
+    "end": 2.52
+   },
+   {
+    "word": "animation.",
+    "start": 2.56,
+    "end": 3.52
+   },
+   {
+    "word": "Then",
+    "start": 3.84,
+    "end": 4.08
+   },
+   {
+    "word": "the",
+    "start": 4.24,
+    "end": 4.32
+   },
+   {
+    "word": "agent",
+    "start": 4.48,
+    "end": 4.8
+   },
+   {
+    "word": "checks",
+    "start": 4.88,
+    "end": 5.2
+   },
+   {
+    "word": "its",
+    "start": 5.28,
+    "end": 5.36
+   },
+   {
+    "word": "own",
+    "start": 5.44,
+    "end": 5.6
+   },
+   {
+    "word": "work.",
+    "start": 5.8,
+    "end": 6.24
+   },
+   {
+    "word": "It",
+    "start": 6.48,
+    "end": 6.64
+   },
+   {
+    "word": "looks",
+    "start": 6.72,
+    "end": 6.88
+   },
+   {
+    "word": "at",
+    "start": 6.96,
+    "end": 7.12
+   },
+   {
+    "word": "every",
+    "start": 7.2,
+    "end": 7.44
+   },
+   {
+    "word": "frame,",
+    "start": 7.6,
+    "end": 8.16
+   },
+   {
+    "word": "and",
+    "start": 8.2,
+    "end": 8.24
+   },
+   {
+    "word": "it",
+    "start": 8.32,
+    "end": 8.4
+   },
+   {
+    "word": "measures",
+    "start": 8.48,
+    "end": 8.88
+   },
+   {
+    "word": "every",
+    "start": 9.04,
+    "end": 9.28
+   },
+   {
+    "word": "pause.",
+    "start": 9.36,
+    "end": 10.16
+   }
+  ]
+ },
+ "s06": {
+  "digest": "6acca31034a07fb6",
+  "duration": 6.88,
+  "match": 1.0,
+  "words": [
+   {
+    "word": "Captions",
+    "start": 0.0,
+    "end": 0.48
+   },
+   {
+    "word": "are",
+    "start": 0.56,
+    "end": 0.64
+   },
+   {
+    "word": "included,",
+    "start": 0.72,
+    "end": 1.52
+   },
+   {
+    "word": "in",
+    "start": 1.6,
+    "end": 1.68
+   },
+   {
+    "word": "any",
+    "start": 1.76,
+    "end": 1.92
+   },
+   {
+    "word": "language.",
+    "start": 2.0,
+    "end": 2.88
+   },
+   {
+    "word": "No",
+    "start": 2.96,
+    "end": 3.12
+   },
+   {
+    "word": "video",
+    "start": 3.2,
+    "end": 3.52
+   },
+   {
+    "word": "editor",
+    "start": 3.6,
+    "end": 3.92
+   },
+   {
+    "word": "needed.",
+    "start": 4.0,
+    "end": 4.8
+   },
+   {
+    "word": "It's",
+    "start": 4.88,
+    "end": 5.04
+   },
+   {
+    "word": "free,",
+    "start": 5.12,
+    "end": 5.6
+   },
+   {
+    "word": "and",
+    "start": 5.68,
+    "end": 5.76
+   },
+   {
+    "word": "the",
+    "start": 5.8,
+    "end": 5.84
+   },
+   {
+    "word": "link",
+    "start": 5.92,
+    "end": 6.08
+   },
+   {
+    "word": "is",
+    "start": 6.16,
+    "end": 6.24
+   },
+   {
+    "word": "below.",
+    "start": 6.44,
+    "end": 6.96
+   }
+  ]
+ }
+}

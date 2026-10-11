@@ -1,0 +1,13 @@
+{
+  "title": "What happens when you open a website",
+  "voice_id": "JBFqnCBsd6RMkjVDRZzb",
+  "model_id": "eleven_v4",
+  "voice_settings": {"stability": 0.5, "similarity_boost": 0.75},
+  "language": "en",
+  "scenes": [
+    {"id": "s01", "text": "What happens when you open a website? It takes four steps. First, you type a web address, like example.com, and press Enter."},
+    {"id": "s02", "text": "Computers find each other by number, not by name. DNS is the internet's phone book. The browser asks DNS to look up example.com. DNS sends back the server's IP address."},
+    {"id": "s03", "text": "Next, the browser sends a request to that IP address. The request hops across the internet to the server. The server sends back the page."},
+    {"id": "s04", "text": "Last, the browser draws the page on your screen. To recap: you type a web address. DNS finds the IP address. The server sends back the page. The browser draws it."}
+  ]
+}

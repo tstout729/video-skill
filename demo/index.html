@@ -1,0 +1,677 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>video skill: animation you can follow</title>
+<style>
+  @font-face { font-family: "Geist"; src: url("/_skill/assets/fonts/geist-latin-wght-normal.woff2") format("woff2"); font-weight: 100 900; font-display: block; }
+  @font-face { font-family: "Nunito Sans"; src: url("/_skill/assets/fonts/NunitoSans-SemiBold.ttf") format("truetype"); font-weight: 600; font-display: block; }
+  :root {
+    --canvas: #EEEBE6; --surface: #FFFFFF; --ink: #1C1B19; --muted: #67635C; --line: #E6E1DA;
+    --accent: #2F55E0; --accent-soft: #E8EDFC; --dark: #18191E;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--canvas); }
+  body { width: 1080px; height: 1080px; overflow: hidden; font-family: "Geist", sans-serif; color: var(--ink);
+         -webkit-font-smoothing: antialiased; }
+  #stage { position: absolute; left: 0; top: 0; width: 1080px; height: 1080px; overflow: hidden; background: var(--canvas); }
+  .abs { position: absolute; }
+  .hide { opacity: 0; }
+  .card { background: var(--surface); border-radius: 32px;
+          box-shadow: 0 1px 2px rgba(40, 30, 20, 0.05), 0 10px 30px rgba(40, 30, 20, 0.07); }
+
+  /* eyebrow pill and headlines */
+  #eb { left: 0; top: 64px; height: 52px; border-radius: 26px; overflow: hidden; }
+  .eb-t { top: 0; left: 24px; line-height: 52px; font-size: 28px; font-weight: 600; letter-spacing: 0.01em; white-space: nowrap; }
+  .hl { left: 0; width: 1080px; text-align: center; top: 136px; font-size: 64px; line-height: 72px; font-weight: 620; letter-spacing: -0.03em; white-space: nowrap; }
+
+  /* hook: the app card */
+  #cam1 { left: 0; top: 0; width: 1080px; height: 1080px; transform-origin: 540px 650px; }
+  #app { left: 140px; width: 800px; overflow: hidden; }
+  #app-title { left: 52px; top: 46px; font-size: 44px; font-weight: 620; letter-spacing: -0.02em; white-space: nowrap; }
+  #app-sub { left: 52px; top: 106px; font-size: 30px; color: var(--muted); white-space: nowrap; }
+  .row { left: 52px; width: 696px; height: 84px; display: flex; align-items: center; }
+  .row + .row { }
+  .av { width: 64px; height: 64px; border-radius: 32px; background: var(--accent-soft); color: var(--accent);
+        font-size: 28px; font-weight: 650; display: flex; align-items: center; justify-content: center; flex: none; }
+  .nm { margin-left: 24px; font-size: 34px; font-weight: 550; letter-spacing: -0.01em; flex: 1; white-space: nowrap; }
+  .rl { font-size: 30px; color: var(--muted); white-space: nowrap; }
+  .sep { left: 52px; width: 696px; height: 2px; background: var(--line); }
+  .btn { background: var(--accent); border-radius: 20px; }
+  .bt { left: 0; right: 0; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; gap: 12px;
+        color: #fff; font-size: 34px; font-weight: 600; white-space: nowrap; }
+  #app-btn { left: 52px; right: 52px; bottom: 48px; height: 88px; }
+  #app-ok { left: 0; right: 0; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; }
+  #ok-in { display: flex; flex-direction: column; align-items: center; }
+  #ok-title { margin-top: 26px; font-size: 44px; font-weight: 620; letter-spacing: -0.02em; }
+  #ok-sub { margin-top: 6px; font-size: 28px; color: var(--muted); }
+
+  /* pointer */
+  #ptr { left: 0; top: 0; width: 48px; height: 48px; z-index: 50; }
+  #ring { left: 0; top: 0; width: 80px; height: 80px; border-radius: 40px; border: 3px solid var(--accent); z-index: 49; }
+
+  /* s03: title, request, pipeline */
+  #title { left: 0; width: 1080px; height: 120px; top: 410px; display: flex; align-items: center; justify-content: center; gap: 30px; }
+  .mark { width: 104px; height: 104px; border-radius: 28px; background: var(--accent); flex: none; position: relative; }
+  .mark svg { position: absolute; left: 0; top: 0; }
+  .ttext { font-size: 112px; font-weight: 640; letter-spacing: -0.045em; line-height: 120px; white-space: nowrap; }
+  .sub { left: 0; width: 1080px; text-align: center; font-size: 44px; line-height: 56px; font-weight: 500; letter-spacing: -0.015em; white-space: nowrap; }
+  #sub1 { top: 566px; color: var(--muted); }
+  #sub2 { top: 634px; color: var(--ink); }
+  #chat { left: 72px; top: 330px; width: 936px; height: 188px; border-radius: 28px; }
+  #prompt { left: 40px; top: 36px; font-size: 44px; line-height: 56px; font-weight: 600; color: var(--accent); }
+  #req { left: 92px; top: 40px; width: 800px; font-size: 40px; line-height: 54px; font-weight: 500; letter-spacing: -0.015em; }
+  #caret { display: inline-block; width: 3px; height: 44px; background: var(--accent); vertical-align: -8px; margin-left: 3px; }
+  .tile { top: 720px; width: 152px; height: 180px; border-radius: 26px; background: #fff;
+          box-shadow: 0 1px 2px rgba(40, 30, 20, 0.05), 0 8px 24px rgba(40, 30, 20, 0.06); }
+  .tile svg { position: absolute; left: 48px; top: 32px; }
+  .tile .lab { position: absolute; left: 0; right: 0; top: 114px; text-align: center; font-size: 32px; font-weight: 580; letter-spacing: -0.01em; }
+  #flow { left: 0; top: 0; width: 1080px; height: 1080px; overflow: visible; }
+
+  /* s04: three kinds */
+  #tabs { top: 248px; height: 96px; border-radius: 48px; background: #fff; display: flex; padding: 8px;
+          box-shadow: 0 1px 2px rgba(40, 30, 20, 0.05), 0 8px 24px rgba(40, 30, 20, 0.06); }
+  .tab { padding: 0 34px; line-height: 80px; font-size: 44px; font-weight: 600; letter-spacing: -0.02em; white-space: nowrap; }
+  .ind { top: 8px; height: 80px; border-radius: 40px; background: var(--accent); }
+  .over { left: 0; top: 0; right: 0; bottom: 0; display: flex; padding: 8px; color: #fff; }
+  #ex { left: 72px; top: 384px; width: 936px; height: 580px; border-radius: 32px; overflow: hidden; }
+  #ex-exp, #ex-walk, #ex-loop { left: 0; top: 0; width: 936px; height: 580px; }
+  .nlab { font-family: "Nunito Sans", sans-serif; font-weight: 600; }
+  #wk-bar { left: 0; top: 0; width: 936px; height: 88px; border-bottom: 2px solid #EEEAE4; }
+  #wk-brand { left: 40px; top: 24px; font-size: 32px; font-weight: 700; letter-spacing: -0.02em; }
+  #wk-h { left: 208px; top: 128px; font-size: 40px; font-weight: 620; letter-spacing: -0.02em; white-space: nowrap; }
+  #wk-l { left: 208px; top: 204px; font-size: 28px; color: var(--muted); }
+  #wk-in { left: 208px; top: 246px; width: 520px; height: 80px; border: 2px solid #DCD7CF; border-radius: 16px;
+           font-size: 30px; line-height: 76px; padding-left: 24px; }
+  #wk-btn { left: 208px; top: 352px; width: 520px; height: 84px; border-radius: 18px; }
+  #shape { left: 0; top: 0; overflow: hidden; }
+  .sc { left: 0; top: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; gap: 18px; white-space: nowrap; }
+
+  /* s05: principles and the self-check */
+  .pn { font-size: 48px; line-height: 60px; font-weight: 600; letter-spacing: -0.025em; white-space: nowrap; }
+  .pn span { display: inline-block; }
+  #chk { left: 72px; top: 452px; width: 936px; height: 492px; }
+  #chk-t { left: 48px; top: 40px; font-size: 44px; font-weight: 620; letter-spacing: -0.02em; }
+  .chk-l { left: 48px; font-size: 28px; color: var(--muted); }
+  .fr { top: 172px; width: 110px; height: 76px; border-radius: 14px; background: #E7E3DC; overflow: visible; }
+  .fr i { position: absolute; background: #fff; border-radius: 6px; left: 23px; width: 64px; }
+  .fr i b { position: absolute; left: 6px; right: 6px; bottom: 5px; height: 5px; border-radius: 3px; background: var(--accent); }
+  .tick { width: 34px; height: 34px; border-radius: 17px; background: var(--accent); right: -10px; top: -12px; }
+  #track { left: 48px; top: 420px; width: 840px; height: 2px; background: #E3DED6; }
+  .bar { top: 409px; height: 24px; border-radius: 12px; background: var(--accent); transform-origin: left center; }
+  .bl { top: 348px; font-size: 30px; font-weight: 620; color: var(--accent); display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+
+  /* s06: captions and the end card */
+  #player { left: 72px; top: 252px; width: 936px; height: 526px; border-radius: 28px; background: #E2DED7; overflow: hidden; }
+  #mini { left: 258px; top: 70px; width: 420px; height: 250px; border-radius: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  #mini-t { margin-top: 18px; font-size: 32px; font-weight: 620; letter-spacing: -0.02em; }
+  .cap { left: 0; right: 0; bottom: 64px; display: flex; justify-content: center; }
+  .cap span { background: rgba(22, 21, 19, 0.86); color: #fff; font-size: 32px; line-height: 44px; font-weight: 500; padding: 10px 24px; border-radius: 12px; white-space: nowrap; }
+  #pbar { left: 28px; right: 28px; bottom: 26px; height: 6px; border-radius: 3px; background: #CBC5BB; }
+  #pfill { left: 0; top: 0; bottom: 0; width: 58%; border-radius: 3px; background: var(--accent); }
+  #lang { top: 818px; height: 88px; border-radius: 44px; background: #fff; display: flex; padding: 8px;
+          box-shadow: 0 1px 2px rgba(40, 30, 20, 0.05), 0 8px 24px rgba(40, 30, 20, 0.06); }
+  #lang .tab { line-height: 72px; font-size: 36px; padding: 0 34px; }
+  #lang .ind { height: 72px; border-radius: 36px; }
+  #endT { left: 0; width: 1080px; height: 120px; top: 320px; display: flex; align-items: center; justify-content: center; gap: 30px; }
+  #endS { top: 470px; color: var(--muted); }
+  #endU { top: 544px; color: var(--accent); font-weight: 560; }
+  #endI { top: 654px; height: 92px; border-radius: 22px; display: flex; align-items: center; gap: 16px; padding: 0 40px; white-space: nowrap; }
+  #endI b { color: var(--accent); font-size: 36px; font-weight: 600; }
+  #endI span { font-size: 32px; font-weight: 520; letter-spacing: -0.01em; }
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <!-- s01-s02: the same UI sequence, rushed and then staged -->
+  <div id="eb" class="abs hide"><span id="eb-b" class="abs eb-t">Before</span><span id="eb-a" class="abs eb-t" style="color:#fff">After</span></div>
+  <div id="hl-fast" class="abs hl hide">Too fast to follow.</div>
+  <div id="hl-one" class="abs hl hide">One change at a time.</div>
+
+  <div id="cam1" class="abs">
+    <div id="app" class="abs card hide">
+      <div id="app-title" class="abs">Invite your team</div>
+      <div id="app-sub" class="abs">Add people to your workspace.</div>
+      <div id="row0" class="abs row" style="top:182px"><div class="av">MC</div><div class="nm">Maya Chen</div><div class="rl">Design</div></div>
+      <div id="sep0" class="abs sep" style="top:272px"></div>
+      <div id="row1" class="abs row" style="top:278px"><div class="av">LP</div><div class="nm">Leo Park</div><div class="rl">Engineering</div></div>
+      <div id="sep1" class="abs sep" style="top:368px"></div>
+      <div id="row2" class="abs row" style="top:374px"><div class="av">SR</div><div class="nm">Sam Rivera</div><div class="rl">Marketing</div></div>
+      <div id="app-btn" class="abs btn">
+        <div id="btn-a" class="abs bt">Add people</div>
+        <div id="btn-b" class="abs bt hide">Send invites</div>
+      </div>
+      <div id="app-ok" class="abs"><div id="ok-in" class="hide">
+        <svg width="112" height="112" viewBox="0 0 112 112"><circle cx="56" cy="56" r="56" fill="#2F55E0"/>
+          <path id="ok-check" d="M34 57 L49 72 L79 41" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div id="ok-title">3 invites sent</div>
+        <div id="ok-sub">Maya, Leo and Sam can join now.</div>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- s03: what it is, the request, the pipeline -->
+  <div id="title" class="abs">
+    <div id="title-mark" class="mark hide"><svg width="104" height="104" viewBox="0 0 104 104"><path d="M42 33 L74 52 L42 71 Z" fill="#fff" stroke="#fff" stroke-width="6" stroke-linejoin="round"/></svg></div>
+    <div id="title-text" class="ttext hide">video skill</div>
+  </div>
+  <div id="sub1" class="abs sub hide">Free and open source</div>
+  <div id="sub2" class="abs sub hide">For Claude Code and Codex</div>
+
+  <div id="chat" class="abs card hide">
+    <div id="prompt" class="abs">›</div>
+    <div id="req" class="abs"><span id="req-t"></span><span id="caret"></span></div>
+  </div>
+  <svg id="flow" class="abs" viewBox="0 0 1080 1080">
+    <path id="link" d="M148 518 L148 720" fill="none" stroke="#B9B3A9" stroke-width="3" stroke-linecap="round"/>
+    <g id="arrows" fill="none" stroke="#9E978C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></g>
+  </svg>
+  <div id="tiles"></div>
+
+  <!-- s04: three kinds -->
+  <div id="hl-three" class="abs hl hide">Three kinds of video</div>
+  <div id="tabs" class="abs hide">
+    <div class="tab" id="tab0">Explainer</div><div class="tab" id="tab1">Walkthrough</div><div class="tab" id="tab2">Loop</div>
+    <div id="ind" class="abs ind"></div>
+    <div id="tabs-on" class="abs over"><div class="tab">Explainer</div><div class="tab">Walkthrough</div><div class="tab">Loop</div></div>
+  </div>
+  <div id="ex" class="abs hide">
+    <svg id="ex-exp" class="abs" viewBox="0 0 936 580">
+      <text id="exp-title" class="nlab" x="56" y="84" font-size="30" fill="#A3A6B3">How a request finds a server</text>
+      <g id="node0"><rect x="86" y="248" width="230" height="108" rx="22" fill="#23252D" stroke="#8DA2FF" stroke-width="3"/>
+        <text class="nlab" x="201" y="313" font-size="34" fill="#fff" text-anchor="middle">Browser</text></g>
+      <g id="node1"><rect x="620" y="150" width="230" height="108" rx="22" fill="#23252D" stroke="#8DA2FF" stroke-width="3"/>
+        <text class="nlab" x="735" y="215" font-size="34" fill="#fff" text-anchor="middle">DNS</text></g>
+      <g id="node2"><rect x="620" y="376" width="230" height="108" rx="22" fill="#23252D" stroke="#8DA2FF" stroke-width="3"/>
+        <text class="nlab" x="735" y="441" font-size="34" fill="#fff" text-anchor="middle">Server</text></g>
+      <g fill="none" stroke="#E4E6EE" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+        <path id="ea0" d="M334 284 L600 214"/>
+        <path id="ea1" d="M334 320 L600 410"/>
+      </g>
+      <g fill="#E4E6EE">
+        <path id="eh0" d="M604 213 L584 209 L589 227 Z"/>
+        <path id="eh1" d="M604 411 L590 397 L584 415 Z"/>
+      </g>
+    </svg>
+    <div id="ex-walk" class="abs">
+      <div id="wk-bar" class="abs"><div id="wk-brand" class="abs">Acme</div></div>
+      <div id="wk-h" class="abs">Create your account</div>
+      <div id="wk-l" class="abs">Email</div>
+      <div id="wk-in" class="abs">maya@example.com</div>
+      <div id="wk-btn" class="abs btn">
+        <div id="wk-a" class="abs bt">Sign up</div>
+        <div id="wk-b" class="abs bt hide"><svg width="34" height="34" viewBox="0 0 34 34"><path d="M8 17.5 L14.5 24 L26 11" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>Account created</div>
+      </div>
+    </div>
+    <div id="ex-loop" class="abs">
+      <div id="shape" class="abs">
+        <div id="sh-a" class="abs sc"><svg width="68" height="68" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg></div>
+        <div id="sh-b" class="abs sc hide"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg><span style="color:#fff;font-size:46px;font-weight:600;letter-spacing:-0.02em">Uploading</span></div>
+        <div id="sh-c" class="abs sc hide" style="flex-direction:column;gap:14px"><svg width="96" height="96" viewBox="0 0 84 84"><circle cx="42" cy="42" r="42" fill="#2F55E0"/><path d="M25 43 L37 55 L60 31" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></svg><span style="font-size:46px;font-weight:620;letter-spacing:-0.02em">Uploaded</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- s05: principles and the self-check -->
+  <div id="hl-prin" class="abs hl hide">Principles of animation</div>
+  <div id="pn0" class="abs pn hide" style="left:150px;top:252px">Anticipation</div>
+  <div id="pn1" class="abs pn hide" style="left:590px;top:252px">Staging</div>
+  <div id="pn2" class="abs pn hide" style="left:150px;top:336px">Slow in and out</div>
+  <div id="pn3" class="abs pn" style="left:590px;top:336px"></div>
+  <div id="chk" class="abs card hide">
+    <div id="chk-t" class="abs">Checks its own work</div>
+    <div class="abs chk-l" style="top:124px">Every frame</div>
+    <div id="frames"></div>
+    <div class="abs chk-l" style="top:286px">Every pause</div>
+    <div id="track" class="abs"></div>
+    <div id="bars"></div>
+  </div>
+
+  <!-- s06: captions, then the end card -->
+  <div id="hl-cap" class="abs hl hide">Captions in any language</div>
+  <div id="hl-edit" class="abs hl hide">No video editor needed</div>
+  <div id="player" class="abs hide">
+    <div id="mini" class="abs card">
+      <svg width="84" height="84" viewBox="0 0 84 84"><circle cx="42" cy="42" r="42" fill="#2F55E0"/><path d="M25 43 L37 55 L60 31" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div id="mini-t">3 invites sent</div>
+    </div>
+    <div id="cap-en" class="abs cap hide"><span>Each step holds, so you can follow it.</span></div>
+    <div id="cap-es" class="abs cap hide"><span>Cada paso se mantiene, para que puedas seguirlo.</span></div>
+    <div id="pbar" class="abs"><div id="pfill" class="abs"></div></div>
+  </div>
+  <div id="lang" class="abs hide">
+    <div class="tab" id="lang0">English</div><div class="tab" id="lang1">Español</div>
+    <div id="lind" class="abs ind"></div>
+    <div id="lang-on" class="abs over"><div class="tab">English</div><div class="tab">Español</div></div>
+  </div>
+
+  <div id="endT" class="abs">
+    <div id="end-mark" class="mark hide"><svg width="104" height="104" viewBox="0 0 104 104"><path d="M42 33 L74 52 L42 71 Z" fill="#fff" stroke="#fff" stroke-width="6" stroke-linejoin="round"/></svg></div>
+    <div id="end-text" class="ttext hide">video skill</div>
+  </div>
+  <div id="endS" class="abs sub hide">Free and open source (MIT)</div>
+  <div id="endU" class="abs sub hide">github.com/tstout729/video-skill</div>
+  <div id="endI" class="abs card hide"><b>›</b><span>/plugin marketplace add tstout729/video-skill</span></div>
+
+  <svg id="ptr" class="abs hide" viewBox="0 0 48 48"><path d="M9 5 L9 38 L17.5 30.5 L23 43 L29 40.5 L23.5 28.5 L35 28.5 Z" fill="#1C1B19" stroke="#fff" stroke-width="3" stroke-linejoin="round"/></svg>
+  <div id="ring" class="abs hide"></div>
+</div>
+
+<script src="words.js"></script>
+<script type="module">
+import { track, springStep, SPRING, clamp, progress, easeOut, easeInOut, mix, style as styleEl, cue, sfx } from "/_skill/runtime/motion.js";
+
+const ACC = "#2F55E0", INK = "#1C1B19", WHITE = "#FFFFFF", DARK = "#18191E", NEUTRAL = "#DDD8D0", SOFT = "#E8EDFC";
+const W = 1080, H = 1080;
+const $ = (id) => document.getElementById(id);
+const style = (e, look, css) => styleEl(typeof e === "string" ? $(e) : e, look, css);
+await document.fonts.load('600 64px "Geist"');
+await document.fonts.load('600 34px "Nunito Sans"');
+await document.fonts.ready;
+
+// ---------- springs used here ----------
+const QUICK = { duration: 0.22, bounce: 0 };
+const BOUNCY = { duration: 0.34, bounce: 0.26 };   // only in the rushed "Before" version
+const SMOOTH = SPRING.smooth, GENTLE = SPRING.gentle;
+
+// Entrance and exit look for an element shown from `on` to `off`, driven by a spring.
+function ent(t, on, off = Infinity, o = {}) {
+  const { spring = SMOOTH, dist = 18, fade = 0.3, exit = 0.22, exitDist = -10, scale0 = 1, x0 = 0 } = o;
+  if (!(t >= on)) return { opacity: 0, blur: 0, y: dist, x: x0, scale: scale0 };
+  const s = springStep(t - on, spring);
+  const pi = easeOut(progress(t, on, on + fade));
+  const po = easeInOut(progress(t, off, off + exit));
+  return { opacity: pi * (1 - po), blur: 5 * (1 - pi) + 5 * po, y: dist * (1 - s) + exitDist * po,
+           x: x0 * (1 - s), scale: scale0 + (1 - scale0) * s };
+}
+// A 0..1 visibility track read as a look.
+const settleUp = (t, at, d) => (t >= at ? d * (1 - springStep(t - at, GENTLE)) : d);
+const vis = (v, dist = 10) => { const o = clamp(v); return { opacity: o, blur: 5 * (1 - o), y: dist * (1 - v) }; };
+const dash = (path, p) => { const L = path.getTotalLength(); path.style.strokeDasharray = `${L} ${L}`; path.style.strokeDashoffset = `${(L * (1 - clamp(p))).toFixed(2)}`; path.style.visibility = p > 0.002 ? "visible" : "hidden"; };
+
+// ---------- timing (all from the narrator's words) ----------
+const SC = window.SCENES;
+const T = {};
+// s01: the rushed version, twice
+T.rush1 = cue("AI") + 0.02;
+T.fast = cue("too fast");
+T.rush2re = cue("Everything");
+T.rush2 = T.rush2re + 0.3;
+T.fastOff = SC.s01.end + 0.1;
+// s02: the same sequence, staged
+T.reset = SC.s01.end + 0.3;
+T.ebSwap = T.reset + 0.4;
+T.ptrIn = cue("same") - 0.1;
+T.tap1 = cue("animation") + 0.12;
+T.one = cue("One change");
+T.tap2 = cue("holds") + 0.06;
+T.ok = T.tap2 + 0.14;
+// s03: the skill and its pipeline
+T.title = SC.s03.start - 0.05;
+T.exit2 = T.title - 0.6;
+T.free = cue("free");
+T.agents = cue("coding");
+T.you = cue("You ask");
+T.up = T.you - 0.75;
+T.chat = T.up + 0.25;
+T.type0 = T.you + 0.12;
+T.enter = cue("Your agent") + 0.12;
+T.tiles = [cue("script"), cue("voice"), cue("animates"), cue("code"), cue("time")];
+T.exit3 = SC.s03.end + 0.55;
+// s04: three kinds
+T.h4 = SC.s04.start - 0.4;
+T.tabs = T.h4 + 0.25;
+T.exp = cue("Explainers");
+T.up4 = T.exp - 0.78;
+T.draw = cue("draw");
+T.walk = cue("Walkthroughs");
+T.tap3 = cue("clicks") + 0.05;
+T.loop = cue("motion") - 0.05;
+T.morphB = T.loop + 0.8;
+T.morphC = T.loop + 2.42;
+// s05: principles and the self-check
+T.exit4 = cue("classic") - 0.42;
+T.h5 = T.exit4 + 0.38;
+T.names = [0, 1, 2, 3].map((i) => T.h5 + 0.45 + i * 0.35);
+T.chk = cue("checks");
+T.up5 = T.chk + 0.02;
+T.looks = cue("looks") + 0.1;
+T.meas = cue("measures");
+T.exit5 = SC.s05.end + 0.85;
+// s06: captions and the end card
+T.player = SC.s06.start - 0.35;
+T.capH = cue("Captions");
+T.capEn = cue("included");
+T.lang = cue("any language");
+T.edit = cue("No video");
+T.exit6 = cue("free") - 0.1;
+T.end0 = T.exit6 + 0.3;
+T.endS = T.end0 + 0.36;
+T.endU = Math.max(cue("link") + 0.02, T.endS + 0.4);
+T.endI = Math.max(cue("below"), T.endU + 0.4);
+const DURATION = window.NARRATION.duration;
+
+// ---------- hook: app card tracks ----------
+const A = {
+  h: track(324), head: track(1), btn: track(1), lblA: track(1), lblB: track(0),
+  rows: [track(0), track(0), track(0)], ok: track(0), okPop: track(0), okDraw: track(0),
+  press: track(0), camS: track(1), camX: track(0), camY: track(0),
+};
+function rush(T0) {
+  // The typical agent version: every change fires inside one second, springs overshoot,
+  // and the camera zooms while the content is still swapping.
+  A.camS.to(T0, 1.08, { duration: 0.3, bounce: 0.14 }); A.camY.to(T0, -26, { duration: 0.3, bounce: 0.14 });
+  A.camX.to(T0, 18, { duration: 0.3, bounce: 0.14 });
+  A.h.to(T0, 640, BOUNCY);
+  A.lblA.to(T0, 0, QUICK); A.lblB.to(T0 + 0.02, 1, QUICK);
+  A.rows.forEach((r) => r.to(T0 + 0.04, 1, BOUNCY));
+  A.press.to(T0 + 0.14, 1, { duration: 0.08, bounce: 0 }).to(T0 + 0.22, 0, QUICK);
+  A.head.to(T0 + 0.34, 0, QUICK); A.btn.to(T0 + 0.34, 0, QUICK); A.rows.forEach((r) => r.to(T0 + 0.34, 0, QUICK));
+  A.h.to(T0 + 0.34, 440, BOUNCY);
+  A.ok.to(T0 + 0.38, 1, QUICK); A.okPop.to(T0 + 0.38, 1, { duration: 0.32, bounce: 0.3 }); A.okDraw.to(T0 + 0.4, 1, QUICK);
+  A.camS.to(T0 + 0.46, 1, { duration: 0.34, bounce: 0.14 }); A.camY.to(T0 + 0.46, 0, { duration: 0.34, bounce: 0.14 });
+  A.camX.to(T0 + 0.46, 0, { duration: 0.34, bounce: 0.14 });
+  sfx(T0, "pop", 0.7); sfx(T0 + 0.14, "tap", 0.9); sfx(T0 + 0.4, "success", 0.7);
+}
+function backToStart(T0, quick) {
+  const sp = quick ? QUICK : SMOOTH;
+  A.ok.to(T0, 0, QUICK); A.okPop.to(T0, 0, QUICK); A.okDraw.to(T0, 0, QUICK);
+  A.h.to(T0, 324, quick ? QUICK : GENTLE);
+  const t1 = T0 + (quick ? 0.06 : 0.2);
+  A.head.to(t1, 1, sp); A.btn.to(t1, 1, sp); A.lblA.to(t1, 1, sp); A.lblB.to(t1, 0, QUICK);
+}
+rush(T.rush1);
+backToStart(T.rush2re, true);
+rush(T.rush2);
+backToStart(T.reset, false);
+// The staged version: the pointer arrives, presses, the card grows, then the rows follow.
+A.press.to(T.tap1 - 0.06, 1, { duration: 0.12, bounce: 0 }).to(T.tap1 + 0.08, 0, SPRING.snappy);
+A.h.to(T.tap1 + 0.1, 640, GENTLE);
+A.lblA.to(T.tap1 + 0.14, 0, QUICK); A.lblB.to(T.tap1 + 0.34, 1, SMOOTH);
+A.rows.forEach((r, i) => r.to(T.tap1 + 0.62 + i * 0.08, 1, SMOOTH));
+A.press.to(T.tap2 - 0.06, 1, { duration: 0.12, bounce: 0 }).to(T.tap2 + 0.08, 0, SPRING.snappy);
+A.head.to(T.ok, 0, QUICK); A.btn.to(T.ok, 0, QUICK); A.rows.forEach((r) => r.to(T.ok, 0, QUICK));
+A.h.to(T.ok + 0.04, 440, GENTLE);
+A.ok.to(T.ok + 0.26, 1, SMOOTH); A.okPop.to(T.ok + 0.26, 1, SMOOTH);
+A.okDraw.to(T.ok + 0.62, 1, { duration: 0.6, bounce: 0 });
+sfx(T.ok + 0.62, "success", 0.8);
+
+// Eyebrow: "Before" becomes "After".
+const ebWB = $("eb-b").offsetWidth + 48, ebWA = $("eb-a").offsetWidth + 48;
+const EB = { w: track(ebWB), acc: track(0), b: track(1), a: track(0) };
+EB.w.to(T.ebSwap, ebWA, SMOOTH); EB.acc.to(T.ebSwap, 1, SMOOTH);
+EB.b.to(T.ebSwap, 0, QUICK); EB.a.to(T.ebSwap + 0.16, 1, SMOOTH);
+
+// ---------- pointer ----------
+const P = { x: track(900), y: track(1000), show: track(0), press: track(0), taps: [] };
+// x and y use different springs, so every trip bends into a gentle arc.
+function move(t, x, y, d = 0.7) { P.x.to(t, x, { duration: d, bounce: 0.02 }); P.y.to(t + 0.04, y, { duration: d * 1.25, bounce: 0.02 }); }
+function tap(t, sound = "tap") { P.press.to(t - 0.06, 1, { duration: 0.12, bounce: 0 }).to(t + 0.08, 0, SPRING.snappy); P.taps.push(t); sfx(t, sound); }
+P.show.to(T.ptrIn, 1, SMOOTH);
+move(T.ptrIn + 0.02, 662, 726, 0.72);
+tap(T.tap1);
+move(T.tap1 + 0.3, 992, 790, 0.8);
+move(T.tap2 - 0.66, 672, 884, 0.72);
+tap(T.tap2);
+move(T.ok + 0.45, 930, 968, 0.8);
+P.show.to(T.exit2, 0, QUICK);
+// walkthrough example in s04
+P.x.set(T.tap3 - 1.2, 880); P.y.set(T.tap3 - 1.2, 930);
+P.show.to(T.tap3 - 1.1, 1, SMOOTH);
+move(T.tap3 - 0.7, 610, 790, 0.72);
+tap(T.tap3);
+move(T.tap3 + 0.4, 820, 900, 0.8);
+P.show.to(T.loop - 0.25, 0, QUICK);
+
+// ---------- s03: typing and the pipeline ----------
+const REQ = "Make a 60-second walkthrough of our signup page";
+const charT = [];
+{
+  const span = T.enter - 0.14 - T.type0;
+  for (let i = 0; i < REQ.length; i++) {
+    const jitter = (Math.sin(i * 12.9898) * 43758.5453) % 1 * 0.012;
+    charT.push(T.type0 + (span * i) / REQ.length + jitter);
+    if (i % 4 === 0) sfx(charT[i], "key", 0.45);
+  }
+  sfx(T.enter, "key", 0.9);
+}
+const TILE_NAMES = ["Script", "Voice", "Animate", "Check", "Render"];
+const ICONS = [
+  '<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/><path d="M10 13h6M10 17h6"/>',
+  '<path d="M4 10v4M8 7v10M12 4v16M16 8v8M20 10.5v3"/>',
+  '<circle cx="15" cy="12" r="5"/><path d="M3 9h5M2 12h5M3 15h5"/>',
+  '<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.8 2.8L16.5 9.5"/>',
+  '<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M10 9.2v5.6l4.6-2.8z"/>',
+];
+const TILE_X = [72, 268, 464, 660, 856];
+const tiles = TILE_NAMES.map((name, i) => {
+  const d = document.createElement("div");
+  d.className = "abs tile hide"; d.style.left = TILE_X[i] + "px";
+  d.innerHTML = `<svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[i]}</svg><div class="lab">${name}</div>`;
+  $("tiles").appendChild(d);
+  return d;
+});
+const arrows = [1, 2, 3, 4].map((i) => {
+  const x0 = TILE_X[i - 1] + 152 + 10, x1 = TILE_X[i] - 10, y = 810;
+  const g = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  g.setAttribute("d", `M${x0} ${y} L${x1} ${y} M${x1 - 8} ${y - 8} L${x1} ${y} L${x1 - 8} ${y + 8}`);
+  $("arrows").appendChild(g);
+  return g;
+});
+
+// ---------- s04: tabs and the three examples ----------
+function setupPill(container, ids) {
+  const w = container.offsetWidth;
+  container.style.left = `${(W - w) / 2}px`;
+  return ids.map((id) => ({ el: $(id), l: $(id).offsetLeft, r: $(id).offsetLeft + $(id).offsetWidth }));
+}
+const TABS = setupPill($("tabs"), ["tab0", "tab1", "tab2"]);
+const IND = { l: track(0), r: track(0), o: track(0) };
+{
+  const c0 = (TABS[0].l + TABS[0].r) / 2;
+  IND.l.set(0, c0); IND.r.set(0, c0);
+  IND.o.to(T.exp, 1, QUICK);
+  IND.l.to(T.exp, TABS[0].l, SMOOTH); IND.r.to(T.exp, TABS[0].r, SMOOTH);
+  // Liquid move: the leading edge leaves first and lands faster than the trailing edge.
+  IND.r.to(T.walk, TABS[1].r, { duration: 0.46, bounce: 0.04 }); IND.l.to(T.walk + 0.05, TABS[1].l, { duration: 0.72, bounce: 0.02 });
+  IND.r.to(T.loop, TABS[2].r, { duration: 0.46, bounce: 0.04 }); IND.l.to(T.loop + 0.05, TABS[2].l, { duration: 0.72, bounce: 0.02 });
+  sfx(T.exp, "toggle", 0.5); sfx(T.walk, "toggle", 0.5); sfx(T.loop, "toggle", 0.5);
+}
+const SH = { w: track(164), h: track(164), r: track(82), c: track(0), a: track(1), b: track(0), cc: track(0) };
+SH.w.to(T.morphB, 500, GENTLE); SH.a.to(T.morphB, 0, QUICK); SH.b.to(T.morphB + 0.22, 1, SMOOTH);
+SH.h.to(T.morphC, 320, GENTLE); SH.r.to(T.morphC, 40, GENTLE); SH.c.to(T.morphC, 1, SMOOTH);
+SH.b.to(T.morphC, 0, QUICK); SH.cc.to(T.morphC + 0.24, 1, SMOOTH);
+sfx(T.morphB, "pop", 0.5); sfx(T.morphC, "pop", 0.5);
+
+// ---------- s05: principles and the self-check ----------
+{
+  const el = $("pn3");
+  el.innerHTML = [..."Follow-through"].map((c) => `<span>${c}</span>`).join("");
+}
+const PN3 = [...$("pn3").children];
+const PN0Y = track(22);
+PN0Y.to(T.names[0] + 0.12, 32, { duration: 0.24, bounce: 0 }).to(T.names[0] + 0.3, 0, SMOOTH);
+const FRAMES = [];
+for (let i = 0; i < 7; i++) {
+  const f = document.createElement("div");
+  f.className = "abs fr"; f.style.left = `${48 + i * 122}px`;
+  const hh = 22 + i * 6;
+  f.innerHTML = `<i style="top:${(76 - hh) / 2}px;height:${hh}px"><b></b></i><div class="abs tick hide"><svg width="34" height="34" viewBox="0 0 34 34"><path d="M10 17.5 L15 22.5 L24.5 12.5" fill="none" stroke="#fff" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`;
+  $("frames").appendChild(f);
+  FRAMES.push(f.querySelector(".tick"));
+}
+const BARS = [[48, 236, "2.1 s"], [318, 458, "1.8 s"], [570, 844, "2.6 s"]].map(([x0, x1, label]) => {
+  const b = document.createElement("div");
+  b.className = "abs bar"; b.style.left = `${x0}px`; b.style.width = `${x1 - x0}px`;
+  const l = document.createElement("div");
+  l.className = "abs bl hide";
+  l.innerHTML = `${label}<svg width="30" height="30" viewBox="0 0 30 30"><path d="M8 15.5 L13 20.5 L22.5 10.5" fill="none" stroke="#2F55E0" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  $("bars").appendChild(b); $("bars").appendChild(l);
+  l.style.left = `${(x0 + x1) / 2 - l.offsetWidth / 2}px`;
+  return { b, l };
+});
+
+// ---------- s06: captions toggle ----------
+const LANG = setupPill($("lang"), ["lang0", "lang1"]);
+const LI = { l: track(LANG[0].l), r: track(LANG[0].r) };
+LI.r.to(T.lang, LANG[1].r, { duration: 0.46, bounce: 0.04 }); LI.l.to(T.lang + 0.05, LANG[1].l, { duration: 0.72, bounce: 0.02 });
+sfx(T.lang, "toggle", 0.7);
+$("endI").style.left = `${(W - $("endI").offsetWidth) / 2}px`;
+
+// ---------- frame ----------
+function clipTo(overId, boxId, e, r, o) {
+  const w = $(boxId).offsetWidth;
+  $(overId).style.clipPath = `inset(8px ${(w - e.r).toFixed(2)}px 8px ${e.l.toFixed(2)}px round ${r}px)`;
+  $(overId).style.opacity = o.toFixed(3);
+}
+
+function seek(t) {
+  // s01-s02 ------------------------------------------------------------
+  style("eb", ent(t, -1, T.exit2 + 0.12, { dist: 0 }), { left: 540 - EB.w(t) / 2, width: EB.w(t), background: mix(NEUTRAL, ACC, EB.acc(t)) });
+  style("eb-b", vis(EB.b(t), 6)); style("eb-a", vis(EB.a(t), 6));
+  style("hl-fast", ent(t, T.fast, T.fastOff, { dist: 14 }));
+  style("hl-one", ent(t, T.one, T.exit2 + 0.06, { dist: 14 }));
+
+  const h = A.h(t), top = 650 - h / 2;
+  style("cam1", { x: A.camX(t), y: A.camY(t), scale: A.camS(t) });
+  const appLook = ent(t, -1, T.exit2, { dist: 0, exitDist: 0 });
+  appLook.scale = 1 - 0.03 * easeInOut(progress(t, T.exit2, T.exit2 + 0.22));
+  style("app", appLook, { top, height: h });
+  style("app-title", vis(A.head(t), 8)); style("app-sub", vis(A.head(t), 8));
+  A.rows.forEach((r, i) => {
+    const v = r(t);
+    style(`row${i}`, { ...vis(v, 14), x: 0 });
+    if (i < 2) style(`sep${i}`, { opacity: clamp(Math.min(v, A.rows[i + 1](t))) });
+  });
+  const pr = A.press(t);
+  style("app-btn", { ...vis(A.btn(t), 8), scale: 1 - 0.03 * pr }, { background: mix(ACC, "#2442B8", pr * 0.6) });
+  style("btn-a", vis(A.lblA(t), 6)); style("btn-b", vis(A.lblB(t), 6));
+  const okv = A.ok(t);
+  style("ok-in", { opacity: clamp(okv), blur: 5 * (1 - clamp(okv)), y: 10 * (1 - okv), scale: 0.92 + 0.08 * A.okPop(t) });
+  dash($("ok-check"), A.okDraw(t));
+
+  // pointer ---------------------------------------------------------------
+  const pv = clamp(P.show(t));
+  style("ptr", { opacity: pv, x: P.x(t) - 9, y: P.y(t) - 5, scale: 1 - 0.12 * P.press(t) });
+  let ringP = -1, last = -Infinity;
+  for (const tp of P.taps) if (tp <= t && tp > last) last = tp;
+  if (t - last < 0.42) ringP = (t - last) / 0.42;
+  if (ringP >= 0) {
+    const s = 0.3 + 0.7 * easeOut(ringP);
+    style("ring", { opacity: 0.55 * (1 - ringP) * pv, x: P.x(t) - 40, y: P.y(t) - 40, scale: s });
+  } else style("ring", { opacity: 0 });
+
+  // s03 ---------------------------------------------------------------
+  const up = clamp(springStep(t - T.up, GENTLE), 0, 1.02);
+  const upv = t >= T.up ? up : 0;
+  const tLook = (on) => ent(t, on, T.exit3, { dist: 16, scale0: 0.96 });
+  style("title", { x: 0, y: (196 - 470) * upv, scale: 1 - 0.44 * upv });
+  style("title-mark", tLook(T.title));
+  style("title-text", tLook(T.title + 0.1));
+  style("sub1", ent(t, T.free, T.up - 0.1, { dist: 14 }));
+  style("sub2", ent(t, T.agents, T.up - 0.06, { dist: 14 }));
+  style("chat", ent(t, T.chat, T.exit3, { spring: GENTLE, dist: 34 }));
+  let n = 0; while (n < charT.length && charT[n] <= t) n++;
+  $("req-t").textContent = REQ.slice(0, n);
+  $("caret").style.opacity = t < T.enter ? 1 : 0;
+  dash($("link"), easeInOut(progress(t, T.enter + 0.04, T.tiles[0] - 0.02)));
+  $("link").style.opacity = 1 - easeInOut(progress(t, T.exit3, T.exit3 + 0.22));
+  tiles.forEach((d, i) => {
+    const on = T.tiles[i];
+    style(d, ent(t, on, T.exit3 + 0.04 * i, { dist: 18, scale0: 0.94 }));
+    const act = easeInOut(progress(t, on, on + 0.35)) * (1 - easeInOut(progress(t, T.tiles[i + 1] ?? Infinity, (T.tiles[i + 1] ?? Infinity) + 0.35)));
+    d.style.background = mix(WHITE, ACC, act);
+    d.querySelector("svg").style.color = mix(ACC, WHITE, act);
+    d.querySelector(".lab").style.color = mix(INK, WHITE, act);
+  });
+  arrows.forEach((a, k) => {
+    const on = T.tiles[k + 1] - 0.24;
+    dash(a, easeInOut(progress(t, on, on + 0.24)));
+    a.style.opacity = 1 - easeInOut(progress(t, T.exit3, T.exit3 + 0.22));
+  });
+
+  // s04 ---------------------------------------------------------------
+  const dy4 = settleUp(t, T.up4, 236);
+  const h4 = ent(t, T.h4, T.exit4, { dist: 14 }); h4.y += dy4; style("hl-three", h4);
+  const tb4 = ent(t, T.tabs, T.exit4 + 0.05, { dist: 16 }); tb4.y += dy4; style("tabs", tb4);
+  const ind = { l: IND.l(t), r: IND.r(t) };
+  style("ind", { opacity: clamp(IND.o(t)) }, { left: ind.l, width: Math.max(0, ind.r - ind.l) });
+  clipTo("tabs-on", "tabs", ind, 40, clamp(IND.o(t)));
+  const exLook = ent(t, T.exp + 0.12, T.exit4 + 0.1, { spring: GENTLE, dist: 30 });
+  style("ex", exLook, { background: mix(DARK, WHITE, easeInOut(progress(t, T.walk + 0.12, T.walk + 0.42))) });
+  style("ex-exp", { opacity: 1 - easeInOut(progress(t, T.walk, T.walk + 0.18)) });
+  style("exp-title", ent(t, T.exp + 0.26, Infinity, { dist: 10 }));
+  [0, 1, 2].forEach((i) => {
+    const lk = ent(t, T.exp + 0.36 + i * 0.08, Infinity, { dist: 14 });
+    $(`node${i}`).style.opacity = lk.opacity.toFixed(3);
+    $(`node${i}`).setAttribute("transform", `translate(0 ${lk.y.toFixed(2)})`);
+  });
+  [0, 1].forEach((i) => {
+    const p = easeInOut(progress(t, T.draw + 0.05 + i * 0.28, T.draw + 0.55 + i * 0.28));
+    dash($(`ea${i}`), p);
+    $(`eh${i}`).style.opacity = clamp((p - 0.9) * 10).toFixed(3);
+  });
+  style("ex-walk", ent(t, T.walk + 0.34, T.loop, { dist: 14, exit: 0.18 }));
+  const wp = clamp(P.press(t) * (t > T.tap3 - 0.5 && t < T.tap3 + 0.5 ? 1 : 0));
+  const wsw = progress(t, T.tap3 + 0.1, T.tap3 + 0.1 + 0.6);
+  style("wk-btn", { scale: 1 - 0.03 * wp }, { background: mix(ACC, "#2442B8", wp * 0.6) });
+  style("wk-a", { opacity: 1 - progress(t, T.tap3 + 0.1, T.tap3 + 0.24), blur: 5 * progress(t, T.tap3 + 0.1, T.tap3 + 0.24), y: -8 * progress(t, T.tap3 + 0.1, T.tap3 + 0.24) });
+  const wbi = springStep(t - (T.tap3 + 0.28), SMOOTH);
+  style("wk-b", t >= T.tap3 + 0.28 ? { opacity: clamp(easeOut(progress(t, T.tap3 + 0.28, T.tap3 + 0.55))), blur: 5 * (1 - clamp(wbi)), y: 8 * (1 - wbi) } : { opacity: 0 });
+  style("ex-loop", ent(t, T.loop + 0.2, Infinity, { dist: 0, fade: 0.22 }));
+  const sw = SH.w(t), sh = SH.h(t);
+  style("shape", ent(t, T.loop + 0.2, Infinity, { dist: 0, scale0: 0.6, fade: 0.22, spring: { duration: 0.45, bounce: 0.04 } }),
+        { left: 468 - sw / 2, top: 290 - sh / 2, width: sw, height: sh, borderRadius: SH.r(t), background: mix(ACC, SOFT, SH.c(t)) });
+  style("sh-a", vis(SH.a(t), 0)); style("sh-b", vis(SH.b(t), 6)); style("sh-c", vis(SH.cc(t), 10));
+
+  // s05 ---------------------------------------------------------------
+  const dy5 = settleUp(t, T.up5, 246);
+  const h5 = ent(t, T.h5, T.exit5, { dist: 14 }); h5.y += dy5; style("hl-prin", h5);
+  const n0 = T.names[0];
+  style("pn0", { opacity: easeOut(progress(t, n0, n0 + 0.2)) * (1 - easeInOut(progress(t, T.exit5, T.exit5 + 0.22))), y: (t < n0 ? 22 : PN0Y(t)) + dy5 });
+  const pn1 = ent(t, T.names[1], T.exit5 + 0.03, { dist: 18 }); pn1.y += dy5; style("pn1", pn1);
+  const p2 = easeInOut(progress(t, T.names[2], T.names[2] + 0.8));
+  style("pn2", { opacity: easeOut(progress(t, T.names[2], T.names[2] + 0.3)) * (1 - easeInOut(progress(t, T.exit5 + 0.06, T.exit5 + 0.28))), x: -48 * (1 - p2), y: dy5 });
+  style("pn3", { y: dy5 });
+  PN3.forEach((s, i) => style(s, ent(t, T.names[3] + i * 0.03, T.exit5 + 0.09, { dist: 20, spring: { duration: 0.6, bounce: 0.1 }, fade: 0.2 })));
+  style("chk", ent(t, T.chk + 0.42, T.exit5 + 0.12, { spring: GENTLE, dist: 30 }));
+  FRAMES.forEach((f, i) => style(f, ent(t, T.looks + i * 0.11, Infinity, { dist: 0, scale0: 0.5, fade: 0.14, spring: SMOOTH })));
+  BARS.forEach(({ b, l }, i) => {
+    const on = T.meas + i * 0.12;
+    const g = t >= on ? clamp(springStep(t - on, { duration: 0.6, bounce: 0 })) : 0;
+    b.style.transform = `scaleX(${g.toFixed(4)})`;
+    style(l, ent(t, on + 0.26, Infinity, { dist: 8, fade: 0.22 }));
+  });
+
+  // s06 ---------------------------------------------------------------
+  style("hl-cap", ent(t, T.capH, T.edit, { dist: 14, exit: 0.16 }));
+  style("hl-edit", ent(t, T.edit + 0.16, T.exit6, { dist: 14 }));
+  style("player", ent(t, T.player, T.exit6 + 0.04, { spring: GENTLE, dist: 30 }));
+  style("lang", ent(t, T.player + 0.14, T.exit6 + 0.08, { dist: 20 }));
+  const li = { l: LI.l(t), r: LI.r(t) };
+  style("lind", {}, { left: li.l, width: li.r - li.l });
+  clipTo("lang-on", "lang", li, 36, 1);
+  style("cap-en", ent(t, T.capEn, T.lang + 0.06, { dist: 10, exit: 0.14 }));
+  style("cap-es", ent(t, T.lang + 0.24, Infinity, { dist: 10 }));
+  style("end-mark", ent(t, T.end0, Infinity, { dist: 16, scale0: 0.94 }));
+  style("end-text", ent(t, T.end0 + 0.1, Infinity, { dist: 16, scale0: 0.96 }));
+  style("endS", ent(t, T.endS, Infinity, { dist: 14 }));
+  style("endU", ent(t, T.endU, Infinity, { dist: 14 }));
+  style("endI", ent(t, T.endI, Infinity, { dist: 16 }));
+}
+
+window.seek = seek;
+window.T = T;
+const stills = [0.5, T.rush1 + 0.15, T.rush1 + 0.3, T.rush1 + 1.2, T.fast + 0.8, T.rush2 + 0.2, T.rush2 + 1.5,
+  T.reset + 0.9, T.tap1 - 0.2, T.tap1 + 0.4, T.tap1 + 0.9, T.one + 0.9, T.tap2 - 0.3, T.ok + 0.4, T.ok + 1.6,
+  T.title + 0.8, T.agents + 1.0, T.up + 0.5, T.chat + 1.2, T.enter + 0.3, T.tiles[1] + 0.5, T.tiles[4] + 1.0,
+  T.tabs + 1.0, T.up4 + 0.4, T.exp + 0.7, T.draw + 1.2, T.walk + 0.4, T.walk + 1.2, T.tap3 - 0.3, T.tap3 + 1.0,
+  T.loop + 0.8, T.morphB + 0.7, T.morphC + 1.0, T.h5 + 0.7, T.names[3] + 1.0, T.up5 + 0.4, T.chk + 1.0, T.looks + 1.0,
+  T.meas + 1.4, T.capEn + 0.6, T.lang + 0.8, T.edit + 0.8, T.endS + 0.3, T.endI + 1.0, DURATION - 0.1];
+window.VIDEO = { width: W, height: H, duration: DURATION, stills: stills.map((s) => +s.toFixed(2)) };
+const q = new URLSearchParams(location.search).get("t");
+seek(q ? Number(q) : 0);
+</script>
+</body>
+</html>

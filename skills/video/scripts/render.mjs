@@ -97,12 +97,21 @@ const { chromium } = loadPlaywright();
 // CHROMIUM_PATH points at an installed Chrome/Chromium when Playwright's own download is unavailable.
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined, args: ["--force-color-profile=srgb", "--disable-lcd-text"] });
 
+let warned = false;
 async function openPage() {
   const probe = await browser.newPage();
   await probe.goto(pageUrl);
   await probe.waitForFunction(() => window.VIDEO && typeof window.seek === "function");
   const video = await probe.evaluate(() => window.VIDEO);
   const sfx = await probe.evaluate(() => window.SFX || []);
+  if (!warned) {
+    warned = true;
+    const missing = await probe.evaluate((d) => {
+      for (const t of [0, d / 4, d / 2, (3 * d) / 4, d]) window.seek(t);
+      return [...(window.STYLE_MISSING || [])];
+    }, video.duration);
+    if (missing.length) console.warn(`warning: style() selectors that match nothing: ${missing.join(", ")}`);
+  }
   await probe.close();
   const context = await browser.newContext({
     viewport: { width: video.width, height: video.height },

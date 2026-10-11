@@ -1,0 +1,36 @@
+name: check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  render-examples:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: astral-sh/setup-uv@v6
+      - name: System packages
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg libcairo2-dev libpango1.0-dev pkg-config >/dev/null
+      - name: Static checks
+        run: |
+          for f in skills/video/scripts/*.py; do python3 -m py_compile "$f"; done
+          node --check skills/video/scripts/render.mjs
+          node --check skills/video/runtime/motion.js
+          bash -n skills/video/scripts/setup.sh tests/render-examples.sh
+          python3 tests/test_captions.py
+          python3 -c "import json; [json.load(open(f)) for f in ['.claude-plugin/plugin.json', '.claude-plugin/marketplace.json']]"
+      - name: Setup
+        run: bash skills/video/scripts/setup.sh
+      - name: Render every example (no API key)
+        run: bash tests/render-examples.sh

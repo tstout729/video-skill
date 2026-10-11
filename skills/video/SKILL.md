@@ -39,9 +39,9 @@ Slow down. Agent-made animation is usually too fast and shows too much at once. 
 ## Shared steps
 
 - **Research.** Read the real sources: the code, the docs, the data. Every number, name and example on screen, and every fact the narrator says, must be true. Use the product's real labels and a realistic example with sample data. Never show passwords, keys, access codes or personal data; mask a code as `• • • •`, and use made-up names.
-- **Script.** Write `narration.json` (format below) in [plain writing](references/plain-writing.md): short sentences, one idea each, the same word for the same thing. Plan one visual per sentence. Narration runs about 130 words per minute. An explainer has 6–10 scenes of 15–30 seconds. A walkthrough opens with the situation, does the task step by step, and ends with a one-line recap.
+- **Script.** Write `narration.json` (format below) in [plain writing](references/plain-writing.md): short sentences, one idea each, the same word for the same thing. Plan one visual per sentence. Narration runs about 130 words per minute. A full explainer usually has 6–10 scenes of 15–30 seconds; a short one, like `examples/explainer`, can have 4. A walkthrough opens with the situation, does the task step by step, and ends with a one-line recap.
 - **Narrate.** `uv run --script <skill>/scripts/narrate.py <project>`. It records one unedited ElevenLabs take per scene, transcribes each take, and retries below a 0.93 match, because a take sometimes repeats or drops a phrase. Re-runs only record scenes whose text changed. The key comes from `ELEVENLABS_API_KEY` or a line `ELEVENLABS_API_KEY=...` in `~/.config/elevenlabs/env`. Never print it. Each take uses the user's ElevenLabs credits, so say roughly how much narration you will record.
-- **Deliver.** Put the MP4 and `.srt` in the project's `out/` folder, or where the user's preferences say. Never overwrite an existing file. Report the path, the length and the voice, and anything you simplified. For a walkthrough, say that the screen is a redraw with sample data.
+- **Deliver.** Put the MP4 and `.srt` in the project's `out/` folder, or where the user's preferences say. Re-rendering replaces the project's own `out/` files; when you copy a video anywhere else, never overwrite an existing file (`cp -n`). Report the path, the length and the voice, and anything you simplified. For a walkthrough, say that the screen is a redraw with sample data.
 
 ```json
 {"title": "How a request finds a server", "voice_id": "JBFqnCBsd6RMkjVDRZzb", "model_id": "eleven_v4",
@@ -92,6 +92,9 @@ Gotchas:
 - Cues search forward from the previous cue. Do not cue the same word twice for one moment; a hyphenated word ("eighty-nine") can be cued by either part.
 - Draw lines behind cards with `kit.card(..., solid=True)` and `set_z_index`, or the lines cross the text.
 - `path_arc` tilts text when the same animation also scales it. Move first and scale after, or move along a custom arc path.
+- `GrowArrow` fails on a `CurvedArrow`. Use `Arrow(start, end, path_arc=...)` instead.
+- `AddTextLetterByLetter` hides letters by opacity, so the text keeps its full width while it types. A caret must follow the last visible letter.
+- `FadeTransform` between two different texts garbles the words halfway. To change a header, fade the old one out upward and the new one in.
 - Manim's `add_sound` needs pydub, which does not work on Python 3.13+. Audio is added in `assemble.py` instead.
 - Some ffmpeg builds have no `drawtext`; put all on-screen text in Manim.
 - A 4-minute 1080p render takes a minute or two. Iterate on drafts freely.

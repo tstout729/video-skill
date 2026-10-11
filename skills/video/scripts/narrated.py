@@ -131,9 +131,11 @@ class kit:
         return group.to_corner(UL, buff=0.5)
 
     @staticmethod
-    def node(s: str, color: str, size: float = 22, r: float = 0.11, side=DOWN):
+    def node(s: str, color: str, size: float = 22, r: float = 0.11, side=DOWN, gap: float | None = None):
         dot = Dot(radius=r, color=color)
-        label = kit.text(s, size=size, color=kit.INK).next_to(dot, side, buff=0.12)
+        # Labels beside a dot need more room than labels above or below it.
+        gap = gap if gap is not None else (0.25 if abs(side[0]) > abs(side[1]) else 0.12)
+        label = kit.text(s, size=size, color=kit.INK).next_to(dot, side, buff=gap)
         return VGroup(dot, label)
 
     @staticmethod

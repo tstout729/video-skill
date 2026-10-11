@@ -15,6 +15,7 @@ Captions are a soft subtitle track (mov_text) plus a sidecar .srt next to the ou
 
 import argparse
 import json
+import math
 import re
 import subprocess
 import tempfile
@@ -35,20 +36,75 @@ def stamp(t: float) -> str:
     return f"{h:02}:{m:02}:{s:02},{ms:03}"
 
 
+# Words a caption line may start with when a long sentence has to break.
+SOFT_BREAKS = {"and", "or", "but", "so", "with", "to", "for", "that", "which", "in", "on", "at", "of",
+               "from", "because", "while", "then", "when", "if", "y", "o", "pero", "con", "para", "que"}
+
+
+def _split_point(line: list[dict]) -> int:
+    """Where to break a full line: after a comma, else before a soft word, never inside a name."""
+    best, best_score = len(line), -1
+    for k in range(3, len(line)):
+        prev, nxt = line[k - 1]["word"], line[k]["word"]
+        if prev.endswith((",", ";", "\u2014", "\u2013")):
+            score = 3
+        elif re.sub(r"\W", "", nxt).lower() in SOFT_BREAKS:
+            score = 2
+        elif prev[:1].isupper() and nxt[:1].isupper():
+            score = -1  # "Claude / Code"
+        else:
+            score = 1
+        if score >= best_score:
+            best, best_score = k, score
+    return best
+
+
 def caption_lines(words: list[dict], max_words: int = 9) -> list[tuple[float, float, str]]:
     """Break at sentence ends; never strand the last one or two words of a sentence."""
     ends = [bool(re.search(r"[.!?:]$", w["word"])) for w in words]
     lines, current = [], []
+
+    def emit(part):
+        lines.append((part[0]["start"], part[-1]["end"], " ".join(x["word"] for x in part)))
+
     for i, w in enumerate(words):
         current.append(w)
         near_end = any(ends[i + 1:i + 3]) and not ends[i]
-        if ends[i] or (len(current) >= max_words and not near_end) or len(current) >= max_words + 2 \
-                or (len(current) >= 5 and w["word"].endswith(",") and not near_end):
-            lines.append((current[0]["start"], current[-1]["end"], " ".join(x["word"] for x in current)))
+        if ends[i] or (len(current) >= 5 and w["word"].endswith(",") and not near_end):
+            emit(current)
             current = []
+        elif (len(current) >= max_words and not near_end) or len(current) >= max_words + 2:
+            k = _split_point(current)
+            emit(current[:k])
+            current = current[k:]
     if current:
-        lines.append((current[0]["start"], current[-1]["end"], " ".join(x["word"] for x in current)))
+        emit(current)
     return lines
+
+
+LOUDNORM = "loudnorm=I=-16:TP=-1.5:LRA=11"
+
+
+def two_pass_loudnorm(ffmpeg_args: list[str]) -> str:
+    """Measure, then return a loudnorm filter that lands on -16 LUFS (one pass lands about 1 LU low).
+
+    ffmpeg_args are the inputs and filter options of the real command, with "{loudnorm}" where
+    the filter goes. Falls back to the one-pass filter if the measurement is unusable.
+    """
+    probe = [a.replace("{loudnorm}", LOUDNORM + ":print_format=json") for a in ffmpeg_args]
+    out = subprocess.run(["ffmpeg", "-hide_banner", "-nostats", *probe, "-f", "null", "-"],
+                         capture_output=True, text=True).stderr
+    found = re.findall(r"\{[^{}]*\"input_i\"[^{}]*\}", out)
+    try:
+        m = json.loads(found[-1])
+        values = [float(m[k]) for k in ("input_i", "input_tp", "input_lra", "input_thresh", "target_offset")]
+    except (IndexError, KeyError, ValueError):
+        return LOUDNORM
+    if not all(map(math.isfinite, values)):
+        return LOUDNORM  # silence measures as -inf
+    i, tp, lra, thresh, offset = values
+    return (f"{LOUDNORM}:measured_I={i}:measured_TP={tp}:measured_LRA={lra}"
+            f":measured_thresh={thresh}:offset={offset}:linear=true")
 
 
 # narration.json "language" (ISO 639-1, default "en") labels the caption track (ISO 639-2).
@@ -94,9 +150,10 @@ def main() -> None:
         joined = tmp / "joined.mp4"
         subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", str(listing),
                         "-c", "copy", str(joined)], check=True)
+        level = two_pass_loudnorm(["-i", str(joined), "-map", "0:a", "-af", "{loudnorm}"])
         subprocess.run([
             "ffmpeg", "-v", "error", "-y", "-i", str(joined), "-i", str(srt_path),
-            "-map", "0", "-map", "1", "-c:v", "copy", "-af", "loudnorm=I=-16:TP=-1.5:LRA=11",
+            "-map", "0", "-map", "1", "-c:v", "copy", "-af", level,
             "-c:a", "aac", "-b:a", "192k", "-c:s", "mov_text",
             "-metadata", f"title={cfg.get('title', '')}", "-metadata:s:s:0",
             f"language={CAPTION_LANGUAGES.get(cfg.get('language', 'en'), cfg.get('language', 'en'))}",

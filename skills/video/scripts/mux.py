@@ -30,7 +30,7 @@ SR = 48000
 HERE = Path(__file__).resolve().parent
 # Caption line breaking is shared with the explainer pipeline's assemble.py.
 sys.path.insert(0, str(HERE))
-from assemble import CAPTION_LANGUAGES, caption_lines, stamp  # noqa: E402
+from assemble import CAPTION_LANGUAGES, caption_lines, stamp, two_pass_loudnorm  # noqa: E402
 
 
 def probe(path: Path) -> float:
@@ -136,9 +136,12 @@ def main() -> None:
             chains.append("[key]anullsink")
         if not mix:
             raise SystemExit("nothing to mix: pass --narration, --music, or render with SFX")
-        level = "" if sfx_only else ",loudnorm=I=-16:TP=-1.5:LRA=11"
+        level = "" if sfx_only else ",{loudnorm}"
         chains.append(f"{''.join(mix)}amix=inputs={len(mix)}:normalize=0:duration=longest,"
                       f"atrim=0:{duration:.3f}{level}[a]")
+        graph = ";".join(chains)
+        if not sfx_only:
+            graph = graph.replace("{loudnorm}", two_pass_loudnorm([*inputs, "-filter_complex", graph, "-map", "[a]"]))
 
         cmd = ["ffmpeg", "-v", "error", "-y", *inputs]
         srt_path = None
@@ -152,7 +155,7 @@ def main() -> None:
                 srt.append(f"{k + 1}\n{stamp(start)} --> {stamp(hold)}\n{text}\n")
             srt_path.write_text("\n".join(srt))
             cmd += ["-i", str(srt_path)]
-        cmd += ["-filter_complex", ";".join(chains), "-map", "0:v", "-map", "[a]"]
+        cmd += ["-filter_complex", graph, "-map", "0:v", "-map", "[a]"]
         if srt_path:
             # The project's narration.json (next to words.js) names the caption language.
             spec = args.words.parent / "narration.json"

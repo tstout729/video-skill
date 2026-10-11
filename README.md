@@ -1,0 +1,134 @@
+# video skill
+
+**Make narrated explainers, app walkthroughs, training videos and motion loops entirely in code, with your coding agent.**
+
+<a href="docs/demo.mp4"><img src="docs/demo.jpg" alt="Watch the 74-second demo: the same animation rushed, then slowed down, and what the skill makes" width="540"></a>
+
+*Click to watch the demo. It was made with this skill; its source is in [`demo/`](demo/).*
+
+You ask for a video. Your agent writes the script, records the voice, animates every frame in code in time with the narrator, checks its own pacing, and hands you an MP4 with captions. There's no video editor, timeline or After Effects.
+
+It works in [Claude Code](https://claude.com/claude-code), [Codex](https://openai.com/codex) and any agent that supports [Agent Skills](https://agentskills.io).
+
+## What it makes
+
+| | Kind | Good for | Built with |
+| --- | --- | --- | --- |
+| <a href="docs/examples/explainer.mp4"><img src="docs/examples/explainer.jpg" width="240" alt="Explainer example"></a> | **Explainer** | How a system, process or idea works: narrated, animated diagrams | [Manim](https://www.manim.community) |
+| <a href="docs/examples/walkthrough.mp4"><img src="docs/examples/walkthrough.jpg" width="240" alt="Walkthrough example"></a> | **Walkthrough** | Product demos, feature tours, training and onboarding: a real screen used step by step, with a pointer that clicks as the narrator speaks | HTML + springs, rendered by [Playwright](https://playwright.dev) |
+| <a href="docs/examples/loop.mp4"><img src="docs/examples/loop.jpg" width="240" alt="Loop example"></a> | **Loop** | Social posts and feature teasers: one shape morphing through UI states, timed to a beat | HTML + springs |
+
+Every video gets:
+
+- **A real voice** from [ElevenLabs](https://elevenlabs.io). Each take is transcribed and re-recorded if a phrase was dropped or repeated.
+- **Word-level timing.** Each motion starts as the narrator says its cue words.
+- **Captions** as a soft track and a `.srt` file, in any language.
+- **Unhurried motion.** The agent follows the classic principles of animation, then checks its own work. It looks at every frame and measures every pause, so nothing changes before you can read it.
+
+## Install
+
+**Claude Code**, as a plugin:
+
+```
+/plugin marketplace add tstout729/video-skill
+/plugin install video-skill@video-skill
+```
+
+**Any agent** (Claude Code, Codex, Cursor, Copilot and [many more](https://github.com/vercel-labs/skills)), with the skills CLI:
+
+```sh
+npx skills add tstout729/video-skill -g
+```
+
+**By hand**: copy or link the `skills/video` folder into your agent's skills folder. For example, use `~/.claude/skills/video` for Claude Code or `~/.codex/skills/video` for Codex.
+
+```sh
+git clone https://github.com/tstout729/video-skill
+ln -s "$PWD/video-skill/skills/video" ~/.claude/skills/video
+```
+
+### Set up once
+
+Ask your agent to *"set up the video skill"*, or run the setup script yourself:
+
+```sh
+bash skills/video/scripts/setup.sh      # from the repo, or the installed skill folder
+```
+
+It installs Playwright and Chromium into a private cache folder, never into your project. It also checks everything else:
+
+| Needs | Why | Get it |
+| --- | --- | --- |
+| macOS or Linux | Windows works through WSL2 | |
+| [ffmpeg](https://ffmpeg.org) | encoding, mixing, captions | `brew install ffmpeg` / `apt install ffmpeg` |
+| [Node.js](https://nodejs.org) 18+ | the HTML renderer | `brew install node` |
+| [uv](https://docs.astral.sh/uv/) | runs the Python scripts and Manim with their dependencies | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
+| An [ElevenLabs](https://elevenlabs.io) API key | narration (loops and the bundled examples don't need it) | `export ELEVENLABS_API_KEY=...` |
+
+## Use it
+
+Just ask:
+
+- *"Make a 2-minute explainer of how our billing pipeline works."*
+- *"Make a walkthrough video of the signup flow in this app, for new users."*
+- *"Make a training video that shows how to approve a refund in our admin panel."*
+- *"Make a 12-second square loop of our checkout button for LinkedIn."*
+- *"Now make the same video in Spanish."*
+
+The agent reads your code or docs for the facts, shows you its plan when the request is open-ended, then works through script, voice, animation, review and render. Each video lives in its own folder (`videos/<name>/` by default), so you can ask for changes later: *"slow down scene 3"*, *"use a calmer voice"*, *"fix the price on the second card"*.
+
+## Try the examples, with no API key
+
+The examples include their recorded narration, so they render without an ElevenLabs key:
+
+```sh
+git clone https://github.com/tstout729/video-skill && cd video-skill
+bash skills/video/scripts/setup.sh
+bash tests/render-examples.sh            # renders all three at draft quality
+```
+
+Each example's README has the full-quality commands: [explainer](skills/video/examples/explainer/), [walkthrough](skills/video/examples/walkthrough/), [loop](skills/video/examples/loop/). They're also the templates your agent copies from.
+
+## Your preferences
+
+Put your defaults in `~/.config/video-skill/preferences.md`, or in `VIDEO.md` in a project; the project file wins. Write them in plain words. For example:
+
+```markdown
+- Use the voice "Alice" (Xb7hH8MSUJpSbSDYk0k2). Spanish versions use voice ...
+- Save finished videos to ~/Movies/Videos/.
+- Brand: background #0F172A, accent #22C55E, font Inter.
+- At the end of a big feature, make a short explainer of what changed.
+```
+
+## Costs
+
+Rendering is local and free. Narration uses ElevenLabs credits: about 1,000 characters of script per minute of video, plus one short transcription per take to check it. Only changed scenes are re-recorded. The agent tells you before it records.
+
+## How it works
+
+```
+narration.json ─▶ narrate.py ─▶ audio + word timings
+                                   │
+              ┌────────────────────┴────────────────────┐
+         video.py (Manim)                       index.html (seek(t) page)
+              │                                          │
+         manim render                    render.mjs: Playwright frames + motion blur
+              │                                          │
+         assemble.py ──────▶  MP4 + captions  ◀────── mux.py (voice, UI sounds, music)
+```
+
+- **Explainers** use [Manim](https://www.manim.community) with a small base class. `self.play_at("cue words", ...)` starts an animation as the narrator says those words.
+- **Walkthroughs and loops** are one HTML page that draws each frame as a pure function of time. Springs are closed-form, so a frame never depends on the one before it, and rendering runs in parallel. The renderer blends subframes for motion blur, and `mux.py` places every UI sound on its moment.
+- **Pacing** follows [`animation-principles.md`](skills/video/animation-principles.md). It turns the classic principles of animation into rules for UI and diagram motion: one change at a time, holds long enough to read, anticipation, arcs, slow in and out. It ends with a hold check the agent runs on its own render.
+
+## Credits
+
+- The principles of animation come from Disney's animators. John Lasseter applied them to computer animation in [*Principles of Traditional Animation Applied to 3D Computer Animation*](https://dl.acm.org/doi/10.1145/37402.37407) (SIGGRAPH 1987).
+- The explainer style is inspired by [3Blue1Brown](https://www.3blue1brown.com) and built on [Manim Community](https://www.manim.community).
+- The UI motion approach was adapted from Ross's open motion-design prompt template ([@rossaxbt](https://x.com/rossaxbt)).
+- The fonts are [Geist](https://vercel.com/font) and [Nunito Sans](https://fonts.google.com/specimen/Nunito+Sans), both under the SIL Open Font License.
+- The tools: [Playwright](https://playwright.dev), [ffmpeg](https://ffmpeg.org), [ElevenLabs](https://elevenlabs.io) and [uv](https://docs.astral.sh/uv/).
+
+## License
+
+[MIT](LICENSE). The bundled fonts keep their own licenses.

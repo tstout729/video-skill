@@ -1,0 +1,570 @@
+{
+ "s01": {
+  "digest": "ff83f41ac426ff13",
+  "duration": 9.44,
+  "match": 1.0,
+  "words": [
+   {
+    "word": "What",
+    "start": 0.0,
+    "end": 0.24
+   },
+   {
+    "word": "happens",
+    "start": 0.32,
+    "end": 0.72
+   },
+   {
+    "word": "when",
+    "start": 0.8,
+    "end": 0.88
+   },
+   {
+    "word": "you",
+    "start": 0.96,
+    "end": 1.04
+   },
+   {
+    "word": "open",
+    "start": 1.16,
+    "end": 1.28
+   },
+   {
+    "word": "a",
+    "start": 1.36,
+    "end": 1.4
+   },
+   {
+    "word": "website?",
+    "start": 1.44,
+    "end": 2.24
+   },
+   {
+    "word": "It",
+    "start": 2.48,
+    "end": 2.56
+   },
+   {
+    "word": "takes",
+    "start": 2.64,
+    "end": 3.04
+   },
+   {
+    "word": "four",
+    "start": 3.16,
+    "end": 3.28
+   },
+   {
+    "word": "steps.",
+    "start": 3.36,
+    "end": 4.12
+   },
+   {
+    "word": "First,",
+    "start": 4.4,
+    "end": 4.96
+   },
+   {
+    "word": "you",
+    "start": 5.04,
+    "end": 5.12
+   },
+   {
+    "word": "type",
+    "start": 5.2,
+    "end": 5.36
+   },
+   {
+    "word": "a",
+    "start": 5.44,
+    "end": 5.52
+   },
+   {
+    "word": "web",
+    "start": 5.6,
+    "end": 5.68
+   },
+   {
+    "word": "address,",
+    "start": 5.76,
+    "end": 6.32
+   },
+   {
+    "word": "like",
+    "start": 6.4,
+    "end": 6.72
+   },
+   {
+    "word": "example.com,",
+    "start": 6.8,
+    "end": 8.24
+   },
+   {
+    "word": "and",
+    "start": 8.32,
+    "end": 8.4
+   },
+   {
+    "word": "press",
+    "start": 8.48,
+    "end": 8.72
+   },
+   {
+    "word": "Enter.",
+    "start": 8.88,
+    "end": 9.52
+   }
+  ]
+ },
+ "s02": {
+  "digest": "4dc1f1a3e691ee1d",
+  "duration": 13.68,
+  "match": 1.0,
+  "words": [
+   {
+    "word": "Computers",
+    "start": 0.0,
+    "end": 0.56
+   },
+   {
+    "word": "find",
+    "start": 0.64,
+    "end": 0.88
+   },
+   {
+    "word": "each",
+    "start": 0.96,
+    "end": 1.04
+   },
+   {
+    "word": "other",
+    "start": 1.12,
+    "end": 1.28
+   },
+   {
+    "word": "by",
+    "start": 1.36,
+    "end": 1.52
+   },
+   {
+    "word": "number,",
+    "start": 1.6,
+    "end": 2.32
+   },
+   {
+    "word": "not",
+    "start": 2.4,
+    "end": 2.56
+   },
+   {
+    "word": "by",
+    "start": 2.64,
+    "end": 2.72
+   },
+   {
+    "word": "name.",
+    "start": 2.88,
+    "end": 3.28
+   },
+   {
+    "word": "DNS",
+    "start": 3.92,
+    "end": 4.56
+   },
+   {
+    "word": "is",
+    "start": 4.64,
+    "end": 4.72
+   },
+   {
+    "word": "the",
+    "start": 4.8,
+    "end": 4.88
+   },
+   {
+    "word": "internet's",
+    "start": 5.08,
+    "end": 5.36
+   },
+   {
+    "word": "phone",
+    "start": 5.44,
+    "end": 5.68
+   },
+   {
+    "word": "book.",
+    "start": 5.76,
+    "end": 6.32
+   },
+   {
+    "word": "The",
+    "start": 6.64,
+    "end": 6.68
+   },
+   {
+    "word": "browser",
+    "start": 6.72,
+    "end": 7.12
+   },
+   {
+    "word": "asks",
+    "start": 7.2,
+    "end": 7.6
+   },
+   {
+    "word": "DNS",
+    "start": 7.68,
+    "end": 8.24
+   },
+   {
+    "word": "to",
+    "start": 8.28,
+    "end": 8.32
+   },
+   {
+    "word": "look",
+    "start": 8.4,
+    "end": 8.56
+   },
+   {
+    "word": "up",
+    "start": 8.68,
+    "end": 8.8
+   },
+   {
+    "word": "example.com.",
+    "start": 9.12,
+    "end": 10.36
+   },
+   {
+    "word": "DNS",
+    "start": 10.64,
+    "end": 11.2
+   },
+   {
+    "word": "sends",
+    "start": 11.36,
+    "end": 11.6
+   },
+   {
+    "word": "back",
+    "start": 11.68,
+    "end": 11.92
+   },
+   {
+    "word": "the",
+    "start": 11.96,
+    "end": 12.0
+   },
+   {
+    "word": "server's",
+    "start": 12.16,
+    "end": 12.56
+   },
+   {
+    "word": "IP",
+    "start": 12.6,
+    "end": 12.88
+   },
+   {
+    "word": "address.",
+    "start": 12.96,
+    "end": 13.76
+   }
+  ]
+ },
+ "s03": {
+  "digest": "992ababbe0b8d9aa",
+  "duration": 9.36,
+  "match": 1.0,
+  "words": [
+   {
+    "word": "Next,",
+    "start": 0.0,
+    "end": 0.64
+   },
+   {
+    "word": "the",
+    "start": 0.72,
+    "end": 0.8
+   },
+   {
+    "word": "browser",
+    "start": 1.0,
+    "end": 1.2
+   },
+   {
+    "word": "sends",
+    "start": 1.28,
+    "end": 1.52
+   },
+   {
+    "word": "a",
+    "start": 1.56,
+    "end": 1.6
+   },
+   {
+    "word": "request",
+    "start": 1.88,
+    "end": 2.16
+   },
+   {
+    "word": "to",
+    "start": 2.32,
+    "end": 2.4
+   },
+   {
+    "word": "that",
+    "start": 2.48,
+    "end": 2.56
+   },
+   {
+    "word": "IP",
+    "start": 2.72,
+    "end": 3.04
+   },
+   {
+    "word": "address.",
+    "start": 3.28,
+    "end": 3.6
+   },
+   {
+    "word": "The",
+    "start": 4.08,
+    "end": 4.16
+   },
+   {
+    "word": "request",
+    "start": 4.4,
+    "end": 4.64
+   },
+   {
+    "word": "hops",
+    "start": 4.8,
+    "end": 5.04
+   },
+   {
+    "word": "across",
+    "start": 5.12,
+    "end": 5.36
+   },
+   {
+    "word": "the",
+    "start": 5.44,
+    "end": 5.48
+   },
+   {
+    "word": "internet",
+    "start": 5.52,
+    "end": 5.92
+   },
+   {
+    "word": "to",
+    "start": 6.0,
+    "end": 6.08
+   },
+   {
+    "word": "the",
+    "start": 6.16,
+    "end": 6.24
+   },
+   {
+    "word": "server.",
+    "start": 6.32,
+    "end": 7.0
+   },
+   {
+    "word": "The",
+    "start": 7.28,
+    "end": 7.36
+   },
+   {
+    "word": "server",
+    "start": 7.44,
+    "end": 7.84
+   },
+   {
+    "word": "sends",
+    "start": 7.92,
+    "end": 8.24
+   },
+   {
+    "word": "back",
+    "start": 8.32,
+    "end": 8.48
+   },
+   {
+    "word": "the",
+    "start": 8.56,
+    "end": 8.64
+   },
+   {
+    "word": "page.",
+    "start": 8.72,
+    "end": 9.44
+   }
+  ]
+ },
+ "s04": {
+  "digest": "1c0e850f1e138599",
+  "duration": 13.36,
+  "match": 1.0,
+  "words": [
+   {
+    "word": "Last,",
+    "start": 0.0,
+    "end": 0.72
+   },
+   {
+    "word": "the",
+    "start": 0.8,
+    "end": 0.88
+   },
+   {
+    "word": "browser",
+    "start": 1.12,
+    "end": 1.36
+   },
+   {
+    "word": "draws",
+    "start": 1.44,
+    "end": 1.76
+   },
+   {
+    "word": "the",
+    "start": 1.84,
+    "end": 1.88
+   },
+   {
+    "word": "page",
+    "start": 1.92,
+    "end": 2.24
+   },
+   {
+    "word": "on",
+    "start": 2.28,
+    "end": 2.32
+   },
+   {
+    "word": "your",
+    "start": 2.4,
+    "end": 2.48
+   },
+   {
+    "word": "screen.",
+    "start": 2.56,
+    "end": 3.12
+   },
+   {
+    "word": "To",
+    "start": 3.84,
+    "end": 3.92
+   },
+   {
+    "word": "recap:",
+    "start": 4.0,
+    "end": 4.56
+   },
+   {
+    "word": "you",
+    "start": 4.96,
+    "end": 5.04
+   },
+   {
+    "word": "type",
+    "start": 5.12,
+    "end": 5.36
+   },
+   {
+    "word": "a",
+    "start": 5.44,
+    "end": 5.52
+   },
+   {
+    "word": "web",
+    "start": 5.6,
+    "end": 5.76
+   },
+   {
+    "word": "address.",
+    "start": 6.0,
+    "end": 6.32
+   },
+   {
+    "word": "DNS",
+    "start": 6.8,
+    "end": 7.44
+   },
+   {
+    "word": "finds",
+    "start": 7.52,
+    "end": 7.92
+   },
+   {
+    "word": "the",
+    "start": 8.0,
+    "end": 8.08
+   },
+   {
+    "word": "IP",
+    "start": 8.16,
+    "end": 8.48
+   },
+   {
+    "word": "address.",
+    "start": 8.72,
+    "end": 9.04
+   },
+   {
+    "word": "The",
+    "start": 9.52,
+    "end": 9.6
+   },
+   {
+    "word": "server",
+    "start": 9.68,
+    "end": 10.08
+   },
+   {
+    "word": "sends",
+    "start": 10.16,
+    "end": 10.48
+   },
+   {
+    "word": "back",
+    "start": 10.56,
+    "end": 10.72
+   },
+   {
+    "word": "the",
+    "start": 10.8,
+    "end": 10.88
+   },
+   {
+    "word": "page.",
+    "start": 10.96,
+    "end": 11.44
+   },
+   {
+    "word": "The",
+    "start": 11.84,
+    "end": 11.92
+   },
+   {
+    "word": "browser",
+    "start": 12.0,
+    "end": 12.48
+   },
+   {
+    "word": "draws",
+    "start": 12.56,
+    "end": 12.88
+   },
+   {
+    "word": "it.",
+    "start": 13.0,
+    "end": 13.44
+   }
+  ]
+ }
+}

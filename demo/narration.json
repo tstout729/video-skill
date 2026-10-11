@@ -1,0 +1,41 @@
+{
+  "title": "Video skill: animation you can follow",
+  "voice_id": "JBFqnCBsd6RMkjVDRZzb",
+  "model_id": "eleven_v4",
+  "voice_settings": {
+    "stability": 0.5,
+    "similarity_boost": 0.75
+  },
+  "language": "en",
+  "timeline": {
+    "gap": 1.4,
+    "lead_in": 1.0,
+    "tail": 4.0
+  },
+  "scenes": [
+    {
+      "id": "s01",
+      "text": "Ask an AI to animate something, and it usually moves too fast. Everything happens at once, and nothing stays still long enough to read."
+    },
+    {
+      "id": "s02",
+      "text": "Here is the same animation, slowed down. One change at a time. Each step holds, so you can follow it."
+    },
+    {
+      "id": "s03",
+      "text": "This is the video skill, a free, open-source skill for coding agents like Claude Code and Codex. You ask for a video. Your agent writes the script, records the voice, and animates every frame in code, in time with the narrator."
+    },
+    {
+      "id": "s04",
+      "text": "It makes three kinds of video. Explainers that draw how a system works. Walkthroughs of a real app, with a pointer that clicks as the narrator speaks. And motion loops for social posts."
+    },
+    {
+      "id": "s05",
+      "text": "Every video follows the classic principles of animation. Then the agent checks its own work. It looks at every frame, and it measures every pause."
+    },
+    {
+      "id": "s06",
+      "text": "Captions are included, in any language. No video editor needed. It's free, and the link is below."
+    }
+  ]
+}

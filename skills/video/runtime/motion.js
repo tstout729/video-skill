@@ -142,7 +142,12 @@ export const $ = (sel) => {
 
 // Apply a look ({opacity, blur, y, x, scale}) plus any raw CSS properties.
 export function style(el, look = {}, css = {}) {
-  if (typeof el === "string") el = $(el);
+  if (typeof el === "string") {
+    const sel = el;
+    el = $(sel);
+    // Remember selectors that match nothing, such as "title" for "#title"; render.mjs lists them.
+    if (!el) (window.STYLE_MISSING ||= new Set()).add(sel);
+  }
   if (!el) return;
   const { opacity, blur, x = 0, y = 0, scale = 1 } = look;
   if (opacity !== undefined) el.style.opacity = opacity.toFixed(4);
