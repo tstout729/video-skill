@@ -1,13 +1,22 @@
 #!/usr/bin/env bash
 # Install and check everything the video skill needs. Safe to run again at any time.
-#   bash <skill>/scripts/setup.sh           install Playwright + Chromium if missing, then check everything
-#   bash <skill>/scripts/setup.sh --check   check only; change nothing
+#   bash <skill>/scripts/setup.sh                install Playwright + Chromium if missing, then check everything
+#   bash <skill>/scripts/setup.sh --check        check only; change nothing
+#   bash <skill>/scripts/setup.sh --with three   also install three.js (for 3D), served to pages at /_vendor/three/
 # Playwright goes into a private cache folder ($VIDEO_SKILL_HOME, default ~/.cache/video-skill),
 # never into your project. Exit code 1 means a required tool is missing.
 set -uo pipefail
-check_only=0; [[ "${1:-}" == --check ]] && check_only=1
+check_only=0; with_three=0
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --check) check_only=1 ;;
+    --with) [[ "${2:-}" == three ]] && with_three=1; shift ;;
+  esac
+  shift
+done
 cache="${VIDEO_SKILL_HOME:-${XDG_CACHE_HOME:-$HOME/.cache}/video-skill}"
 pw_version="${PLAYWRIGHT_VERSION:-1.64.0}"
+three_version="${THREE_VERSION:-0.186.1}"  # pinned: three.js option names change between releases
 missing=0
 ok()   { printf '  \033[32m✓\033[0m %s\n' "$1"; }
 warn() { printf '  \033[33m!\033[0m %s\n' "$1"; }
@@ -95,6 +104,21 @@ if command -v node >/dev/null; then
       fi
     fi
   fi
+fi
+
+echo "three.js (for 3D, optional)"
+three_pkg="$cache/node_modules/three/package.json"
+if [[ -f "$three_pkg" ]]; then
+  ok "three $(node -p "require('$three_pkg').version") at /_vendor/three/"
+elif (( with_three && ! check_only )); then
+  mkdir -p "$cache"
+  if (cd "$cache" && npm install --silent --no-audit --no-fund --ignore-scripts --prefix "$cache" "three@$three_version" >/dev/null); then
+    ok "three $three_version installed at /_vendor/three/"
+  else
+    bad "three.js install failed; check npm and your network"
+  fi
+else
+  ok "three.js not installed (only 3D pieces need it: setup.sh --with three)"
 fi
 
 echo "Manim (for explainer videos)"
