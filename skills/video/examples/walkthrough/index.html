@@ -26,11 +26,13 @@
     SETTLE            how long each spring needs to look still; a guard uses it so the next
                       move never starts before the last one has settled
   Springs, chosen by the size of the change
-    snappy   button presses; the leading edge of a sliding pill; the card turning white
+    snappy   button presses; the leading edge of a sliding pill
     smooth   the trailing edge of a sliding pill; the card flattening into a row
     gentle   the invite card opening, and settling into the list
     MORPH    the window itself: intro card -> app window -> recap card (1.2 s)
     camera   every zoom, and only after the content has settled
+    RECOLOR  ink <-> white in about 0.15 s, only once a shape has mostly grown, with its
+             content riding on the color, so no frame shows an empty gray shape
     arcTap   the pointer: a 0.55 s spring on its longer axis, 0.75 s on the shorter one
   Content changes use swap() and presence() (timed fades with a short blur), not springs.
 
@@ -43,14 +45,15 @@
     "Members" 12.3 tap Members: the tab line slides, the member list swaps in
     "This list"   camera pushes in on the list
     "Next"   16.9 step 2
-    "Invite" 18.4 tap Invite: the button grows into the invite card; the page dims
-    "Type"   19.2 step 3; then the camera pushes in on the card
-              21.3 tap the email field and type jordan@example.com
-    "Now"    23.1 step 4 (waits for the typing to finish)
+    "Invite" 18.7 tap Invite: the button grows (still ink, still labeled) into the invite
+                  card; the page dims. At 19.2 it turns white as the title arrives
+    "Type"   19.4 step 3, once the card is white; then the camera pushes in on the card
+              21.5 tap the email field and type jordan@example.com
+    "Now"    23.3 step 4 (waits for the typing to finish)
     "Member" 25.7 tap Member: the role pill slides, the description swaps
     "Click"  29.8 step 5
     "Send"   30.5 tap Send invite; the pointer leaves; the camera eases back to the list
-    "shows"  32.9 the card flies into the list and becomes the new row
+    "shows"  32.9 the card flattens into the list; its text hands over to the new row's
     "Pending" 34.5 the Pending badge appears; step 5 checks off
     "invites" 37.6 the window morphs into the recap card
     "Settings", "Pick", "Pending"   recap points 1, 2 and 3; the last state holds 4.8 s
@@ -161,7 +164,8 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
 #inv-face { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 8px;
   color: var(--white); font-size: 17px; font-weight: 500; padding-right: 4px; }
 #inv-form { position: absolute; left: 0; top: 0; width: 480px; height: 404px; }
-#inv-form > * { position: absolute; }
+#inv-form > *, #inv-body > * { position: absolute; }
+#inv-body { left: 0; top: 0; width: 480px; height: 404px; }
 .c-title { left: 32px; top: 30px; font-size: 23px; font-weight: 600; letter-spacing: -0.01em; }
 #lbl-email { left: 32px; top: 84px; } #lbl-role { left: 32px; top: 186px; }
 #email { left: 32px; top: 110px; width: 416px; height: 50px; border: 1.5px solid var(--field); border-radius: 10px;
@@ -267,6 +271,7 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
       <div id="inv-face"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Invite</div>
       <div id="inv-form">
         <div class="c-title">Invite to Acme</div>
+        <div id="inv-body">
         <div class="f-label" id="lbl-email">Email address</div>
         <div id="email"><span id="email-ph">name@example.com</span><span id="email-text"></span><span id="caret"></span></div>
         <div class="f-label" id="lbl-role">Role</div>
@@ -280,6 +285,7 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
         <div id="desc-member">Can create and edit projects.</div>
         <div id="cancel">Cancel</div>
         <div id="send">Send invite</div>
+        </div>
       </div>
       <div class="row" id="inv-row">
         <div class="who"><div class="ghost"><svg class="i" viewBox="0 0 24 24"><rect x="3.5" y="5.5" width="17" height="13" rx="2"/><path d="m4 7 8 6 8-6"/></svg></div><div><div class="nm">jordan@example.com</div><div class="em">Invited just now</div></div></div>
@@ -317,6 +323,7 @@ const MORPH = { duration: 1.2, bounce: 0.02 };               // the window: the 
 const MORPH_TRAIL = { duration: 1.4, bounce: 0.0 };          // height trails width: a soft stretch
 const LEAD = SPRING.snappy, TRAIL = SPRING.smooth;            // edges of a sliding indicator
 const SETTLE = { gentle: 1.05, camera: 1.2, morph: 1.35 };   // seconds until each spring looks still
+const RECOLOR = { duration: 0.2, bounce: 0 };                // ink <-> white in about 0.15 s
 
 const EMAIL = "jordan@example.com";
 const C = { canvas: "#ECEAE5", ink: "#1F1E1B", body: "#45413B", muted: "#6F6A62", faint: "#A39D93", field: "#D9D4CB",
@@ -332,11 +339,12 @@ T.settings = cue("Settings") + TAP_DELAY;                    // tap
 T.members  = cue("Members") + 0.4;                           // tap (a little later: Settings needs its hold)
 T.camList  = Math.max(cue("This list"), T.members + 0.65 + 3 * STAGGER);
 T.step2    = cue("Next");
-T.invite   = cue("Invite") + TAP_DELAY;                      // tap
+T.invite   = cue("Invite") + 0.55;                           // tap, late in the word: scene 3 needs its hold
 T.cardOpen = T.invite + 0.1;
-T.step3    = cue("Type");
+T.cardWhite = T.cardOpen + 0.38;                             // ink -> white, title in
+T.step3    = Math.max(cue("Type"), T.cardWhite + 0.25);      // after the card has turned white
 T.camCard  = Math.max(T.step3 + 0.15, T.cardOpen + SETTLE.gentle);
-T.email    = T.camCard + 0.9 + TRAVEL;                       // pointer leaves once the zoom is nearly still
+T.email    = T.camCard + 0.8 + TRAVEL;                       // pointer leaves once the zoom is nearly still
 T.keys = [];
 for (let i = 0, k = T.email + 0.3; i < EMAIL.length; i++) {
   T.keys.push(k);
@@ -436,7 +444,9 @@ inv.cx.to(T.cardOpen, CARD.x + CARD.w / 2, SPRING.gentle);
 inv.cy.to(T.cardOpen, CARD.y + CARD.h / 2, { duration: 1.05, bounce: 0.01 });
 inv.w.to(T.cardOpen, CARD.w, SPRING.gentle); inv.h.to(T.cardOpen, CARD.h, SPRING.gentle);
 inv.r.to(T.cardOpen, 18, SPRING.gentle);
-inv.ink.to(T.cardOpen, 0, SPRING.snappy);                      // whiten fast, so it never looks gray
+// The shape is still the button, so it stays ink until it has mostly grown (about 75%),
+// then whitens in a few frames as the title arrives. No frame shows an empty gray box.
+inv.ink.to(T.cardWhite, 0, RECOLOR);
 inv.lift.to(T.cardOpen, 1, SPRING.gentle);
 // Into the list: it flattens to a row first (smooth), then settles into its slot (gentle).
 inv.cx.to(T.fly, mid(ROW).x, SPRING.gentle); inv.cy.to(T.fly, mid(ROW).y, { duration: 1.05, bounce: 0.01 });
@@ -565,11 +575,16 @@ function drawInvite(t) {
     boxShadow: `0 ${26 * lift}px ${56 * lift}px -${14 * lift}px rgba(31,30,27,${(0.30 * lift).toFixed(3)}),` +
       ` 0 0 0 1px rgba(31,30,27,${(0.06 * lift).toFixed(3)})`,
   });
-  const open = swap(t, T.cardOpen, { exit: 0.1, gap: 0.3, enter: 0.35 });
-  const fly = swap(t, T.fly, { exit: 0.16, gap: 0.12, enter: 0.4 });
-  style("#inv-face", open.out);
-  style("#inv-form", lookUp(open.in, fly.out));
-  style("#inv-row", fly.in);
+  // The button's label rides on the ink and the card's title rides on the white, so the
+  // shape always shows one of them. The rest of the form follows the title by one stagger.
+  // Into the list, the form stays while the card flattens (clipped from below), then hands
+  // over to the row's text with a small overlap, so the shape is never empty there either.
+  style("#inv-face", { opacity: ink });
+  style("#inv-form", presence(t, -1, T.fly + 0.2, { exit: 0.12 }));
+  style("#inv-row", presence(t, T.fly + 0.26, Infinity, { enter: 0.3 }));
+  const title = presence(t, T.cardWhite, Infinity, { enter: 0.2 });
+  style(".c-title", { ...title, opacity: Math.min(title.opacity, 1 - ink) });
+  style("#inv-body", presence(t, T.cardWhite + 0.08, Infinity, { enter: 0.25 }));
   style("#badge", { ...presence(t, T.badge, Infinity, { dist: 0 }), scale: badgeScale(t) });
 
   // Email field: focus ring, typed text, caret.

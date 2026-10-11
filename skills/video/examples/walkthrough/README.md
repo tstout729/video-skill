@@ -19,7 +19,7 @@ Copy this folder to start your own walkthrough. The comment at the top of `index
 - **`swap` and `presence`.** Pages, tabs and the role description swap with a short blur. The step list, rows and recap points stagger in at 70 ms.
 - **A pointer that flies on an arc, then presses.** Its longer axis moves on a faster spring than its shorter axis, so the path curves. Each tap declares a UI sound.
 - **A camera that waits.** It zooms only after the content it frames has settled. It lives inside the clipped app window, so a zoom never shows the canvas.
-- **One shape.** The intro card morphs into the app window, and the window morphs into the recap card. Inside the app, the Invite button grows into the invite card, and the card flies into the list as the new row.
+- **One shape.** The intro card morphs into the app window, and the window morphs into the recap card. Inside the app, the Invite button grows into the invite card, and the card flies into the list as the new row. A shape keeps its content while it changes: the button stays ink with its label until it has mostly grown, then turns white in about 0.15 s as the card's title arrives. No frame shows an empty gray box.
 - **Review stills.** `window.VIDEO.stills` lists eleven settled states for a contact sheet.
 
 ## Files
