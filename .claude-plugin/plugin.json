@@ -2,10 +2,23 @@
   "name": "video-skill",
   "displayName": "Video",
   "version": "1.0.0",
-  "description": "Make narrated explainers, app walkthroughs, training videos and UI motion loops entirely in code: script, voice, word-timed animation, captions, and pacing by the principles of animation.",
-  "author": { "name": "Trevor Stout", "url": "https://github.com/tstout729" },
+  "description": "Make videos in code from a directed brief: narrated explainers, app walkthroughs and training videos, launch films with kinetic type, 3D and clips, and motion loops. Script, voice, word-timed animation, captions and music, reviewed frame by frame like an animator.",
+  "author": {
+    "name": "Trevor Stout",
+    "url": "https://github.com/tstout729"
+  },
   "homepage": "https://github.com/tstout729/video-skill",
   "repository": "https://github.com/tstout729/video-skill",
   "license": "MIT",
-  "keywords": ["video", "animation", "explainer", "walkthrough", "training", "motion-design", "manim", "playwright", "elevenlabs"]
+  "keywords": [
+    "video",
+    "animation",
+    "explainer",
+    "walkthrough",
+    "training",
+    "motion-design",
+    "manim",
+    "playwright",
+    "elevenlabs"
+  ]
 }

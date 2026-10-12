@@ -37,3 +37,5 @@ jobs:
         run: bash skills/video/scripts/setup.sh
       - name: Render every example (no API key)
         run: bash tests/render-examples.sh
+      - name: Renderer regressions
+        run: bash tests/test_render.sh

@@ -31,7 +31,7 @@ Each shot has one hero move. Everything else waits, dims or holds still.
 - Moves across the frame ease in and out.
 - Linear timing is only for rotation, progress bars and a loop's overall phase. Linear easing on an ordinary move is the quickest way to make something look computer-generated.
 
-**Springs.** One number describes every spring: the damping ratio ζ. In `motion.js`, pass `{duration, damping}`; the older `bounce` equals 1 − ζ.
+**Springs.** One number describes every spring: the damping ratio ζ. In `motion.js`, pass `{duration, damping}`; the older `bounce` equals 1 − ζ. The named `SPRING` presets are near-critical (ζ 0.94–1.0, `pop` 0.86), for app screens in walkthroughs, where an overshoot reads as a glitch. For objects, hero moves and launch films, pass `{damping: 0.8}`.
 
 | Damping ratio | Feel | Use |
 | --- | --- | --- |

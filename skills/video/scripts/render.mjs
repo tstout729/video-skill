@@ -6,7 +6,7 @@
 //   node render.mjs <page.html> --out draft.mp4 --fps 30 --sub 1 --scale 0.5 --debug   (fast draft)
 //   node render.mjs <page.html> --serve [--port 8080]       preview in a browser (?t=12.5, ?debug=1)
 //
-// The page must define window.VIDEO = {width, height, duration} and window.seek(t); see
+// The page must define window.VIDEO = {width, height, duration, cuts?} and window.seek(t); see
 // page.mjs for what the local server serves. --debug adds ?debug=1, which shows the frame
 // number, time and current cue on every frame (motion.js), for drafts only.
 // Motion blur: each output frame averages `sub` subframes spread across `shutter` of the frame
@@ -55,6 +55,7 @@ const browser = await launch();
 const first = await openVideoPage(browser, url, { scale, query });
 const { video } = first;
 const duration = Number(opt("to", video.duration));
+const cuts = (video.cuts ?? []).map(Number).filter(Number.isFinite).sort((a, b) => a - b);
 
 // Selectors that style() could not find are usually typos ("title" for "#title").
 const missing = await first.p.evaluate(async (d) => {
@@ -112,9 +113,13 @@ async function renderChunk(index, ctx) {
   const closed = new Promise((res, rej) => ff.on("close", (c) => (c ? rej(new Error(`ffmpeg ${c}`)) : res())));
   for (let k = k0; k < k1; k++) {
     for (let j = 0; j < sub; j++) {
-      // Subframes span `shutter` of the frame interval, ending at the frame time.
-      const t = from + (k + ((j + 1 - sub) / sub) * shutter) / fps;
-      const buf = await shot(ctx.p, Math.max(from, t));
+      // Subframes span `shutter` of the frame interval, ending at the frame time. A hard cut
+      // (VIDEO.cuts) inside that span would blend the two shots, so subframes before it move
+      // to the cut: the first frame of a shot is all new shot, as a camera cut is.
+      const tFrame = from + k / fps;
+      let t = Math.max(from, from + (k + ((j + 1 - sub) / sub) * shutter) / fps);
+      for (const c of cuts) if (t < c && c <= tFrame + 1e-9) t = c;
+      const buf = await shot(ctx.p, t);
       if (!ff.stdin.write(buf)) await new Promise((r) => ff.stdin.once("drain", r));
     }
     done++;

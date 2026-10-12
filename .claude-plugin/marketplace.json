@@ -1,12 +1,15 @@
 {
   "name": "video-skill",
   "description": "The video skill: narrated explainers, walkthroughs and motion loops made in code.",
-  "owner": { "name": "Trevor Stout", "url": "https://github.com/tstout729" },
+  "owner": {
+    "name": "Trevor Stout",
+    "url": "https://github.com/tstout729"
+  },
   "plugins": [
     {
       "name": "video-skill",
       "source": "./",
-      "description": "Make narrated explainers, app walkthroughs, training videos and UI motion loops entirely in code: script, voice, word-timed animation, captions, and pacing by the principles of animation."
+      "description": "Make videos in code from a directed brief: narrated explainers, app walkthroughs and training videos, launch films with kinetic type, 3D and clips, and motion loops. Script, voice, word-timed animation, captions and music, reviewed frame by frame like an animator."
     }
   ]
 }
