@@ -19,7 +19,8 @@ repeats without fades, and a sound that rings past the end wraps to the start.
 The bed sits at --music-db under narration (default -24). Without narration the bed leads:
 by default it is measured and set to -28 LUFS before normalization, so UI sounds at the
 default --sfx-db peak about 8 dB over it and the final gain stays linear.
-Check the result with check_sync.py.
+Check the result with check_sync.py. When timeline.py marked scenes as read by the scratch voice
+(narrate.py --scratch), the mix ends with a loud warning that the video is a draft.
 """
 
 import argparse
@@ -44,6 +45,7 @@ from assemble import (  # noqa: E402
     caption_lines,
     measure_loudness,
     normalize,
+    scratch_warning,
     stamp,
 )
 
@@ -113,6 +115,20 @@ def write_wav(path: Path, x: np.ndarray) -> None:
 def words_from_js(path: Path) -> list[dict]:
     m = re.search(r"window\.WORDS = (\[.*?\]);", path.read_text(), re.S)
     return json.loads(m.group(1)) if m else []
+
+
+def scratch_scenes(narration: Path | None, words: Path | None) -> list[str]:
+    """Scenes timeline.py marked as read by the scratch voice: narration.wav's tag, or words.js."""
+    found: set[str] = set()
+    if narration:
+        tag = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format_tags=comment", "-of", "csv=p=0",
+                              str(narration)], capture_output=True, text=True).stdout.strip()
+        if tag.startswith("scratch narration:"):
+            found.update(tag.split(":", 1)[1].split())
+    if words:
+        m = re.search(r"window\.NARRATION = \{[^}]*scratch: (\[[^\]]*\])", words.read_text())
+        found.update(json.loads(m.group(1)) if m else [])
+    return sorted(found)
 
 
 def main() -> None:
@@ -227,6 +243,8 @@ def main() -> None:
           f"sfx: {len(events)} at +{args.sfx_lag:g} frame @ {fps:g} fps"
           + (f"  music: {args.music_db:+g} dB" if args.music else "")
           + (f"  captions: {srt_path}" if srt_path else ""))
+    project = args.words.parent if args.words else args.narration.parent.parent if args.narration else None
+    scratch_warning(scratch_scenes(args.narration, args.words), project, "run timeline.py, render and mux again")
 
 
 if __name__ == "__main__":
