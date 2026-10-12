@@ -1,0 +1,80 @@
+/* Motion Lab, explained: the one design system every scene uses. 1080x1350 (4:5). */
+
+@font-face { font-family: "Geist"; src: url("/_skill/assets/fonts/geist-wght-normal.woff2") format("woff2"); font-weight: 100 900; }
+@font-face { font-family: "Geist Mono"; src: url("/_skill/assets/fonts/geist-mono-wght-normal.woff2") format("woff2"); font-weight: 100 900; }
+/* Geist has no Greek: ζ and friends come from Inter, matched by unicode-range under the same names. */
+@font-face { font-family: "Geist"; src: url("/_skill/assets/fonts/inter-greek-wght-normal.woff2") format("woff2"); font-weight: 100 900; unicode-range: U+0370-03FF; }
+@font-face { font-family: "Geist Mono"; src: url("/_skill/assets/fonts/inter-greek-wght-normal.woff2") format("woff2"); font-weight: 100 900; unicode-range: U+0370-03FF; }
+
+:root {
+  --canvas: #ecebe7;
+  --paper: #ffffff;
+  --ink: #1c1c1a;
+  --muted: #6b6a66;
+  --faint: #a8a6a0;
+  --line: #d8d6d0;
+  --accent: #2f55e0;       /* one accent: the active idea, links, the hero's face */
+  --accent-soft: #e3e9fc;
+  --red: #d7263d;          /* frame notes, failures, the banned defaults */
+  --green: #1f8a5b;        /* pass, fixed */
+  --night: #12131f;        /* only for the "defaults" side of experiment one */
+
+  /* Type scale at 1080 px wide: body never under 28 px, key words 44 px or more. */
+  --t-display: 92px;
+  --t-h1: 64px;
+  --t-h2: 46px;
+  --t-body: 32px;
+  --t-small: 26px;
+  --t-label: 20px;
+
+  --r-card: 28px;
+  --shadow: 0 18px 50px rgba(28, 28, 26, 0.10), 0 2px 6px rgba(28, 28, 26, 0.06);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1080px; height: 1350px; overflow: hidden; background: var(--canvas); }
+body {
+  font-family: "Geist", system-ui, sans-serif; color: var(--ink); font-size: var(--t-body);
+  font-feature-settings: "tnum" 1, "ss01" 1; -webkit-font-smoothing: antialiased; text-rendering: geometricPrecision;
+}
+
+/* Frame zones: chapter bar (0-128), stage (128-1120), caption band (1120-1350). Nothing but
+   captions may enter the caption band. */
+#chapter { position: absolute; left: 0; top: 0; width: 1080px; height: 128px; z-index: 50; }
+#stage { position: absolute; left: 0; top: 128px; width: 1080px; height: 992px; overflow: hidden; }
+#cap { position: absolute; left: 0; top: 1120px; width: 1080px; height: 230px; z-index: 60;
+  --caption-size: 40px; --caption-color: #ffffff; --caption-accent: #9fb4ff; --caption-bg: rgba(28, 28, 26, 0.86); }
+
+/* Opacity, not just visibility: a child with visibility: visible would still show inside a hidden scene. */
+.scene { position: absolute; inset: 0; visibility: hidden; opacity: 0; }
+.scene.on { visibility: visible; opacity: 1; }
+
+/* ---- building blocks (kit.js creates these) ---- */
+.label { font-size: var(--t-label); font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.display { font-size: var(--t-display); font-weight: 700; letter-spacing: -0.03em; line-height: 1.02; }
+.h1 { font-size: var(--t-h1); font-weight: 700; letter-spacing: -0.025em; line-height: 1.06; }
+.h2 { font-size: var(--t-h2); font-weight: 650; letter-spacing: -0.02em; line-height: 1.1; }
+.body { font-size: var(--t-body); font-weight: 450; line-height: 1.35; color: var(--ink); }
+.small { font-size: var(--t-small); font-weight: 500; line-height: 1.35; color: var(--muted); }
+.mono { font-family: "Geist Mono", ui-monospace, monospace; font-feature-settings: "zero" 1; }
+.accent { color: var(--accent); }
+.red { color: var(--red); }
+.green { color: var(--green); }
+.card { position: absolute; background: var(--paper); border-radius: var(--r-card); box-shadow: var(--shadow); }
+.chip { display: inline-flex; align-items: center; gap: 10px; padding: 10px 18px; border-radius: 999px;
+  font-size: var(--t-small); font-weight: 600; background: var(--paper); box-shadow: 0 1px 0 var(--line) inset, var(--shadow); white-space: nowrap; }
+.chip.red { background: #fde8eb; color: var(--red); box-shadow: none; }
+.chip.green { background: #e2f3ea; color: var(--green); box-shadow: none; }
+.chip.accent { background: var(--accent-soft); color: var(--accent); box-shadow: none; }
+.abs { position: absolute; }
+.center { position: absolute; left: 0; width: 1080px; text-align: center; }
+svg.plot { position: absolute; overflow: visible; }
+svg.plot .axis { stroke: var(--line); stroke-width: 2; fill: none; }
+svg.plot .curve { stroke: var(--accent); stroke-width: 6; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+svg.plot .ghost { stroke: var(--faint); stroke-width: 4; fill: none; stroke-dasharray: 2 10; stroke-linecap: round; }
+svg.plot .dot { fill: var(--accent); }
+svg.plot text { font-family: "Geist", sans-serif; font-size: 22px; fill: var(--muted); }
+
+/* Captions: a padded pill, centered in the caption band. */
+#cap { display: flex; align-items: center; justify-content: center; text-align: center; padding: 0 60px; }
+#cap .caption-line { padding: 14px 32px 18px; border-radius: 24px; line-height: 1.22; }

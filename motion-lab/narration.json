@@ -1,0 +1,100 @@
+{
+ "title": "Motion Lab, explained",
+ "voice_id": "JBFqnCBsd6RMkjVDRZzb",
+ "model_id": "eleven_v4",
+ "voice_settings": {
+  "stability": 0.5,
+  "similarity_boost": 0.75
+ },
+ "timeline": {
+  "gap": 0.8,
+  "lead_in": 0.8,
+  "tail": 4.0
+ },
+ "scenes": [
+  {
+   "id": "s01",
+   "text": "This video explains Florence's article, Motion Lab: how to make an AI animate like a studio. Every frame here was made the same way, in code, by an agent."
+  },
+  {
+   "id": "s02",
+   "text": "In launch week, motion clips were posted as one prompt. The biggest ones weren't. One music video took a five-minute brief and twelve hours of work. Nobody shows the middle: the notes, the fixes, and comments like, this peak lands two frames late."
+  },
+  {
+   "id": "s03",
+   "text": "So the article is a lab notebook, with every prompt and every follow-up. Its main idea: adjectives are where the model's default look lives. Swap an adjective for a number, and you take that decision back."
+  },
+  {
+   "id": "s04",
+   "text": "Experiment one. Same model, same earbuds, same six-second loop. One run got three adjectives and came back with the defaults: navy space, a glowing ring, particles and a spin. The other run got four hundred and fifty words of direction."
+  },
+  {
+   "id": "s05",
+   "text": "Premium became materials: satin ceramic, with the brand color on one part. Cool became studio lights, with no glow. Modern became a narrow lens and one push-in. Animation became a tempo, anticipation and springs."
+  },
+  {
+   "id": "s06",
+   "text": "The model writes programs, not video. Code draws each frame, a browser freezes each moment, and a video tool joins them. So every frame is repeatable, edits are cheap, and the model can check its own frames."
+  },
+  {
+   "id": "s07",
+   "text": "A render contract keeps it that way. No clocks or timers. Seeded randomness. And a loop renders frames zero to N minus one, because frame N repeats frame zero and causes a hitch."
+  },
+  {
+   "id": "s08",
+   "text": "You can start with no install, in the Claude app. Or use Claude Code, which renders the frames, looks at them and fixes the code itself. Start at medium effort, and raise it only after two misses."
+  },
+  {
+   "id": "s09",
+   "text": "A directed prompt removes one decision per line. The goal comes first, then the time, the shots, the output and a check. Add a ban list: no gradients, glow, particles, or everything fading in at once. Grow it after every render."
+  },
+  {
+   "id": "s10",
+   "text": "Each shot gets one hero move. Secondary moves travel about sixty percent as far, a moment later. Ambient motion stays under five percent."
+  },
+  {
+   "id": "s11",
+   "text": "Now the numbers. Entrances ease out. Exits ease in, and run forty to fifty percent shorter. Springs use the damping ratio: one has no bounce, point eight is premium, and point five is playful. Position can bounce. Opacity never does."
+  },
+  {
+   "id": "s12",
+   "text": "Feedback takes about a tenth of a second, and hero reveals six to nine tenths. Stagger list items forty to eighty milliseconds apart. Compute each beat from time, so the cuts never drift. Hold text for point three seconds a word, plus half a second."
+  },
+  {
+   "id": "s13",
+   "text": "Cameras get the gentlest curves. In a parallax shot, the foreground moves at full speed, the middle at half, and the background at a fifth. Keep text contrast at four and a half to one, and never flash more than three times a second."
+  },
+  {
+   "id": "s14",
+   "text": "Experiment two puts the classic principles of animation on a 3D character. Five do most of the work: anticipation, squash and stretch, overlapping action, follow-through and arcs. Each label lights up on its exact frame, so a late move shows its label first."
+  },
+  {
+   "id": "s15",
+   "text": "Then an automated audit ran seventy-one checks across all four hundred and eighty frames. Six failed, and all six were fixed before the final render."
+  },
+  {
+   "id": "s16",
+   "text": "The first render is a draft. Read a contact sheet like a storyboard. An onion skin shows the spacing, and a speed graph shows the sharp corners. Write one or two notes per round, and point each one at a frame."
+  },
+  {
+   "id": "s17",
+   "text": "Turn feelings into numbers. Make it pop becomes eight percent over six frames. It drags becomes one beat shorter per hold. And post your follow-up count: receipts build trust."
+  },
+  {
+   "id": "s18",
+   "text": "Name the engine, or the model picks one. Three J S for anything 3D, Remotion for a series, and plain HTML for a short loop."
+  },
+  {
+   "id": "s19",
+   "text": "Feeds start muted, so the picture must work in silence. Mix to minus fourteen LUFS, with each picture one frame before its sound. And export GIFs at a frame rate they can store, or a loop runs four percent fast."
+  },
+  {
+   "id": "s20",
+   "text": "When a fix doesn't hold, compare the frames just before and after it. Every fix joins the contract. The homework: make one, write two notes with frame numbers, and post every prompt."
+  },
+  {
+   "id": "s21",
+   "text": "All of this is now part of the free video skill, and this video was made with it. Florence's article and the skill are linked below."
+  }
+ ]
+}

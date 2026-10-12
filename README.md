@@ -10,6 +10,8 @@ You ask for a video. Your agent writes the script, records the voice, animates e
 
 It works in [Claude Code](https://claude.com/claude-code), [Codex](https://openai.com/codex) and any agent that supports [Agent Skills](https://agentskills.io).
 
+**[Motion Lab, explained](https://tstout729.github.io/video-skill/#motion-lab)** is a 5½-minute film made with this skill. It explains Florence's article on directing AI motion with numbers. Its [brief](motion-lab/brief.md), [scenes](motion-lab/scenes/) and [review log](motion-lab/log.md) are all here: 62 review rounds, 107 notes pinned to frames, and 203 automated checks.
+
 ## What it makes
 
 | | Kind | Good for | Built with |
