@@ -21,7 +21,7 @@ jobs:
       - name: System packages
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq ffmpeg libcairo2-dev libpango1.0-dev pkg-config >/dev/null
+          sudo apt-get install -y -qq ffmpeg espeak-ng libcairo2-dev libpango1.0-dev pkg-config >/dev/null
       - name: Static checks
         run: |
           for f in skills/video/scripts/*.py; do python3 -m py_compile "$f"; done
@@ -33,6 +33,8 @@ jobs:
           python3 tests/test_captions.py
           uv run -q --with numpy python3 tests/test_audio.py
           python3 -c "import json; [json.load(open(f)) for f in ['.claude-plugin/plugin.json', '.claude-plugin/marketplace.json']]"
+      - name: Scratch voice (espeak-ng, no API key)
+        run: uv run -q --with numpy --with requests python3 tests/test_scratch_voice.py
       - name: Setup
         run: bash skills/video/scripts/setup.sh
       - name: Render every example (no API key)

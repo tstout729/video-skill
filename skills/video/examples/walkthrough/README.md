@@ -53,6 +53,6 @@ To look at the review stills first, run `node ../../scripts/render.mjs index.htm
 ## Change the script
 
 1. Edit `narration.json`.
-2. Run `uv run --script ../../scripts/narrate.py .`. It needs an ElevenLabs key, and it records only the scenes whose text changed.
+2. Run `uv run --script ../../scripts/narrate.py .`. It needs an ElevenLabs key, and it records only the scenes whose text changed. Without a key, add `--scratch` for a free draft in your computer's voice ([scratch voice](../../references/scratch-voice.md)).
 3. If you changed a word that `index.html` cues on, change that cue too.
 4. Run the three commands after `setup.sh` again.

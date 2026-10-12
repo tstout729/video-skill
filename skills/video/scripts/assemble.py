@@ -12,7 +12,8 @@ Each scene's video length wins: narration is padded with silence, never cut, bec
 Narrated.finish() already holds the picture until the narration ends.
 Captions are a soft subtitle track (mov_text) plus a sidecar .srt next to the output.
 Loudness is normalized in two passes to -16 LUFS (--social: -14 LUFS for feeds), with true
-peaks capped at -1.0 dBTP; the measured result is printed.
+peaks capped at -1.0 dBTP; the measured result is printed. A scene still read by the scratch
+voice (narrate.py --scratch) gets a loud warning that the video is a draft.
 """
 
 import argparse
@@ -20,6 +21,7 @@ import json
 import math
 import re
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -179,6 +181,19 @@ def normalize(measure_args: list[str], encode, out: Path, lufs: float = LUFS_DEF
     return level, peak
 
 
+def scratch_warning(scenes: list[str], project: Path | None, redo: str) -> None:
+    """Say loudly that the computer's draft voice (narrate.py --scratch) is still in the video."""
+    if not scenes:
+        return
+    narrate = Path(__file__).resolve().parent / "narrate.py"
+    bar = "!" * 78
+    sys.stdout.flush()  # the warning comes last, after the summary line
+    print("\n".join(["", bar, f"!!  SCRATCH NARRATION in {', '.join(scenes)}: the computer's draft voice.",
+                     "!!  This video is a draft. Do not deliver it. Record the real voice:",
+                     f"!!    uv run --script {narrate} {project or '<project>'}",
+                     f"!!  then {redo}.", bar, ""]), file=sys.stderr)
+
+
 # narration.json "language" (ISO 639-1, default "en") labels the caption track (ISO 639-2).
 CAPTION_LANGUAGES = {"en": "eng", "es": "spa", "fr": "fra", "de": "deu", "pt": "por", "it": "ita"}
 
@@ -238,6 +253,8 @@ def main() -> None:
 
         lufs, peak = normalize(["-i", str(joined), "-map", "0:a", "-af", "{loudnorm}"], encode, args.out, args.lufs)
     print(f"{args.out}  {probe_duration(args.out):.1f}s  {lufs:.1f} LUFS  {peak:.1f} dBTP  captions: {srt_path}")
+    scratch_warning([s["id"] for s in cfg["scenes"] if timings[s["id"]].get("scratch")], args.project,
+                    "render the scenes and run assemble.py again")
 
 
 if __name__ == "__main__":
