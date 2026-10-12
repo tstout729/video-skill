@@ -28,7 +28,7 @@ Pick one pack per video and keep to its rules. The rules below are written as th
 
 **LOOK:** warm uncoated paper (`#f3eee3`) and three inks. The default trio is aqua `#5ec8e5`, fluorescent pink `#ff48b0` and yellow `#ffe800` (`INKS` has other common Riso inks). Every color is a plate tone or an overprint: aqua + yellow prints green, pink + yellow orange, aqua + pink violet, all three a warm near-black. White is paper. Screens at 15°, 75° and 45°, 9 px cells at 1080 wide. One bold grotesk for type, printed solid in one or two inks: Geist 800–900 at −2 px tracking, Geist Mono for numbers. Check that text keeps a 4.5:1 contrast with what it is printed on: fluorescent pink on a light sky does not; violet (aqua + pink) does.
 
-**MOTION:** on ones at 24 fps, eased (springs at ζ 0.9–1.0, ease-in exits). Things never fade: they print in and out by tone, so dots grow from nothing to solid. Registration wanders by up to a pixel and the ink texture changes on twos, cycling through three prints, so a held frame shimmers like a stack of real prints. The screen is fixed to the sheet: a moving shape moves through the dots.
+**MOTION:** on ones at 24 fps, eased (springs at ζ 0.9–1.0, ease-in exits). Things never fade: they print in and out by tone, so dots grow from nothing to solid. Each plate sits 2–3 px off the first one (seeded); its registration wanders by up to a pixel and the ink texture changes on twos, cycling through three prints, so a held frame shimmers like a stack of real prints. The screen is fixed to the sheet: a moving shape moves through the dots.
 
 **BAN:** black or white ink, pure RGB colors, smooth gradients (use a tone gradient: the screen turns it into dots), drop shadows, blur, glow, opacity fades, more than three inks.
 
@@ -39,7 +39,7 @@ const press = riso("#art", { seed: "my-video" });  // inks, paper, pitch, misreg
 window.seek = (t) => press.frame(t, (p) => {
   p.flood({ aqua: p.linear(0, 0, 0, 720, [[0, 0.6], [1, 0.12]]) });   // a screened sky, edge to edge
   p.fill(circle(820, 330, 92), { yellow: 1, pink: 0.42 });           // knockout fill: an orange sun
-  p.stroke(points, { aqua: 1 }, { width: 6 });                       // lines overprint by default
+  p.stroke([[300, 400], [300, 440]], { aqua: 1 }, { width: 6 });    // a rain streak: lines overprint
   p.text("How a seed grows", 70, 142, { aqua: 1, pink: 1 }, { font: "900 82px Geist", tracking: -2.5 });
 });
 ```
@@ -92,9 +92,9 @@ window.seek = (t) => cp.frame(t, (s) => {
   const st = myStory(s.t);                           // read tracks at the stepped time
   s.sheet(PAPERS.sky);
   s.piece(circle(822, st.sunY, 94), PAPERS.marigold, { key: "sun", z: 1.2 });
-  s.piece(hill, PAPERS.moss, { key: "hill", edge: "torn" });
-  s.strip(stemPoints, 16, PAPERS.forest, { key: "stem", end: 11 });
-  s.line(veinPoints, PAPERS.forest, { key: "vein", width: 4 });   // boils
+  s.piece(hillPoints, PAPERS.moss, { key: "hill", edge: "torn" });
+  s.strip(st.stem, 16, PAPERS.forest, { key: "stem", end: 11 });   // points along the stem
+  s.line(st.vein, PAPERS.forest, { key: "vein", width: 4 });        // boils
   s.text("How a seed grows", 66, 142, PAPERS.navy, { size: 86, key: "title", tilt: 6 });
 });
 ```
