@@ -1,6 +1,6 @@
 # /// script
 # requires-python = ">=3.11"
-# dependencies = ["requests", "num2words"]
+# dependencies = ["requests", "num2words", "numpy"]
 # ///
 """Generate per-scene narration with ElevenLabs and verify each take with Scribe.
 
@@ -12,6 +12,12 @@ Writes <project>/audio/<id>.mp3 and <project>/audio/timings.json:
 Each scene is one unedited take (splicing sentences sounds robotic). eleven_v4 sometimes
 repeats or drops a phrase, so every take is transcribed and retried when it does not match.
 Re-running skips scenes whose text is unchanged; pass --force to regenerate.
+
+--scratch records a free draft take in the computer's own voice instead (macOS `say`, or
+espeak-ng / espeak on Linux), with word times from a forced alignment (scratch_voice.py). It needs
+no key. Its timings are marked "scratch": true, and a later run without --scratch replaces every
+scratch take, even when the text is unchanged. --scratch never replaces a real take of the
+current text.
 """
 
 import argparse
@@ -27,6 +33,8 @@ import unicodedata
 from pathlib import Path
 
 import requests
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 API = "https://api.elevenlabs.io/v1"
 ENV_FILE = Path.home() / ".config/elevenlabs/env"
@@ -138,6 +146,11 @@ def duration(path: Path) -> float:
     return float(out.stdout.strip())
 
 
+def has_real_take(entry: dict, digest: str, mp3: Path) -> bool:
+    """A real take of this exact text exists. A scratch take never counts, so it is always replaced."""
+    return mp3.exists() and entry.get("digest") == digest and not entry.get("scratch")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("project", type=Path)
@@ -145,6 +158,12 @@ def main() -> None:
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--min-ratio", type=float, default=0.93)
     parser.add_argument("--tries", type=int, default=4)
+    parser.add_argument("--scratch", action="store_true",
+                        help="free draft takes in the computer's voice (no key); real takes are kept")
+    parser.add_argument("--scratch-voice", help="say voice (say -v '?') or espeak voice; default by language")
+    parser.add_argument("--scratch-rate", type=int, default=150, help="scratch words per minute (default 150)")
+    parser.add_argument("--scratch-engine", choices=["say", "espeak-ng", "espeak"],
+                        help="default: say on macOS, else espeak-ng, else espeak")
     args = parser.parse_args()
 
     cfg = json.loads((args.project / "narration.json").read_text())
@@ -152,7 +171,11 @@ def main() -> None:
     audio_dir.mkdir(exist_ok=True)
     timings_path = audio_dir / "timings.json"
     timings = json.loads(timings_path.read_text()) if timings_path.exists() else {}
-    key = api_key()
+    if args.scratch:
+        from scratch_voice import Engine
+        engine = Engine.find(args.scratch_engine, args.scratch_voice, args.scratch_rate, cfg.get("language", "en"))
+    else:
+        key = api_key()
 
     for scene in cfg["scenes"]:
         sid, text = scene["id"], scene["text"]
@@ -160,9 +183,26 @@ def main() -> None:
         mp3 = audio_dir / f"{sid}.mp3"
         if args.only and sid not in args.only:
             continue
-        if not args.force and mp3.exists() and timings.get(sid, {}).get("digest") == digest:
+        entry = timings.get(sid, {})
+        if args.scratch:
+            if has_real_take(entry, digest, mp3):
+                print(f"{sid}: real take kept")
+                continue
+            scratch_digest = engine.digest(text)
+            if not args.force and mp3.exists() and entry.get("digest") == scratch_digest:
+                print(f"{sid}: unchanged (scratch)")
+                continue
+            words = engine.take(text, mp3)
+            timings[sid] = {"digest": scratch_digest, "duration": duration(mp3), "scratch": True,
+                            "voice": engine.label, "words": words}
+            timings_path.write_text(json.dumps(timings, indent=1))
+            print(f"{sid}: scratch take {timings[sid]['duration']:.1f}s ({engine.label})")
+            continue
+        if not args.force and has_real_take(entry, digest, mp3):
             print(f"{sid}: unchanged")
             continue
+        if entry.get("scratch"):
+            print(f"{sid}: replacing the scratch take")
         best = None
         for attempt in range(1, args.tries + 1):
             audio, words = synthesize(key, cfg, text)
@@ -183,6 +223,10 @@ def main() -> None:
 
     total = sum(t["duration"] for t in timings.values())
     print(f"total narration {total:.1f}s")
+    scratch = [s["id"] for s in cfg["scenes"] if timings.get(s["id"], {}).get("scratch")]
+    if scratch:
+        print(f"scratch takes: {', '.join(scratch)}. A draft only: run narrate.py without --scratch "
+              "to record the real voice before you deliver.")
 
 
 if __name__ == "__main__":
