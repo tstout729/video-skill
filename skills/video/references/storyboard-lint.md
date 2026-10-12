@@ -120,6 +120,8 @@ small #app -- the app is redrawn at its real size; the camera pushes in before e
 - `@ t0-t1` limits the line to findings within those seconds.
 - The reason is required. Lint prints it next to the finding, and notes any line that matched nothing.
 
+The walkthrough and transitions examples each have a real `lint-allow.txt`. The repository's tests lint every HTML example this way.
+
 ### Output
 
 Each finding prints with its number, check, selector path and text, the frames where it holds, and its measurements at one frame (the first settle frame, when there is one):

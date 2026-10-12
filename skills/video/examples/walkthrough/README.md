@@ -21,6 +21,7 @@ Copy this folder to start your own walkthrough. The comment at the top of `index
 - **A camera that waits.** It zooms only after the content it frames has settled. It lives inside the clipped app window, so a zoom never shows the canvas.
 - **One shape.** The intro card morphs into the app window, and the window morphs into the recap card. Inside the app, the Invite button grows into the invite card, and the card flies into the list as the new row. A shape keeps its content while it changes: the button stays ink with its label until it has mostly grown, then turns white in about 0.15 s as the card's title arrives. No frame shows an empty gray box.
 - **Review stills.** `window.VIDEO.stills` lists eleven settled states for a contact sheet.
+- **A lint with reasons.** `review.mjs lint index.html --allow lint-allow.txt` passes. The allow file names each deliberate finding and says why: the app is drawn at its real desktop size, upcoming steps are faint until their turn, and the page behind the invite card is dimmed and cropped.
 
 ## Files
 
@@ -29,6 +30,7 @@ Copy this folder to start your own walkthrough. The comment at the top of `index
 | `narration.json` | The script: six short scenes, George voice |
 | `audio/s01.mp3` ... `s06.mp3`, `audio/timings.json` | The recorded takes and their word times. They are committed, so you can render without an ElevenLabs key |
 | `index.html` | The animation. Every frame is a pure function of time |
+| `lint-allow.txt` | The lint findings that are on purpose, each with its reason |
 | `words.js`, `audio/narration.wav` | Written by `timeline.py` from the takes |
 
 ## Render it
