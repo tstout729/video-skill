@@ -29,7 +29,8 @@ jobs:
           node --check skills/video/scripts/page.mjs
           node --check skills/video/scripts/review.mjs
           node --check skills/video/runtime/motion.js
-          bash -n skills/video/scripts/setup.sh tests/render-examples.sh
+          node --check skills/video/runtime/transitions.js
+          bash -n skills/video/scripts/setup.sh tests/render-examples.sh tests/test_transitions.sh
           python3 tests/test_captions.py
           uv run -q --with numpy python3 tests/test_audio.py
           python3 -c "import json; [json.load(open(f)) for f in ['.claude-plugin/plugin.json', '.claude-plugin/marketplace.json']]"
@@ -39,3 +40,5 @@ jobs:
         run: bash tests/render-examples.sh
       - name: Renderer regressions
         run: bash tests/test_render.sh
+      - name: Transitions, finish and cut check
+        run: bash tests/test_transitions.sh
