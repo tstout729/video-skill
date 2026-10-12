@@ -20,7 +20,7 @@ It works in [Claude Code](https://claude.com/claude-code), [Codex](https://opena
 
 Every video gets:
 
-- **A real voice** from [ElevenLabs](https://elevenlabs.io). Each take is transcribed and re-recorded if a phrase was dropped or repeated.
+- **A real voice** from [ElevenLabs](https://elevenlabs.io). Each take is transcribed and re-recorded if a phrase was dropped or repeated. For drafts, your computer's own voice works too, for free.
 - **Word-level timing.** Each motion starts as the narrator says its cue words.
 - **Captions** as a soft track and a `.srt` file, in any language.
 - **Unhurried motion.** The agent follows the classic principles of animation, then checks its own work. It looks at every frame and measures every pause, so nothing changes before you can read it.
@@ -63,7 +63,7 @@ It installs Playwright and Chromium into a private cache folder, never into your
 | [ffmpeg](https://ffmpeg.org) | encoding, mixing, captions | `brew install ffmpeg` / `apt install ffmpeg` |
 | [Node.js](https://nodejs.org) 18+ | the HTML renderer | `brew install node` |
 | [uv](https://docs.astral.sh/uv/) | runs the Python scripts and Manim with their dependencies | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
-| An [ElevenLabs](https://elevenlabs.io) API key | narration (loops and the bundled examples don't need it) | `export ELEVENLABS_API_KEY=...` |
+| An [ElevenLabs](https://elevenlabs.io) API key | the finished narration (drafts, loops and the bundled examples don't need it) | `export ELEVENLABS_API_KEY=...` |
 
 ## Use it
 
@@ -77,7 +77,7 @@ Just ask:
 
 The agent reads your code or docs for the facts, shows you its plan when the request is open-ended, then works through script, voice, animation, review and render. Each video lives in its own folder (`videos/<name>/` by default), so you can ask for changes later: *"slow down scene 3"*, *"use a calmer voice"*, *"fix the price on the second card"*.
 
-## Try the examples, with no API key
+## Try it without an API key
 
 The examples include their recorded narration, so they render without an ElevenLabs key:
 
@@ -88,6 +88,13 @@ bash tests/render-examples.sh            # renders all three at draft quality
 ```
 
 Each example's README has the full-quality commands: [explainer](skills/video/examples/explainer/), [walkthrough](skills/video/examples/walkthrough/), [loop](skills/video/examples/loop/). They're also the templates your agent copies from.
+
+Your own videos work without a key too. Ask for a draft with the scratch voice, or run `narrate.py --scratch`. Your computer's built-in voice (`say` on macOS, espeak-ng on Linux) reads the script, and the skill writes the same audio files and word timings a real take has. Timing, rendering, captions and mixing all work unchanged. That helps in two ways:
+
+- **Iterate on timing for free.** Rework the script and the animation against the scratch voice as often as you like. Record the real voice once, when both are settled.
+- **Make a full draft without a key.** Anyone can go from a request to a narrated MP4 with captions before signing up for ElevenLabs. Lists that test skills on machines with no voice keys, such as [awesome-claude-video-skills](https://github.com/zhuyansen/awesome-claude-video-skills), get the whole pipeline, not just the silent parts.
+
+Word times come from a forced alignment of the scratch take, so cues land within a frame or two of the words. The final mix prints a large warning while any scratch take is still in the video, and running `narrate.py` with a key replaces them all. Details: [Scratch voice](skills/video/references/scratch-voice.md).
 
 ## Tips
 
@@ -110,7 +117,7 @@ Put your defaults in `~/.config/video-skill/preferences.md`, or in `VIDEO.md` in
 
 ## Costs
 
-Rendering is local and free. Narration uses ElevenLabs credits: about 1,000 characters of script per minute of video, plus one short transcription per take to check it. Only changed scenes are re-recorded. The agent tells you before it records.
+Rendering is local and free, and so are drafts read by the scratch voice. Narration uses ElevenLabs credits: about 1,000 characters of script per minute of video, plus one short transcription per take to check it. Only changed scenes are re-recorded. The agent tells you before it records.
 
 ## How it works
 
@@ -136,7 +143,7 @@ narration.json ─▶ narrate.py ─▶ audio + word timings
 - The explainer style is inspired by [3Blue1Brown](https://www.3blue1brown.com) and built on [Manim Community](https://www.manim.community).
 - The UI motion approach was adapted from Ross's open motion-design prompt template ([@rossaxbt](https://x.com/rossaxbt)).
 - The fonts are [Geist and Geist Mono](https://vercel.com/font), [Nunito Sans](https://fonts.google.com/specimen/Nunito+Sans) and the Greek subset of [Inter](https://rsms.me/inter/), all under the SIL Open Font License.
-- The tools: [Playwright](https://playwright.dev), [ffmpeg](https://ffmpeg.org), [ElevenLabs](https://elevenlabs.io) and [uv](https://docs.astral.sh/uv/).
+- The tools: [Playwright](https://playwright.dev), [ffmpeg](https://ffmpeg.org), [ElevenLabs](https://elevenlabs.io) and [uv](https://docs.astral.sh/uv/). Scratch voices come from macOS `say` and [eSpeak NG](https://github.com/espeak-ng/espeak-ng), run as installed programs, never bundled.
 
 ## License
 

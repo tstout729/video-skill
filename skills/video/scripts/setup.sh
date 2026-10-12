@@ -154,9 +154,17 @@ echo "Narration (ElevenLabs)"
 if [[ -n "${ELEVENLABS_API_KEY:-}" ]] || grep -q '^ELEVENLABS_API_KEY=' "$HOME/.config/elevenlabs/env" 2>/dev/null; then
   ok "ElevenLabs API key found"
 else
-  warn "No ElevenLabs API key. Narrated videos need one; silent loops and the bundled examples do not."
+  warn "No ElevenLabs API key. Finished narrated videos need one; drafts, silent loops and the bundled examples do not."
   echo "     Get a key at https://elevenlabs.io, then: export ELEVENLABS_API_KEY=..."
   echo "     or save the line ELEVENLABS_API_KEY=... in ~/.config/elevenlabs/env (chmod 600)"
+fi
+# narrate.py --scratch: a free draft voice, for timing work and for trying the skill without a key.
+if [[ "$os" == Darwin ]] && command -v say >/dev/null; then
+  ok "Scratch voice for free drafts: say (narrate.py --scratch)"
+elif scratch="$(command -v espeak-ng || command -v espeak)"; then
+  ok "Scratch voice for free drafts: $(basename "$scratch") (narrate.py --scratch)"
+else
+  warn "No scratch voice for free drafts (narrate.py --scratch): $(hint espeak-ng espeak-ng)"
 fi
 
 if (( missing )); then echo "Not ready: fix the items marked ✗, then run this again."; exit 1; fi
