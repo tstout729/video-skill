@@ -1,0 +1,616 @@
+{
+ "s01": {
+  "digest": "737fec7a01d863f2",
+  "duration": 4.08,
+  "match": 1.0,
+  "words": [
+   {
+    "word": "Every",
+    "start": 0.0,
+    "end": 0.32
+   },
+   {
+    "word": "frame",
+    "start": 0.48,
+    "end": 0.72
+   },
+   {
+    "word": "of",
+    "start": 0.8,
+    "end": 0.88
+   },
+   {
+    "word": "this",
+    "start": 0.96,
+    "end": 1.04
+   },
+   {
+    "word": "video",
+    "start": 1.12,
+    "end": 1.52
+   },
+   {
+    "word": "was",
+    "start": 1.6,
+    "end": 1.76
+   },
+   {
+    "word": "made",
+    "start": 1.84,
+    "end": 2.0
+   },
+   {
+    "word": "in",
+    "start": 2.08,
+    "end": 2.24
+   },
+   {
+    "word": "code,",
+    "start": 2.44,
+    "end": 2.96
+   },
+   {
+    "word": "by",
+    "start": 3.04,
+    "end": 3.2
+   },
+   {
+    "word": "Claude.",
+    "start": 3.28,
+    "end": 4.08
+   }
+  ]
+ },
+ "s02": {
+  "digest": "cd8d06c3a3578d87",
+  "duration": 7.2,
+  "match": 1.0,
+  "words": [
+   {
+    "word": "It",
+    "start": 0.0,
+    "end": 0.16
+   },
+   {
+    "word": "starts",
+    "start": 0.24,
+    "end": 0.56
+   },
+   {
+    "word": "from",
+    "start": 0.64,
+    "end": 0.72
+   },
+   {
+    "word": "a",
+    "start": 0.8,
+    "end": 0.88
+   },
+   {
+    "word": "brief",
+    "start": 0.96,
+    "end": 1.28
+   },
+   {
+    "word": "in",
+    "start": 1.36,
+    "end": 1.44
+   },
+   {
+    "word": "numbers,",
+    "start": 1.52,
+    "end": 2.32
+   },
+   {
+    "word": "not",
+    "start": 2.4,
+    "end": 2.64
+   },
+   {
+    "word": "adjectives.",
+    "start": 2.72,
+    "end": 3.72
+   },
+   {
+    "word": "Premium",
+    "start": 4.0,
+    "end": 4.56
+   },
+   {
+    "word": "becomes",
+    "start": 4.64,
+    "end": 4.96
+   },
+   {
+    "word": "a",
+    "start": 5.04,
+    "end": 5.12
+   },
+   {
+    "word": "spring",
+    "start": 5.2,
+    "end": 5.68
+   },
+   {
+    "word": "that",
+    "start": 5.76,
+    "end": 5.84
+   },
+   {
+    "word": "barely",
+    "start": 6.0,
+    "end": 6.32
+   },
+   {
+    "word": "bounces.",
+    "start": 6.4,
+    "end": 7.28
+   }
+  ]
+ },
+ "s03": {
+  "digest": "27a2552d971a01aa",
+  "duration": 7.92,
+  "match": 1.0,
+  "words": [
+   {
+    "word": "One",
+    "start": 0.0,
+    "end": 0.24
+   },
+   {
+    "word": "skill",
+    "start": 0.32,
+    "end": 0.64
+   },
+   {
+    "word": "makes",
+    "start": 0.8,
+    "end": 1.12
+   },
+   {
+    "word": "app",
+    "start": 1.2,
+    "end": 1.36
+   },
+   {
+    "word": "walkthroughs,",
+    "start": 1.44,
+    "end": 2.4
+   },
+   {
+    "word": "diagrams",
+    "start": 2.48,
+    "end": 3.04
+   },
+   {
+    "word": "that",
+    "start": 3.12,
+    "end": 3.2
+   },
+   {
+    "word": "explain",
+    "start": 3.4,
+    "end": 3.6
+   },
+   {
+    "word": "an",
+    "start": 3.68,
+    "end": 3.76
+   },
+   {
+    "word": "idea,",
+    "start": 3.84,
+    "end": 4.72
+   },
+   {
+    "word": "3D",
+    "start": 4.8,
+    "end": 5.2
+   },
+   {
+    "word": "objects,",
+    "start": 5.28,
+    "end": 6.0
+   },
+   {
+    "word": "and",
+    "start": 6.08,
+    "end": 6.16
+   },
+   {
+    "word": "loops",
+    "start": 6.24,
+    "end": 6.64
+   },
+   {
+    "word": "that",
+    "start": 6.72,
+    "end": 6.8
+   },
+   {
+    "word": "land",
+    "start": 6.88,
+    "end": 7.12
+   },
+   {
+    "word": "on",
+    "start": 7.16,
+    "end": 7.2
+   },
+   {
+    "word": "the",
+    "start": 7.28,
+    "end": 7.32
+   },
+   {
+    "word": "beat.",
+    "start": 7.36,
+    "end": 8.0
+   }
+  ]
+ },
+ "s04": {
+  "digest": "5d84dfe50a301802",
+  "duration": 5.6,
+  "match": 1.0,
+  "words": [
+   {
+    "word": "Change",
+    "start": 0.0,
+    "end": 0.32
+   },
+   {
+    "word": "the",
+    "start": 0.4,
+    "end": 0.48
+   },
+   {
+    "word": "style",
+    "start": 0.56,
+    "end": 0.88
+   },
+   {
+    "word": "pack,",
+    "start": 0.96,
+    "end": 1.44
+   },
+   {
+    "word": "and",
+    "start": 1.48,
+    "end": 1.52
+   },
+   {
+    "word": "the",
+    "start": 1.6,
+    "end": 1.68
+   },
+   {
+    "word": "same",
+    "start": 1.76,
+    "end": 2.0
+   },
+   {
+    "word": "story",
+    "start": 2.08,
+    "end": 2.4
+   },
+   {
+    "word": "is",
+    "start": 2.48,
+    "end": 2.56
+   },
+   {
+    "word": "printed,",
+    "start": 2.64,
+    "end": 3.28
+   },
+   {
+    "word": "pixelated,",
+    "start": 3.36,
+    "end": 4.24
+   },
+   {
+    "word": "or",
+    "start": 4.32,
+    "end": 4.4
+   },
+   {
+    "word": "cut",
+    "start": 4.48,
+    "end": 4.72
+   },
+   {
+    "word": "from",
+    "start": 4.8,
+    "end": 4.88
+   },
+   {
+    "word": "paper.",
+    "start": 4.96,
+    "end": 5.68
+   }
+  ]
+ },
+ "s05": {
+  "digest": "06b6a0744d251fe7",
+  "duration": 4.88,
+  "match": 1.0,
+  "words": [
+   {
+    "word": "It",
+    "start": 0.0,
+    "end": 0.16
+   },
+   {
+    "word": "writes",
+    "start": 0.32,
+    "end": 0.48
+   },
+   {
+    "word": "the",
+    "start": 0.52,
+    "end": 0.56
+   },
+   {
+    "word": "script,",
+    "start": 0.64,
+    "end": 1.28
+   },
+   {
+    "word": "records",
+    "start": 1.52,
+    "end": 1.76
+   },
+   {
+    "word": "the",
+    "start": 1.8,
+    "end": 1.84
+   },
+   {
+    "word": "voice,",
+    "start": 1.92,
+    "end": 2.48
+   },
+   {
+    "word": "and",
+    "start": 2.56,
+    "end": 2.64
+   },
+   {
+    "word": "times",
+    "start": 2.88,
+    "end": 3.12
+   },
+   {
+    "word": "every",
+    "start": 3.28,
+    "end": 3.44
+   },
+   {
+    "word": "move",
+    "start": 3.6,
+    "end": 3.92
+   },
+   {
+    "word": "to",
+    "start": 3.96,
+    "end": 4.0
+   },
+   {
+    "word": "the",
+    "start": 4.04,
+    "end": 4.08
+   },
+   {
+    "word": "words.",
+    "start": 4.16,
+    "end": 4.96
+   }
+  ]
+ },
+ "s06": {
+  "digest": "57699e69bcdb2eeb",
+  "duration": 10.24,
+  "match": 0.979,
+  "words": [
+   {
+    "word": "Then",
+    "start": 0.0,
+    "end": 0.32
+   },
+   {
+    "word": "it",
+    "start": 0.4,
+    "end": 0.48
+   },
+   {
+    "word": "reviews",
+    "start": 0.56,
+    "end": 0.96
+   },
+   {
+    "word": "its",
+    "start": 1.08,
+    "end": 1.2
+   },
+   {
+    "word": "own",
+    "start": 1.28,
+    "end": 1.44
+   },
+   {
+    "word": "frames,",
+    "start": 1.52,
+    "end": 2.24
+   },
+   {
+    "word": "like",
+    "start": 2.32,
+    "end": 2.4
+   },
+   {
+    "word": "an",
+    "start": 2.44,
+    "end": 2.48
+   },
+   {
+    "word": "animator.",
+    "start": 2.56,
+    "end": 3.44
+   },
+   {
+    "word": "Contact",
+    "start": 3.76,
+    "end": 4.24
+   },
+   {
+    "word": "sheets.",
+    "start": 4.32,
+    "end": 4.92
+   },
+   {
+    "word": "Onion",
+    "start": 5.12,
+    "end": 5.44
+   },
+   {
+    "word": "skins.",
+    "start": 5.52,
+    "end": 6.08
+   },
+   {
+    "word": "Speed",
+    "start": 6.48,
+    "end": 6.8
+   },
+   {
+    "word": "graphs.",
+    "start": 6.88,
+    "end": 7.56
+   },
+   {
+    "word": "And",
+    "start": 7.76,
+    "end": 7.84
+   },
+   {
+    "word": "a",
+    "start": 7.92,
+    "end": 7.96
+   },
+   {
+    "word": "test",
+    "start": 8.0,
+    "end": 8.32
+   },
+   {
+    "word": "for",
+    "start": 8.4,
+    "end": 8.56
+   },
+   {
+    "word": "every",
+    "start": 8.64,
+    "end": 8.88
+   },
+   {
+    "word": "number",
+    "start": 9.04,
+    "end": 9.28
+   },
+   {
+    "word": "in",
+    "start": 9.36,
+    "end": 9.44
+   },
+   {
+    "word": "the",
+    "start": 9.48,
+    "end": 9.52
+   },
+   {
+    "word": "brief.",
+    "start": 9.6,
+    "end": 10.32
+   }
+  ]
+ },
+ "s07": {
+  "digest": "59e83e9de1bbb21a",
+  "duration": 4.8,
+  "match": 1.0,
+  "words": [
+   {
+    "word": "It's",
+    "start": 0.0,
+    "end": 0.2
+   },
+   {
+    "word": "free",
+    "start": 0.24,
+    "end": 0.64
+   },
+   {
+    "word": "and",
+    "start": 0.72,
+    "end": 0.88
+   },
+   {
+    "word": "open",
+    "start": 0.96,
+    "end": 1.2
+   },
+   {
+    "word": "source.",
+    "start": 1.28,
+    "end": 1.96
+   },
+   {
+    "word": "Install",
+    "start": 2.16,
+    "end": 2.56
+   },
+   {
+    "word": "it",
+    "start": 2.64,
+    "end": 2.72
+   },
+   {
+    "word": "with",
+    "start": 2.8,
+    "end": 2.88
+   },
+   {
+    "word": "one",
+    "start": 3.04,
+    "end": 3.2
+   },
+   {
+    "word": "line,",
+    "start": 3.28,
+    "end": 3.76
+   },
+   {
+    "word": "and",
+    "start": 3.84,
+    "end": 3.92
+   },
+   {
+    "word": "make",
+    "start": 4.04,
+    "end": 4.16
+   },
+   {
+    "word": "your",
+    "start": 4.24,
+    "end": 4.32
+   },
+   {
+    "word": "own.",
+    "start": 4.4,
+    "end": 4.88
+   }
+  ]
+ }
+}

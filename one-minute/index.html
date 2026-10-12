@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The video skill, in one minute</title>
+<link rel="stylesheet" href="design.css">
+<script type="importmap">
+{"imports": {"three": "/_vendor/three/build/three.module.js", "three/addons/": "/_vendor/three/examples/jsm/"}}
+</script>
+</head>
+<body>
+<div id="scenes"></div>
+<div id="cap" data-fx="captions"></div>   <!-- data-fx: review.mjs cuts measures the picture, not the captions -->
+<div id="finish"></div>
+<script src="words.js"></script>
+<script src="music/beats.js" onerror="window.BEATS = { bpm: 120, first: 0 }"></script>
+<script type="module">
+import { make, sceneWindow, handoffs, captions, cueIn } from "./kit.js";
+import { scenes, finish } from "/_skill/runtime/transitions.js";
+
+const ids = Object.keys(window.SCENES);
+window.NARRATION_TEXT = Object.fromEntries((await (await fetch("narration.json")).json()).scenes.map((s) => [s.id, s.text]));
+const wins = Object.fromEntries(ids.map((id) => [id, sceneWindow(id)]));
+await Promise.all([document.fonts.load("700 168px Geist"), document.fonts.load("500 28px 'Geist Mono'")]);
+
+// ---- scenes: each module default-exports build(root, k) -> (t) => void | Promise ----
+const box = document.getElementById("scenes");
+const kit = await import("./kit.js");
+const roots = {}, seekers = {};
+for (const id of ids) {
+  const root = make("section", "scene", "", box);
+  root.dataset.scene = id;
+  roots[id] = root;
+  let build = null;
+  try { build = (await import(`./scenes/${id}.js`)).default; } catch (e) {
+    if (!/Failed to fetch|Importing a module|404/.test(String(e))) throw e;
+  }
+  if (build) {
+    seekers[id] = await build(root, { ...kit, id, win: wins[id] });
+  } else {
+    // Placeholder until the scene is built: its id and narration.
+    make("div", "placeholder", `<div class="label">${id} · placeholder</div><div class="body" style="margin-top:16px">${window.NARRATION_TEXT[id]}</div>`, root);
+    seekers[id] = () => {};
+  }
+}
+
+// ---- the film: scene roots with the handoffs between them (kit.HANDOFFS) ----
+const hs = handoffs();
+const film = scenes(ids.flatMap((id, i) => (i < hs.length ? [roots[id], hs[i]] : [roots[id]])));
+// One sweep, on the end card. A sweep on the hop crossed the hard cut at 5.0 s (log.md, round 1).
+const sweeps = { "the end card": { at: cueIn("s07", "free"), dur: 1.0 } };
+
+// ---- seek ----
+const cap = document.getElementById("cap");
+window.seek = (t) => {
+  // Every scene on screen at t draws its content first; then film(t) decides what shows.
+  const pending = ids.filter((id) => t >= wins[id].cutIn - 1e-6 && t <= wins[id].cutOut + 1e-6).map((id) => seekers[id](t));
+  film(t);
+  captions(cap, t);
+  finish("#finish", t, { grain: 0.035, vignette: 0.12, sweeps });
+  return Promise.all(pending);
+};
+
+window.VIDEO = { width: 1080, height: 1350, duration: window.NARRATION.duration,
+  cuts: film.cuts,   // hard cuts only: motion blur never blends two scenes there
+  stills: ids.map((id) => +((wins[id].start + wins[id].end) / 2).toFixed(2)) };
+window.WINDOWS = wins;   // for the review tools and the scene builders
+</script>
+</body>
+</html>
