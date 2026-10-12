@@ -145,7 +145,11 @@ Look:
 - One shape, no cuts. Each state is the same container changing size, corner radius and color while its content swaps with a quick blur (`swap`, `presence`).
 - A pointer (or a touch dot for phone screens) triggers every change with real taps and drags.
 - Springs throughout with only slight overshoot (`SPRING.*`, or a damping ratio of 0.8–0.85 for objects and 1.0 for text). Choose the spring by the size of the change: `snappy` only for presses and toggles, `smooth` for content swaps and short moves, `gentle` for layout changes, and `camera` (or slower) for zooms. The camera zooms so each state fills the frame, and moves only after the content has settled.
-- A light, warm-gray canvas, the app's own colors, and one UI font (Geist is bundled in `assets/fonts`).
+- A light, warm-gray canvas, the app's own colors, and one UI font. `assets/fonts` bundles Geist (`geist-wght-normal.woff2`, full Latin plus symbols such as → and ≤) and Geist Mono for code and numbers. Geist has no Greek, so add Inter's Greek subset under the same family name; the browser then draws characters such as ζ from it:
+  ```css
+  @font-face { font-family: "Geist"; src: url("/_skill/assets/fonts/geist-wght-normal.woff2"); font-weight: 100 900; }
+  @font-face { font-family: "Geist"; src: url("/_skill/assets/fonts/inter-greek-wght-normal.woff2"); font-weight: 100 900; unicode-range: U+0370-03FF; }
+  ```
 - Banned: bouncy easing, particle bursts, glows, gradients on UI chrome, mixed icon stroke widths, dead time, anything that looks like a template. A hold on a settled state that the viewer is reading is not dead time.
 - For a real product, redraw the real screen from its source code or screenshots: the same words, colors and layout. Read the component and copy its strings and hex colors. Use sample data and made-up names.
 

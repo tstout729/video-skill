@@ -135,7 +135,7 @@ narration.json ─▶ narrate.py ─▶ audio + word timings
 - The principles of animation come from Disney's animators. John Lasseter applied them to computer animation in [*Principles of Traditional Animation Applied to 3D Computer Animation*](https://dl.acm.org/doi/10.1145/37402.37407) (SIGGRAPH 1987).
 - The explainer style is inspired by [3Blue1Brown](https://www.3blue1brown.com) and built on [Manim Community](https://www.manim.community).
 - The UI motion approach was adapted from Ross's open motion-design prompt template ([@rossaxbt](https://x.com/rossaxbt)).
-- The fonts are [Geist](https://vercel.com/font) and [Nunito Sans](https://fonts.google.com/specimen/Nunito+Sans), both under the SIL Open Font License.
+- The fonts are [Geist and Geist Mono](https://vercel.com/font), [Nunito Sans](https://fonts.google.com/specimen/Nunito+Sans) and the Greek subset of [Inter](https://rsms.me/inter/), all under the SIL Open Font License.
 - The tools: [Playwright](https://playwright.dev), [ffmpeg](https://ffmpeg.org), [ElevenLabs](https://elevenlabs.io) and [uv](https://docs.astral.sh/uv/).
 
 ## License

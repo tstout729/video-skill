@@ -20,5 +20,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-The bundled fonts in skills/video/assets/fonts are licensed separately under the
-SIL Open Font License 1.1 (see the license files next to them).
+The bundled fonts in skills/video/assets/fonts (Geist, Geist Mono, Nunito Sans and Inter's
+Greek subset) are licensed separately under the SIL Open Font License 1.1 (see the license
+files next to them).

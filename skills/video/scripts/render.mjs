@@ -102,7 +102,8 @@ async function renderChunk(index, ctx) {
     : `tmix=frames=${sub},${select},`;
   // Screenshots are full-range JPEG. Convert to standard (limited) range, which every player,
   // including iPhones and Safari, decodes the same way.
-  const filter = `${blur}scale=in_range=pc:out_range=tv,format=yuv420p`;
+  // H.264 needs even dimensions: a half-scale 1080x1350 page is 540x675, so round down to even.
+  const filter = `${blur}scale=w=trunc(iw/2)*2:h=trunc(ih/2)*2:in_range=pc:out_range=tv,format=yuv420p`;
   const ff = spawn("ffmpeg", [
     "-v", "error", "-y", "-f", "image2pipe", "-framerate", String(fps * sub), "-c:v", "mjpeg", "-i", "-",
     "-vf", filter, "-r", String(fps), "-c:v", "libx264", "-preset", "medium", "-crf", "15",
