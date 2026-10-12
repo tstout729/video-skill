@@ -1,0 +1,230 @@
+<!doctype html>
+<!--
+  Transitions example: each of the eight kinds in transitions.js once, labeled, with the film
+  finish on. 1920x1080, 29.5 s, no voice; three soft whooshes. Copy it to start a launch film.
+
+  Every scene is a root in #scenes: an absolutely positioned box with its own background.
+  scenes([...]) plays them in order, and transition() sets the two roots' looks during each change.
+  Content inside a root may move (the slow push on each motif); the roots themselves belong to
+  the transitions.
+
+  time    kind           scene that comes in
+   0.0                   00 Transitions: the opener and its index (a light sweep at 0.5 s)
+   2.6    cut            01 Cut           a hard cut: listed in VIDEO.cuts via film.cuts
+   5.0    dissolve 0.8   02 Dissolve
+   8.2    push up 1.0    03 Push          whoosh
+  11.6    zoom 0.8       04 Zoom-through  whoosh; through the center of the tunnel motif
+  14.8    whip 0.8       05 Whip          whoosh at the handoff
+  18.0    leak 1.0       06 Light leak    dark to dark, where light reads as light
+  21.4    wipe 0.9       07 Wipe          an iris, opening from where the disc sits
+  24.7    morph 1.2      08 End card      the clay disc becomes the icon; a sweep at 26.3 s
+  29.5    end
+
+  Each labeled scene holds about 2.4 s alone, the reading floor for its 5-7 words plus a beat.
+  The stage behind the scenes is ink, so the morph's bare stage and the zoom's edges read as dark.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Transitions</title>
+<style>
+  @font-face { font-family: Geist; font-weight: 100 900;
+    src: url(/_skill/assets/fonts/geist-latin-wght-normal.woff2) format("woff2"); }
+  @font-face { font-family: "Geist Mono"; font-weight: 100 900;
+    src: url(/_skill/assets/fonts/geist-mono-wght-normal.woff2) format("woff2"); }
+  :root { --canvas: #F1EFEA; --ink: #161513; --pine: #265746; --clay: #C4553A; --sand: #E6DDCC;
+    --brown: #2A1C14; --saffron: #E8A33D; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { width: 1920px; height: 1080px; overflow: hidden; background: var(--ink);
+    font-family: Geist, sans-serif; -webkit-font-smoothing: antialiased; }
+  #scenes { position: absolute; inset: 0; overflow: hidden; background: var(--ink); }
+  .scene { position: absolute; inset: 0; overflow: hidden; background: var(--bg); color: var(--fg); visibility: hidden; }
+
+  /* The card system: the same grid in every scene, so only the content changes. */
+  .top { position: absolute; left: 120px; right: 120px; top: 92px; display: flex; justify-content: space-between;
+    font: 500 24px/1 "Geist Mono", monospace; letter-spacing: 0.06em; }
+  .top .meta, .foot { color: var(--muted); }
+  .title { position: absolute; left: 112px; top: 318px; width: 900px; }
+  h2 { font-size: 232px; font-weight: 600; letter-spacing: -0.055em; line-height: 0.88; white-space: nowrap; }
+  .use { margin: 44px 0 0 10px; font-size: 48px; font-weight: 440; letter-spacing: -0.015em; color: var(--muted); }
+  code { position: absolute; left: 120px; top: 806px; padding: 15px 24px 16px; border-radius: 14px;
+    font: 500 27px/1 "Geist Mono", monospace; letter-spacing: -0.01em; white-space: nowrap;
+    box-shadow: inset 0 0 0 1.5px color-mix(in srgb, currentColor 26%, transparent); }
+  code b { font-weight: 700; }
+  .motif { position: absolute; left: 1100px; top: 210px; width: 640px; height: 640px; }
+  .motif svg { width: 100%; height: 100%; display: block; overflow: visible; }
+  /* A mirrored card puts its text where the scene before it had its picture, so a dissolve never
+     lays one title over another. */
+  .flip .title { left: 1000px; width: 800px; }
+  .flip code { left: 1008px; }
+  .flip .motif { left: 180px; }
+  .foot { position: absolute; left: 120px; right: 120px; bottom: 74px; padding-top: 22px; display: flex;
+    justify-content: space-between; border-top: 1.5px solid color-mix(in srgb, currentColor 22%, transparent);
+    font: 500 21px/1 "Geist Mono", monospace; letter-spacing: 0.08em; text-transform: uppercase; }
+
+  /* 00: the opener */
+  #s0 h2 { font-size: 214px; }
+  #s0 .title { top: 318px; }
+  .index { position: absolute; left: 1336px; top: 262px; width: 464px; font: 500 30px/1 "Geist Mono", monospace; }
+  .index li { list-style: none; display: flex; gap: 34px; padding: 17px 0 18px;
+    border-top: 1.5px solid color-mix(in srgb, currentColor 16%, transparent); }
+  .index li:last-child { border-bottom: 1.5px solid color-mix(in srgb, currentColor 16%, transparent); }
+  .index i { font-style: normal; color: var(--muted); }
+
+  /* 07: the disc the iris opens from and the morph starts from */
+  #disc { position: absolute; left: 110px; top: 110px; width: 420px; height: 420px; border-radius: 50%; background: var(--clay); }
+  #disc::before, #disc::after { content: ""; position: absolute; background: rgba(241, 239, 234, 0.7); }
+  #disc::before { left: 50%; top: 150px; bottom: 150px; width: 2px; margin-left: -1px; }
+  #disc::after { top: 50%; left: 150px; right: 150px; height: 2px; margin-top: -1px; }
+
+  /* 08: the end card */
+  #s8 { text-align: center; }
+  #icon { position: absolute; left: 840px; top: 196px; width: 240px; height: 240px; border-radius: 60px; background: var(--canvas); }
+  #icon svg { width: 100%; height: 100%; display: block; }
+  #s8 h2 { position: absolute; left: 0; right: 0; top: 520px; font-size: 136px; letter-spacing: -0.045em; }
+  #s8 .use { position: absolute; left: 0; right: 0; top: 676px; margin: 0; }
+  #s8 code { left: 50%; top: 806px; transform: translateX(-50%); }
+</style>
+</head>
+<body>
+<div id="scenes"></div>
+<div id="finish"></div>
+
+<script type="module">
+import { sfx, clamp, $ } from "/_skill/runtime/motion.js";
+import { scenes, finish } from "/_skill/runtime/transitions.js";
+
+await Promise.all([document.fonts.load("600 232px Geist"), document.fonts.load("500 27px 'Geist Mono'")]);
+
+// ---------- the timeline ----------
+// Each change starts when the scene before it has held long enough to read.
+const T = { cut: 2.6, dissolve: 5.0, push: 8.2, zoom: 11.6, whip: 14.8, leak: 18.0, wipe: 21.4, morph: 24.7 };
+const DURATION = 29.5;
+const fmt = (t) => `${t.toFixed(2)} s`;
+
+// ---------- the scenes ----------
+// Each scene's colors: background, ink and a muted ink. Every pair keeps text at 4.5:1 or more.
+const C = { canvas: "#F1EFEA", ink: "#161513", pine: "#265746", clay: "#C4553A", brick: "#9E3D28", sand: "#E6DDCC",
+  brown: "#2A1C14", saffron: "#E8A33D" };
+const LOOK = {
+  canvas: [C.canvas, C.ink, "#5E5A54"], ink: [C.ink, C.canvas, "#A8A49C"], pine: [C.pine, C.canvas, "#C9D6CF"],
+  sand: [C.sand, C.ink, "#5A554D"], brick: [C.brick, C.canvas, "#F2DDD5"], brown: [C.brown, "#F3E6D6", "#BFAE9B"],
+};
+const svg = (body) => `<svg viewBox="0 0 600 600">${body}</svg>`;
+// [id, look, label, the line under it, the code chip (HTML), the motif (a 600x600 SVG or HTML)]
+const CARDS = [
+  ["s1", "ink", "Cut", "The default. Nothing in between.", `{ at: ${T.cut}, kind: <b>"cut"</b> }`, svg(`
+    <rect x="34" y="150" width="244" height="300" rx="16" fill="currentColor"/>
+    <rect x="322" y="151.5" width="241" height="297" rx="15" fill="none" stroke="currentColor" stroke-width="3"/>
+    <line x1="300" y1="96" x2="300" y2="504" stroke="${C.saffron}" stroke-width="4"/>
+    <text x="156" y="518" text-anchor="middle" font-family="Geist Mono" font-size="24" fill="#A8A49C">f155</text>
+    <text x="442" y="518" text-anchor="middle" font-family="Geist Mono" font-size="24" fill="#A8A49C">f156</text>`)],
+  ["s2", "pine", "Dissolve", "Time passes.", `{ kind: <b>"dissolve"</b>, dur: 0.8 }`, svg(`
+    <circle cx="222" cy="300" r="178" fill="currentColor" opacity=".2"/>
+    <circle cx="378" cy="300" r="178" fill="currentColor" opacity=".46"/>`)],
+  ["s3", "sand", "Push", "The next step in a sequence.", `{ kind: <b>"push"</b>, dir: "up", dur: 1.0 }`, svg(`
+    <rect x="60" y="40" width="480" height="96" rx="20" fill="currentColor" opacity=".12"/>
+    <rect x="60" y="176" width="480" height="96" rx="20" fill="currentColor" opacity=".3"/>
+    <rect x="60" y="312" width="480" height="96" rx="20" fill="currentColor"/>
+    <rect x="61.5" y="449.5" width="477" height="93" rx="19" fill="none" stroke="currentColor" stroke-width="3"/>`)],
+  ["s4", "brick", "Zoom-through", "Into the detail.", `{ kind: <b>"zoom-through"</b>, dur: 0.8 }`, svg(
+    [560, 448, 344, 248, 160, 80].map((s, i) => `<rect x="${300 - s / 2}" y="${300 - s / 2}" width="${s}" height="${s}" rx="${s * 0.09}"
+      fill="none" stroke="currentColor" stroke-width="3" opacity="${(0.22 + i * 0.156).toFixed(2)}"/>`).join(""))],
+  ["s5", "ink", "Whip", "Energy between two beats.", `{ kind: <b>"whip"</b>, dir: "left", dur: 0.8 }`, svg(
+    [[160, 196, 0.12], [110, 246, 0.24], [60, 300, 0.42], [110, 354, 0.24], [160, 404, 0.12]].map(([x, y, o]) =>
+      `<rect x="${x}" y="${y - 9}" width="${420 - x}" height="18" rx="9" fill="currentColor" opacity="${o}"/>`).join("") +
+    `<circle cx="470" cy="300" r="96" fill="currentColor"/>`)],
+  ["s6", "brown", "Light leak", "Warmth, once per film.", `{ kind: <b>"light-leak"</b>, dur: 1.0 }`, svg(`
+    <clipPath id="above"><rect x="0" y="0" width="600" height="372"/></clipPath>
+    <circle cx="300" cy="372" r="206" fill="${C.saffron}" clip-path="url(#above)"/>
+    <line x1="20" y1="373" x2="580" y2="373" stroke="currentColor" stroke-width="3" opacity=".7"/>
+    ${[408, 438, 464, 486].map((y, i) => `<line x1="${150 + i * 34}" y1="${y}" x2="${450 - i * 34}" y2="${y}"
+      stroke="${C.saffron}" stroke-width="5" stroke-linecap="round" opacity="${(0.55 - i * 0.12).toFixed(2)}"/>`).join("")}`)],
+  ["s7", "canvas", "Wipe", "A reveal with an edge.", `{ kind: <b>"wipe"</b>, shape: "iris" }`, `<div id="disc"></div>`],
+];
+
+const FLIP = new Set(["s2", "s6"]);   // the scenes a dissolve or a leak brings in
+const root = $("#scenes");
+const section = (id, look, html) => {
+  const el = Object.assign(document.createElement("section"), { id, className: FLIP.has(id) ? "scene flip" : "scene", innerHTML: html });
+  const [bg, fg, muted] = LOOK[look];
+  el.style.cssText = `--bg:${bg};--fg:${fg};--muted:${muted}`;
+  return root.appendChild(el);
+};
+const foot = `<div class="foot"><span>transitions.js</span><span>video skill</span></div>`;
+section("s0", "canvas", `
+  <div class="top"><span>VIDEO SKILL · RUNTIME</span><span class="meta">1920 × 1080 · 60 FPS</span></div>
+  <div class="title"><h2>Transitions</h2><p class="use">Eight ways from one scene to the next.</p></div>
+  <ol class="index">${CARDS.map(([, , name], i) => `<li><i>0${i + 1}</i>${name}</li>`).join("")}<li><i>08</i>Morph</li></ol>
+  ${foot}`);
+const kinds = Object.keys(T);
+CARDS.forEach(([id, look, name, use, code, motif], i) => section(id, look, `
+  <div class="top"><span>0${i + 1} / 08</span><span class="meta">AT ${fmt(T[kinds[i]])}</span></div>
+  <div class="title"><h2>${name}</h2><p class="use">${use}</p></div>
+  <code>${code}</code>
+  <div class="motif">${motif}</div>
+  ${foot}`));
+section("s8", "pine", `
+  <div class="top"><span>08 / 08 · MORPH</span><span class="meta">AT ${fmt(T.morph)}</span></div>
+  <div id="icon">${svg(`<path d="M246 196 L410 300 L246 404 Z" fill="${C.pine}" stroke="${C.pine}" stroke-width="22" stroke-linejoin="round"/>`)}</div>
+  <h2>transitions.js</h2>
+  <p class="use">Pure functions of time. One shape becomes the next.</p>
+  <code>{ kind: <b>"morph"</b>, from: "#disc", to: "#icon" }</code>
+  ${foot}`);
+
+// A long name gets a smaller size, so it never runs into the motif.
+for (const h of document.querySelectorAll(".scene:not(#s8) h2")) {
+  const size = parseFloat(getComputedStyle(h).fontSize), room = h.closest(".flip") ? 790 : 920;
+  if (h.scrollWidth > room) h.style.fontSize = `${Math.floor((size * room) / h.scrollWidth)}px`;
+}
+
+// ---------- measure once, with nothing moved ----------
+const center = (sel) => { const r = $(sel).getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; };
+const DISC = center("#disc");
+const TUNNEL = center("#s4 .motif");
+
+// ---------- the film ----------
+const film = scenes([
+  "#s0", { at: T.cut, kind: "cut" },
+  "#s1", { at: T.dissolve, kind: "dissolve" },
+  "#s2", { at: T.push, kind: "push", dir: "up" },
+  "#s3", { at: T.zoom, kind: "zoom-through", origin: TUNNEL },
+  "#s4", { at: T.whip, kind: "whip", dir: "left" },
+  "#s5", { at: T.leak, kind: "light-leak", dir: "right" },
+  "#s6", { at: T.wipe, kind: "wipe", shape: "iris", origin: DISC, soft: 3 },
+  "#s7", { at: T.morph, kind: "morph", from: "#disc", to: "#icon" },
+  "#s8",
+]);
+
+// Sounds sit on the moves that have speed; a dissolve, a leak and a cut stay silent.
+sfx(T.push + 0.35, "whoosh", 0.45);
+sfx(T.zoom + 0.3, "whoosh", 0.5);
+sfx(T.whip + 0.38, "whoosh", 0.7);
+
+// A long hold stays alive with a slow push of 2% on the motif, never on the text.
+const spans = film.transitions.map((s, i) => [i ? film.transitions[i - 1].at : 0, s.end]);
+spans.push([film.transitions.at(-1).at, DURATION]);
+const motifs = [...document.querySelectorAll(".scene")].map((el, i) => ({ el: el.querySelector(".motif, #icon"), span: spans[i] }));
+
+// Content first, then the film: a morph measures its outlines on the frame, so the disc and the
+// icon must already be where frame t puts them.
+window.seek = (t) => {
+  for (const { el, span: [a, b] } of motifs) {
+    if (!el) continue;
+    const q = clamp((t - a) / (b - a));
+    el.style.transform = `scale(${(1 + 0.02 * (0.5 - 0.5 * Math.cos(Math.PI * q))).toFixed(5)})`;
+  }
+  film(t);
+  finish("#finish", t, { grain: true, vignette: true, sweeps: { "opener": 0.5, "end card": T.morph + 1.6 } });
+};
+
+window.VIDEO = {
+  width: 1920, height: 1080, duration: DURATION,
+  cuts: film.cuts,   // the one hard cut; transitions overlap their scenes, so they are not listed
+  stills: [0.3, 1.8, 4.0, 5.4, 6.8, 8.7, 10.4, 11.85, 13.6, 15.2, 16.6, 18.5, 20.0, 21.85, 23.2, 25.0, 25.3, 25.6, 27.4],
+};
+
+window.seek(0);
+</script>
+</body>
+</html>
