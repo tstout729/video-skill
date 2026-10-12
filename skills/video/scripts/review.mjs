@@ -1,15 +1,28 @@
 #!/usr/bin/env node
-// Review a draft the way an animator does: a contact sheet, an onion skin, a speed graph
-// and a hold check. The first three each write one labeled PNG; holds prints text.
+// Review a draft the way an animator does: a storyboard, a contact sheet, an onion skin, a speed
+// graph, a hold check and a layout lint. board, sheet, onion and graph each write one labeled PNG;
+// holds, audit and lint print text.
 //
+//   node review.mjs board <page.html> [--out qa/board.png] [--at stills | 1.5,3,4.2] [--cols 3] [--fps 60]
+//                         [--look [--count 3]]
 //   node review.mjs sheet <page.html|video.mp4> --out sheet.png [--frames 12 | --at 1.5,3,4.2 | --at stills]
 //                         [--from t] [--to t] [--cols 4] [--fps 60] [--scenes ...] [--debug]
 //   node review.mjs onion <page.html|video.mp4> --from t0 --to t1 --out onion.png [--count 8] [--fps 60]
 //   node review.mjs graph <page.html> --select "#card" --from t0 --to t1 --out graph.png
 //                         [--prop x|y|both|scale|opacity] [--fps 60]
 //   node review.mjs holds <video.mp4> [--min 1.5] [--scenes words.js | scenes.json | 0,10.3,24.7]
-//   node review.mjs audit <page.html> [--fps 60] [--every 1]
+//   node review.mjs audit <page.html> [--fps 60] [--every 1] [--grep name]
+//   node review.mjs lint <page.html> [--every 30] [--safe 9x16|4x5|1x1|16x9|off] [--allow allow.txt]
+//                        [--min-size 28] [--out lint.png] [--fps 60]
 //
+// board  A numbered storyboard for the user to approve before narration and full renders are
+//        paid for. One large panel per shot: the shot's key pose through the real seek(t), its
+//        number, frame and time, title, note, sound and "→ next". Shots come from window.SHOTS =
+//        [{t, title, note, sound, next}] (t is the key pose; next is an optional handoff, such as
+//        "cut on beat 9"), else --at, else VIDEO.stills. Without a sound note, a panel lists the
+//        sounds the page declared since the panel before. --look renders 2–4 look frames at full
+//        size instead (--count, or --at), to approve the palette, type and framing first. The
+//        default --out is qa/board.png (qa/look.png with --look) next to the page.
 // sheet  Frames spread evenly from --from to --to (default: the whole video), or the given
 //        times, in one grid. Each cell shows its frame number and time and, for a page, the
 //        scene (window.SCENES) and the latest cue (window.CUE_TIMES), else the words being
@@ -32,8 +45,19 @@
 //        runs from its start to the next scene's start. Exits 0 once the video has been read.
 // audit  Page only. Runs the checks the page declared with check() from motion.js (the brief's
 //        numbers as tests: "caption band stays clear", "card settled by f1167") on every frame
-//        each one names (--every n checks every nth frame of a range). Prints PASS or FAIL per
-//        check with its failing frames, and exits 1 if any check fails.
+//        each one names (--every n checks every nth frame of a range). --grep runs only the checks
+//        whose names contain the text. Prints PASS or FAIL per check with its failing frames, and
+//        exits 1 if any check fails.
+// lint   Page only. Checks the text on screen every --every frames (default: every half second)
+//        and on every frame where the text stops moving: text cut by the frame or by a clipping
+//        box; text outside the format's safe area (--safe, default from the page's size); text
+//        over other text; type smaller than --min-size (28 px on a 1080 px short side, scaled);
+//        and contrast under 4.5:1 against the real pixels behind the text (text hidden, median
+//        background, the text's computed color). A finding counts when it holds on 2 samples in
+//        a row 0.2 s or more apart, or on a settle frame. --allow reads allowed findings, one per
+//        line: `<check> <element or text> [@ t0-t1] -- <reason>`. Prints each finding with its
+//        frames, selector path and text; --out draws them on their frames. Exits 1 on any
+//        finding that is not allowed.
 //
 // Frames are numbered as render.mjs renders them: frame n of a page is window.seek(n / fps)
 // (--fps, default 60); a video uses its own frame rate and an exact ffmpeg seek. --debug opens
@@ -42,6 +66,7 @@
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import zlib from "node:zlib";
 import { fileURLToPath } from "node:url";
 import { SKILL, serve, launch, openVideoPage, shot } from "./page.mjs";
 
@@ -51,13 +76,15 @@ const MAX_SHEET_WIDTH = 2400;
 // ---------- arguments ----------
 
 const COMMANDS = {
+  board: ["out", "at", "cols", "fps", "look", "count"],
   sheet: ["out", "frames", "at", "from", "to", "cols", "fps", "scenes", "debug"],
   onion: ["out", "from", "to", "count", "fps", "debug"],
   graph: ["out", "select", "from", "to", "prop", "fps", "debug"],
   holds: ["min", "scenes"],
-  audit: ["fps", "every", "debug"],
+  audit: ["fps", "every", "grep", "debug"],
+  lint: ["every", "safe", "allow", "min-size", "out", "fps"],
 };
-const FLAGS = new Set(["debug"]);
+const FLAGS = new Set(["debug", "look"]);
 
 class UsageError extends Error {}
 const fail = (msg) => { throw new UsageError(msg); };
@@ -175,6 +202,10 @@ async function openSource(file, o) {
         cues: Array.isArray(window.CUE_TIMES) ? window.CUE_TIMES : null,
         words: Array.isArray(window.WORDS) ? window.WORDS : null,
         beats: window.BEATS && Number.isFinite(window.BEATS.bpm) ? { bpm: window.BEATS.bpm, first: window.BEATS.first ?? 0 } : null,
+        shots: window.SHOTS == null ? null : Array.isArray(window.SHOTS)
+          ? window.SHOTS.map((s) => ({ t: s?.t, title: s?.title, note: s?.note, sound: s?.sound, next: s?.next })) : "not an array",
+        sfx: Array.isArray(window.SFX) ? window.SFX.map((s) => ({ t: s?.t, kind: s?.kind })) : [],
+        title: document.title.trim(),
       }));
       Object.assign(src, {
         kind: "page", name: `${path.basename(path.dirname(file))} / ${path.basename(file)}`, page: p, video,
@@ -229,6 +260,22 @@ function frameRange(src, o, { required = false } = {}) {
 function spread(f0, f1, n) {
   if (n === 1) return [f0];
   return [...new Set(Array.from({ length: n }, (_, k) => Math.round(f0 + (k * (f1 - f0)) / (n - 1))))];
+}
+
+// --at: "stills" (the page's VIDEO.stills) or a list of seconds like 1.5,3,4.2, as frame numbers.
+function atFrames(src, at) {
+  if (at === "stills") {
+    if (!src.meta.stills?.length) fail(src.kind === "page" ? "the page has no VIDEO.stills" : "--at stills needs a page");
+    return src.meta.stills.map((t) => src.clamp(src.frameOf(t)));
+  }
+  const frames = at.split(",").map((s) => s.trim()).filter(Boolean).map((s) => {
+    const t = Number(s);
+    if (!Number.isFinite(t) || t < 0) fail(`--at must be a list of seconds like 1.5,3,4.2 (or "stills"), not ${JSON.stringify(at)}`);
+    if (src.frameOf(t) > src.last) fail(`--at ${s} is after the last frame (${sec(src.timeOf(src.last))})`);
+    return src.clamp(src.frameOf(t));
+  });
+  if (!frames.length) fail("--at needs at least one time");
+  return frames;
 }
 
 // ---------- scenes and cues ----------
@@ -328,6 +375,149 @@ async function compose(browser, { html, width, out, assets = {} }) {
 const pngAssets = (pngs, prefix) =>
   Object.fromEntries(pngs.map((body, i) => [`${prefix}${i}.png`, { body, type: "image/png" }]));
 
+// ---------- board ----------
+
+// window.SHOTS = [{t, title, note, sound, next}] -> checked and sorted by time. t is the key pose.
+function normShots(list, src) {
+  if (list == null) return null;
+  if (!Array.isArray(list) || !list.length) fail("window.SHOTS must be a non-empty array of {t, title, note, sound}");
+  const text = (v) => (v == null || String(v).trim() === "" ? null : String(v).trim());
+  return list.map((s, i) => {
+    const t = Number(s.t);
+    if (s.t == null || !Number.isFinite(t) || t < 0) fail(`window.SHOTS[${i}] needs t, the time of the shot's key pose in seconds, not ${JSON.stringify(s.t)}`);
+    if (src.frameOf(t) > src.last) fail(`window.SHOTS[${i}] at ${sec(t)} is after the last frame (${sec(src.timeOf(src.last))})`);
+    return { t, title: text(s.title), note: text(s.note), sound: text(s.sound), next: text(s.next) };
+  }).sort((a, b) => a.t - b.t);
+}
+
+// The sounds declared between two moments, grouped by kind: "tap 9.38 s · key ×18".
+function soundsBetween(sfx, t0, t1) {
+  const kinds = new Map();
+  for (const s of sfx) if (s.t > t0 + 1e-6 && s.t <= t1 + 1e-6) (kinds.get(s.kind) ?? kinds.set(s.kind, []).get(s.kind)).push(s.t);
+  return [...kinds].map(([k, ts]) => (ts.length > 1 ? `${k} ×${ts.length}` : `${k} ${sec(ts[0])}`)).join(" · ") || null;
+}
+
+async function board(src, o) {
+  if (src.kind !== "page") fail("board renders the page's shots through seek(t), so it needs the page (.html)");
+  const out = o.out ? outPath(o) : path.join(path.dirname(src.file), "qa", o.look ? "look.png" : "board.png");
+  const shots = normShots(src.meta.shots, src);
+  let frames, from;
+  if (o.at !== undefined) [frames, from] = [atFrames(src, o.at), o.at === "stills" ? "VIDEO.stills" : "--at"];
+  else if (shots) [frames, from] = [shots.map((s) => src.clamp(src.frameOf(s.t))), "window.SHOTS"];
+  else if (src.meta.stills?.length) [frames, from] = [atFrames(src, "stills"), "VIDEO.stills (the page defines no window.SHOTS)"];
+  else fail("the page defines no window.SHOTS = [{t, title, note, sound}] and no VIDEO.stills; add SHOTS, or pass --at 1.5,4,8");
+  if (o.look) {
+    // Look frames: the times given, or --count shots from the middle of each equal part of the list,
+    // which skips the opening and closing shots (often a title, or a loop's return to frame 0).
+    if (o.at !== undefined && o.at !== "stills") {
+      if (frames.length < 2 || frames.length > 4) fail(`look frames are 2 to 4 frames; --at gives ${frames.length}`);
+    } else {
+      const k = Math.min(numOpt(o, "count", 3, { min: 2, max: 4, int: true }), frames.length), all = frames;
+      frames = Array.from({ length: k }, (_, j) => all[Math.floor(((j + 0.5) * all.length) / k)]);
+    }
+  }
+  if (frames.length > 40) fail(`${frames.length} panels is too many for one board; use at most 40`);
+
+  // What each panel says. A panel takes the shot on its frame; without one, the cue, words or beat.
+  const sfx = (src.meta.sfx ?? []).filter((s) => Number.isFinite(s.t)).sort((a, b) => a.t - b.t);
+  const panels = frames.map((n, i) => {
+    const t = src.timeOf(n);
+    const shot = shots?.find((s) => Math.abs(src.frameOf(s.t) - n) <= 1) ?? null;
+    const cap = captionAt(src.meta, t), scene = sceneAt(src.meta.scenes, t);
+    const prev = i ? src.timeOf(frames[i - 1]) : -Infinity;
+    return {
+      n, t, title: shot?.title ?? cap?.text ?? scene?.id ?? null, note: shot?.note ?? null,
+      sound: shot?.sound ?? (o.look ? null : soundsBetween(sfx, prev, t)), handoff: shot?.next ?? null,
+    };
+  });
+  const nextOf = (i) => {
+    const q = panels[i + 1], h = panels[i].handoff;
+    if (!q) return h ?? "end";
+    return `${i + 2}${q.title ? ` · ${q.title}` : ""}${h ? ` · ${h}` : ""}`;
+  };
+  const title = src.meta.title || src.name;
+  const portrait = src.height > src.width * 1.2;
+
+  let html, width;
+  if (o.look) {
+    // Full size, up to 1920 wide; as many across as fit in about 3600 px (two by two for four).
+    const k = Math.min(1, 1920 / src.width);
+    const w = Math.round(src.width * k), h = Math.round(src.height * k), gap = 32;
+    const fit = Math.max(1, Math.floor(3600 / w));
+    const cols = frames.length === 4 && fit >= 2 ? 2 : Math.min(frames.length, fit);
+    const pngs = await src.grab(frames, w < src.width ? w : undefined);
+    width = 96 + cols * w + (cols - 1) * gap;
+    const cells = panels.map((p, i) => `<figure class="look">
+      <img class="frame-img" src="l${i}.png" width="${w}" height="${h}">
+      <figcaption><span class="no">${i + 1}</span><span class="ttl">${esc(p.title ?? "")}</span>
+        <span class="when">Frame ${p.n} · ${sec(p.t)}</span></figcaption></figure>`);
+    html = `<!doctype html><meta charset="utf-8"><style>${BASE_CSS}
+      body { width: ${width}px; }
+      .eyebrow { font-size: 18px; } h1 { font-size: 44px; } .meta { font-size: 23px; }
+      .grid { display: grid; grid-template-columns: repeat(${cols}, ${w}px); gap: 44px ${gap}px; }
+      .look img { width: ${w}px; height: ${h}px; }
+      figcaption { margin-top: 18px; display: flex; align-items: center; gap: 18px; }
+      .no { flex: none; width: 56px; height: 56px; border-radius: 14px; display: grid; place-items: center;
+        background: var(--ink); color: #fff; font-size: 30px; font-weight: 650; }
+      .ttl { font-size: 30px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .when { margin-left: auto; flex: none; font-size: 23px; color: var(--muted); }
+      .sub { margin-top: 12px; font-size: 23px; color: var(--muted); }
+    </style>
+    <header><div><div class="eyebrow">Look frames</div><h1>${esc(title)}</h1>
+      <div class="sub">Approve the look first: palette, type, materials and framing, at full size.</div></div>
+      <div class="meta"><b>${frames.length} frames</b> · full size<br>${src.width}×${src.height} · ${fmtFps(src.fps)} fps</div></header>
+    <main class="grid">${cells.join("")}</main>`;
+    const [lw, lh] = await compose(src.browser, { html, width, out, assets: pngAssets(pngs, "l") });
+    console.log(`look: ${frames.length} frames from ${from}\n${panels.map((p, i) => `  ${i + 1}  f${p.n}  ${sec(p.t)}  ${p.title ?? ""}`).join("\n")}\nwrote ${out}  ${lw}x${lh}`);
+    return;
+  }
+
+  // Large panels: three across for wide and square frames, four for tall ones.
+  const pad = 48, gap = 30;
+  const cols = numOpt(o, "cols", portrait ? 4 : 3, { min: 1, max: 8, int: true });
+  const used = Math.min(cols, panels.length);
+  const cellW = Math.floor((MAX_SHEET_WIDTH - 2 * pad - (cols - 1) * gap) / cols);
+  const cellH = Math.round((cellW * src.height) / src.width);
+  const pngs = await src.grab(frames, cellW);
+  width = 2 * pad + used * cellW + (used - 1) * gap;
+  const line = (k, v, cls = "") => `<div class="line ${cls}"><span class="k">${k}</span><span class="v">${esc(v)}</span></div>`;
+  const cells = panels.map((p, i) => `<figure class="panel">
+    <img class="frame-img" src="p${i}.png" width="${cellW}" height="${cellH}">
+    <div class="cap"><div class="no">${i + 1}</div><div class="body">
+      <div class="head"><div class="ttl">${esc(p.title ?? "Untitled")}</div><div class="when">Frame ${p.n} · ${sec(p.t)}</div></div>
+      ${p.note ? `<div class="note">${esc(p.note)}</div>` : ""}
+      ${p.sound ? line("Sound", p.sound) : ""}
+      ${line("Next", `→ ${nextOf(i)}`, "next")}
+    </div></div></figure>`);
+  const dur = sec(src.timeOf(src.last) + 1 / src.fps);
+  html = `<!doctype html><meta charset="utf-8"><style>${BASE_CSS}
+    body { width: ${width}px; }
+    .sub { margin-top: 10px; font-size: 19px; color: var(--muted); }
+    .grid { display: grid; grid-template-columns: repeat(${used}, ${cellW}px); gap: 48px ${gap}px; align-items: start; }
+    .panel img { width: ${cellW}px; height: ${cellH}px; }
+    .cap { margin-top: 16px; display: flex; gap: 16px; padding-right: 2px; }
+    .no { flex: none; width: 50px; height: 50px; border-radius: 12px; display: grid; place-items: center;
+      background: var(--ink); color: #fff; font-size: 26px; font-weight: 650; letter-spacing: -0.01em; }
+    .body { flex: 1; min-width: 0; }
+    .head { min-height: 50px; display: flex; align-items: center; gap: 14px; }
+    .ttl { min-width: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.25;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .when { margin-left: auto; flex: none; font-size: 17px; color: var(--muted); }
+    .note { margin-top: 4px; font-size: 18px; line-height: 1.45; color: var(--body); }
+    .line { margin-top: 8px; display: flex; align-items: baseline; gap: 12px; font-size: 17px; line-height: 1.4; color: var(--body); }
+    .line .k { flex: none; width: 54px; }
+    .line .v { min-width: 0; }
+    .next .v { color: var(--muted); }
+  </style>
+  <header><div><div class="eyebrow">Storyboard</div><h1>${esc(title)}</h1>
+    <div class="sub">Approve or reject each panel by its number before narration and the full render.</div></div>
+    <div class="meta"><b>${panels.length} panel${panels.length > 1 ? "s" : ""}</b> · ${esc(from.split(" ")[0])}<br>${dur} · ${src.width}×${src.height} · ${fmtFps(src.fps)} fps</div></header>
+  <main class="grid">${cells.join("")}</main>`;
+  const [w, h] = await compose(src.browser, { html, width, out, assets: pngAssets(pngs, "p") });
+  console.log(`board: ${panels.length} panels from ${from}\n` +
+    panels.map((p, i) => `  ${String(i + 1).padStart(2)}  f${p.n}  ${sec(p.t)}  ${p.title ?? ""}`).join("\n") + `\nwrote ${out}  ${w}x${h}`);
+}
+
 // ---------- sheet ----------
 
 async function sheet(src, o) {
@@ -335,18 +525,8 @@ async function sheet(src, o) {
   const portrait = src.height > src.width * 1.2;
   const cols = numOpt(o, "cols", portrait ? 6 : 4, { min: 1, max: 12, int: true });
   let frames;
-  if (o.at === "stills") {
-    if (!src.meta.stills?.length) fail(src.kind === "page" ? "the page has no VIDEO.stills" : "--at stills needs a page");
-    frames = src.meta.stills.map((t) => src.clamp(src.frameOf(t)));
-  } else if (o.at !== undefined) {
-    frames = o.at.split(",").map((s) => s.trim()).filter(Boolean).map((s) => {
-      const t = Number(s);
-      if (!Number.isFinite(t) || t < 0) fail(`--at must be a list of seconds like 1.5,3,4.2 (or "stills"), not ${JSON.stringify(o.at)}`);
-      if (src.frameOf(t) > src.last) fail(`--at ${s} is after the last frame (${sec(src.timeOf(src.last))})`);
-      return src.clamp(src.frameOf(t));
-    });
-    if (!frames.length) fail("--at needs at least one time");
-  } else {
+  if (o.at !== undefined) frames = atFrames(src, o.at);
+  else {
     const [f0, f1] = frameRange(src, o);
     frames = spread(f0, f1, numOpt(o, "frames", 12, { min: 1, max: 60, int: true }));
   }
@@ -894,11 +1074,17 @@ async function holds(file, o) {
 
 async function audit(src, o) {
   const every = numOpt(o, "every", 1, { min: 1, int: true });
-  const checks = await src.page.evaluate(() => (window.CHECKS || []).map((c, i) => ({ i, name: c.name, at: c.at })));
+  let checks = await src.page.evaluate(() => (window.CHECKS || []).map((c, i) => ({ i, name: c.name, at: c.at })));
   if (!checks.length) {
     console.log("no checks: declare them in the page with check(name, at, fn) from motion.js");
     return 0;
   }
+  if (o.grep !== undefined) {
+    const all = checks, want = o.grep.toLowerCase();
+    checks = all.filter((c) => String(c.name).toLowerCase().includes(want));
+    if (!checks.length) fail(`no check name contains ${JSON.stringify(o.grep)}; the page declares: ${all.map((c) => JSON.stringify(c.name)).join(", ")}`);
+  }
+  const byIndex = new Map(checks.map((c) => [c.i, c]));
   // Frames each check names, then one seek per frame for every check that names it.
   const byFrame = new Map();
   for (const c of checks) {
@@ -924,7 +1110,7 @@ async function audit(src, o) {
         } catch (e) { return `threw: ${e.message}`; }
       });
     }, { t: src.timeOf(n), ids: byFrame.get(n) });
-    byFrame.get(n).forEach((i, k) => { if (results[k] !== null) checks[i].failed.push({ n, why: results[k] }); });
+    byFrame.get(n).forEach((i, k) => { if (results[k] !== null) byIndex.get(i).failed.push({ n, why: results[k] }); });
   }
   let bad = 0;
   for (const c of checks) {
@@ -933,8 +1119,624 @@ async function audit(src, o) {
     const first = c.failed.slice(0, 3).map((f) => `f${f.n}: ${f.why}`).join("; ");
     console.log(`FAIL  ${c.name}  (${c.failed.length} of ${c.frames} frames)  ${first}${c.failed.length > 3 ? "; ..." : ""}`);
   }
-  console.log(`${checks.length - bad} of ${checks.length} checks pass over ${order.length} frames`);
+  const which = o.grep !== undefined ? ` (names with ${JSON.stringify(o.grep)})` : "";
+  console.log(`${checks.length - bad} of ${checks.length} checks${which} pass over ${order.length} frames`);
   return bad ? 1 : 0;
+}
+
+// ---------- lint ----------
+
+// Safe areas: margins as fractions of the frame (left, top, right, bottom), plus bands where a
+// platform draws its own buttons over the video. Captions from motion.js sit inside each one.
+const SAFE = {
+  "16x9": { ratio: 16 / 9, margin: [0.05, 0.05, 0.05, 0.05], bands: [], about: "title safe, 5% on each side" },
+  "1x1": { ratio: 1, margin: [0.05, 0.05, 0.05, 0.07], bands: [],
+    about: "5% at the sides and top, 7% at the bottom for a feed's mute button and progress bar" },
+  "4x5": { ratio: 4 / 5, margin: [0.05, 0.05, 0.05, 0.07], bands: [],
+    about: "5% at the sides and top, 7% at the bottom for a feed's mute button and progress bar" },
+  "9x16": { ratio: 9 / 16, margin: [0.10, 0.12, 0.10, 0.20],
+    bands: [{ name: "the right rail (like, comment, share)", x0: 0.84, y0: 0.40, x1: 1, y1: 0.80 }],
+    about: "the middle 80%, below the top 12% (the app's tabs), above the bottom 20% (caption, name and buttons), clear of the right rail" },
+};
+const LINT_CHECKS = ["clipped", "safe", "overlap", "small", "contrast"];
+const MIN_CONTRAST = 4.5;
+
+function safeArea(o, w, h) {
+  if (o.safe === "off") return null;
+  if (o.safe) return { name: o.safe, ...SAFE[o.safe] };
+  const hit = Object.entries(SAFE).find(([, s]) => Math.abs(w / h / s.ratio - 1) < 0.03);
+  return hit ? { name: hit[0], ...hit[1] } : null;
+}
+
+// Allowed findings, one per line: <check> <element or text> [@ t0-t1] -- <reason>. # starts a comment.
+function readAllow(file) {
+  const abs = path.resolve(file);
+  if (!fs.existsSync(abs) || fs.statSync(abs).isDirectory()) fail(`--allow: no such file: ${file}`);
+  const name = path.basename(abs);
+  return fs.readFileSync(abs, "utf8").split("\n").flatMap((raw, k) => {
+    const line = raw.trim();
+    if (!line || line.startsWith("#")) return [];
+    const where = `--allow ${name} line ${k + 1}`;
+    const cut = line.indexOf(" -- ");
+    const reason = cut < 0 ? "" : line.slice(cut + 4).trim();
+    if (!reason) fail(`${where}: write the reason after " -- ", for example: contrast #hint -- a watermark, not meant to be read`);
+    let left = line.slice(0, cut).trim(), range = null;
+    const m = left.match(/\s@\s*([\d.]+)\s*-\s*([\d.]+)$/);
+    if (m) {
+      range = [Number(m[1]), Number(m[2])];
+      if (!(range[1] >= range[0])) fail(`${where}: the time range ${m[0].trim()} must run forward`);
+      left = left.slice(0, m.index).trim();
+    }
+    const gap = left.search(/\s/);
+    const check = gap < 0 ? left : left.slice(0, gap), match = gap < 0 ? "" : left.slice(gap).trim();
+    if (check !== "*" && !LINT_CHECKS.includes(check)) fail(`${where}: the check must be one of ${LINT_CHECKS.join(", ")} or *, not ${JSON.stringify(check)}`);
+    if (!match) fail(`${where}: name the element or text to allow (a part of the printed selector and text), or *`);
+    return [{ where: `${name}:${k + 1}`, check, match, range, reason, used: 0 }];
+  });
+}
+
+// Runs in the page. Installs window.__lint: scan() moves through frames and measures how far the
+// text moves; collect() describes the text on screen; mode() hides or marks every glyph for the
+// next screenshot ("hide": transparent, "mark": magenta, "probe": only one element magenta).
+function lintPage() {
+  if (window.__lint) return;
+  const W = window.innerWidth, H = window.innerHeight;
+  const SKIP = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "TEMPLATE", "TITLE"]);
+  const ids = new WeakMap(), byId = new Map();
+  let nextId = 1;
+  const idOf = (el) => { if (!ids.has(el)) ids.set(el, nextId++); return ids.get(el); };
+  const range = document.createRange();
+
+  // Elements that hold text themselves, each with its own non-blank text nodes.
+  function textElements() {
+    const groups = new Map();
+    const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let n; (n = walk.nextNode());) {
+      const el = n.parentElement;
+      if (!el || !/\S/.test(n.data) || SKIP.has(el.tagName) || el.closest("#motion-debug")) continue;
+      if (groups.has(el)) groups.get(el).push(n); else groups.set(el, [n]);
+    }
+    return groups;
+  }
+  const opacityOf = (el) => { let op = 1; for (let e = el; e; e = e.parentElement) op *= Number(getComputedStyle(e).opacity); return op; };
+  // One box per line of text, as drawn (camera included).
+  function lineRects(el, nodes) {
+    const out = [], add = (r) => r.width > 0.5 && r.height > 0.5 && out.push({ x0: r.left, y0: r.top, x1: r.right, y1: r.bottom });
+    if (el instanceof SVGElement) add(el.getBoundingClientRect());
+    else for (const n of nodes) { range.selectNodeContents(n); for (const r of range.getClientRects()) add(r); }
+    return out;
+  }
+  // A short selector path: up to three steps, stopping at the nearest id.
+  function step(e) {
+    if (e.id) return `#${CSS.escape(e.id)}`;
+    const cls = [...e.classList].filter((c) => !/^caption-(past|active|upcoming)$/.test(c)).slice(0, 2);
+    let s = cls.length ? cls.map((c) => `.${CSS.escape(c)}`).join("") : e.localName;
+    const p = e.parentElement;
+    if (p) {
+      const same = [...p.children].filter((c) => c.localName === e.localName);
+      if (same.filter((c) => cls.every((k) => c.classList.contains(k))).length > 1) s += `:nth-of-type(${same.indexOf(e) + 1})`;
+    }
+    return s;
+  }
+  function selectorPath(el) {
+    const parts = [];
+    for (let e = el; e && e !== document.body && e !== document.documentElement; e = e.parentElement) {
+      parts.unshift(step(e));
+      if (e.id || parts.length === 3) break;
+    }
+    return parts.join(" > ") || el.localName;
+  }
+  // The boxes that clip this text: its own overflow, then each ancestor that clips it. An absolutely
+  // positioned element escapes static ancestors until its containing block. The frame is added later.
+  function clipBoxes(el, cs) {
+    const out = [];
+    let escape = null;
+    for (let e = el; e && e !== document.documentElement; e = e.parentElement) {
+      const s = e === el ? cs : getComputedStyle(e);
+      const block = s.transform !== "none" || s.filter !== "none" || /paint|strict|content/.test(s.contain);
+      if (e === el || !escape || (escape === "absolute" ? block || s.position !== "static" : block)) {
+        escape = null;
+        if (s.overflowX !== "visible" || s.overflowY !== "visible" || /paint|strict|content/.test(s.contain)) {
+          const r = e.getBoundingClientRect();
+          if (!(e === document.body || (r.left <= 0.5 && r.top <= 0.5 && r.right >= W - 0.5 && r.bottom >= H - 0.5))) {
+            out.push({ by: selectorPath(e), box: { x0: r.left, y0: r.top, x1: r.right, y1: r.bottom } });
+          }
+        }
+      }
+      if (s.position === "fixed" || (!escape && s.position === "absolute")) escape = s.position;
+    }
+    return out;
+  }
+  // Size on screen: the font size times every scale between the text and the frame.
+  function scaleOf(el) {
+    if (el instanceof SVGGraphicsElement) {
+      const m = el.getScreenCTM();
+      if (m) return Math.sqrt(Math.abs(m.a * m.d - m.b * m.c));
+    }
+    let k = 1;
+    for (let e = el; e && e.nodeType === 1; e = e.parentElement) {
+      const s = getComputedStyle(e);
+      if (s.transform !== "none") { const m = new DOMMatrixReadOnly(s.transform); k *= Math.sqrt(Math.abs(m.a * m.d - m.b * m.c)); }
+      if (s.scale && s.scale !== "none") { const [x, y = x] = s.scale.split(/\s+/).map(Number); k *= Math.sqrt(Math.abs(x * y)); }
+      const z = Number(s.zoom);
+      if (z > 0 && z !== 1) k *= z;
+    }
+    return k;
+  }
+  // Any CSS color as [r, g, b, a]: rgb() and rgba() exactly, other spaces through a 1-pixel canvas.
+  const swatch = document.createElement("canvas").getContext("2d", { willReadFrequently: true });
+  const colors = new Map();
+  function rgba(css) {
+    const m = css.match(/^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)\s*(?:[,/]\s*([\d.]+)(%?)\s*)?\)$/);
+    if (m) return [+m[1], +m[2], +m[3], m[4] === undefined ? 1 : m[5] ? m[4] / 100 : +m[4]];
+    if (!colors.has(css)) {
+      swatch.clearRect(0, 0, 1, 1);
+      swatch.fillStyle = "#000";
+      swatch.fillStyle = css;
+      swatch.fillRect(0, 0, 1, 1);
+      const d = swatch.getImageData(0, 0, 1, 1).data;
+      colors.set(css, [d[0], d[1], d[2], d[3] / 255]);
+    }
+    return colors.get(css);
+  }
+  function visible(el) {
+    if (getComputedStyle(el).visibility !== "visible") return 0;
+    return opacityOf(el);
+  }
+
+  async function scan(frames, fps) {
+    const moved = [];
+    let prev = null;
+    for (const n of frames) {
+      await window.seek(n / fps);
+      const cur = new Map();
+      for (const [el, nodes] of textElements()) {
+        const op = visible(el);
+        if (op < 0.1) continue;
+        const rs = lineRects(el, nodes);
+        if (!rs.length) continue;
+        const len = nodes.reduce((s, x) => s + x.data.length, 0);
+        cur.set(idOf(el), [Math.min(...rs.map((r) => r.x0)), Math.min(...rs.map((r) => r.y0)),
+          Math.max(...rs.map((r) => r.x1)), Math.max(...rs.map((r) => r.y1)), op * 100, len * 10]);
+      }
+      // Pixels moved; 1 per 0.01 of opacity; a change of text, or text coming or going, is a big move.
+      let d = 0;
+      if (prev) {
+        for (const [k, v] of cur) {
+          const p = prev.get(k);
+          if (!p) { d = 999; break; }
+          for (let i = 0; i < v.length; i++) d = Math.max(d, Math.abs(v[i] - p[i]));
+        }
+        for (const k of prev.keys()) if (!cur.has(k)) d = 999;
+      }
+      moved.push(Math.min(999, +d.toFixed(3)));
+      prev = cur;
+    }
+    return moved;
+  }
+
+  function collect() {
+    byId.clear();
+    const out = [];
+    for (const [el, nodes] of textElements()) {
+      const op = visible(el);
+      if (op < 0.1) continue;
+      const full = lineRects(el, nodes);
+      if (!full.length) continue;
+      const cs = getComputedStyle(el), svg = el instanceof SVGElement;
+      const fill = svg && /^(rgb|#|color\()/.test(cs.fill) ? cs.fill : svg ? cs.color : cs.webkitTextFillColor || cs.color;
+      const strokeW = parseFloat(cs.webkitTextStrokeWidth) || 0;
+      let text = nodes.map((x) => x.data).join("").replace(/\s+/g, " ").trim();
+      if (text.length > 48) text = `${text.slice(0, 47)}…`;
+      const id = idOf(el);
+      byId.set(id, el);
+      out.push({ id, sel: selectorPath(el), text, op, full, clips: clipBoxes(el, cs), within: allowSel.filter((s) => el.closest(s)),
+        size: parseFloat(cs.fontSize) * scaleOf(el), fill: rgba(fill), stroke: strokeW > 0 ? rgba(cs.webkitTextStrokeColor) : null });
+    }
+    return out;
+  }
+
+  // Glyph colors for the screenshots. Marks add a 3 px outline (which never moves the layout), so
+  // even thin type has pixels it covers fully; there, how much of the mark shows is how much of the
+  // text reaches the screen through opacity and anything translucent drawn over it.
+  const sheet = document.createElement("style");
+  const HIDE = "*,*::before,*::after{-webkit-text-fill-color:transparent!important;-webkit-text-stroke-color:transparent!important}" +
+    "text,tspan,textPath{fill:transparent!important;stroke:transparent!important}";
+  const mark = (c) => `*,*::before,*::after{-webkit-text-fill-color:${c}!important;-webkit-text-stroke:3px ${c}!important}` +
+    `text,tspan,textPath{fill:${c}!important;stroke:${c}!important;stroke-width:3px!important}`;
+  const PROBE = "[data-review-lint]{-webkit-text-fill-color:#ff00ff!important}" +
+    "text[data-review-lint],tspan[data-review-lint],textPath[data-review-lint]{fill:#ff00ff!important}";
+  function mode(m, id) {
+    for (const el of document.querySelectorAll("[data-review-lint]")) el.removeAttribute("data-review-lint");
+    if (!m) { sheet.remove(); return; }
+    if (m === "probe") byId.get(id)?.setAttribute("data-review-lint", "");
+    sheet.textContent = m === "magenta" ? mark("#ff00ff") : m === "green" ? mark("#00ff00") : m === "probe" ? HIDE + PROBE : HIDE;
+    document.head.append(sheet);
+  }
+  // Allowed findings may name a box by CSS selector: text inside it matches.
+  let allowSel = [];
+  function allowIn(list) {
+    allowSel = list.filter((s) => { try { document.querySelector(s); return true; } catch { return false; } });
+  }
+  window.__lint = { scan, collect, mode, allowIn };
+}
+
+// A PNG screenshot as raw pixels (8-bit RGB or RGBA, as Chromium writes them).
+function decodePng(buf) {
+  if (buf.readUInt32BE(0) !== 0x89504e47) throw new Error("the screenshot is not a PNG");
+  let pos = 8, w = 0, h = 0, depth = 0, type = 0, interlace = 0;
+  const idat = [];
+  while (pos < buf.length) {
+    const len = buf.readUInt32BE(pos), kind = buf.toString("latin1", pos + 4, pos + 8), body = buf.subarray(pos + 8, pos + 8 + len);
+    if (kind === "IHDR") [w, h, depth, type, interlace] = [body.readUInt32BE(0), body.readUInt32BE(4), body[8], body[9], body[12]];
+    else if (kind === "IDAT") idat.push(body);
+    else if (kind === "IEND") break;
+    pos += 12 + len;
+  }
+  if (depth !== 8 || (type !== 2 && type !== 6) || interlace) throw new Error(`cannot read a PNG of depth ${depth}, color type ${type}`);
+  const ch = type === 6 ? 4 : 3, stride = w * ch, raw = zlib.inflateSync(Buffer.concat(idat)), data = Buffer.alloc(h * stride);
+  for (let y = 0; y < h; y++) {
+    const f = raw[y * (stride + 1)], s = y * (stride + 1) + 1, d = y * stride;
+    for (let x = 0; x < stride; x++) {
+      const a = x >= ch ? data[d + x - ch] : 0, b = y ? data[d - stride + x] : 0, c = x >= ch && y ? data[d - stride + x - ch] : 0;
+      let v = raw[s + x];
+      if (f === 1) v += a;
+      else if (f === 2) v += b;
+      else if (f === 3) v += (a + b) >> 1;
+      else if (f === 4) { const p = a + b - c, pa = Math.abs(p - a), pb = Math.abs(p - b), pc = Math.abs(p - c); v += pa <= pb && pa <= pc ? a : pb <= pc ? b : c; }
+      data[d + x] = v;
+    }
+  }
+  return { w, h, ch, data };
+}
+
+const meet = (a, b) => {
+  const r = { x0: Math.max(a.x0, b.x0), y0: Math.max(a.y0, b.y0), x1: Math.min(a.x1, b.x1), y1: Math.min(a.y1, b.y1) };
+  return r.x1 > r.x0 && r.y1 > r.y0 ? r : null;
+};
+const rectArea = (r) => (r.x1 - r.x0) * (r.y1 - r.y0);
+const rectUnion = (a, b) => ({ x0: Math.min(a.x0, b.x0), y0: Math.min(a.y0, b.y0), x1: Math.max(a.x1, b.x1), y1: Math.max(a.y1, b.y1) });
+// A line's box is taller than its glyphs (room for accents and descenders) and may include a
+// space at either end, so edge checks allow 15% of its height and 2 px of its width.
+const inkBox = (r) => { const v = Math.max(2, 0.15 * (r.y1 - r.y0)); return { x0: r.x0 + 2, y0: r.y0 + v, x1: r.x1 - 2, y1: r.y1 - v }; };
+function sidesOutside(r, box) {
+  const s = [];
+  if (r.x1 > r.x0) { if (r.x0 < box.x0) s.push("left"); if (r.x1 > box.x1) s.push("right"); }
+  if (r.y1 > r.y0) { if (r.y0 < box.y0) s.push("top"); if (r.y1 > box.y1) s.push("bottom"); }
+  return s;
+}
+
+// Pixels in a page rect of `base` that differ from `top` (a screenshot whose top-left is at ox, oy)
+// by more than 40 in some channel: the glyphs that `top` draws there.
+function glyphCount(top, base, r, ox = 0, oy = 0) {
+  const x0 = Math.max(0, Math.floor(r.x0), ox), y0 = Math.max(0, Math.floor(r.y0), oy);
+  const x1 = Math.min(base.w, Math.ceil(r.x1), ox + top.w), y1 = Math.min(base.h, Math.ceil(r.y1), oy + top.h);
+  let n = 0;
+  for (let y = y0; y < y1; y++) {
+    for (let x = x0; x < x1; x++) {
+      const i = ((y - oy) * top.w + (x - ox)) * top.ch, j = (y * base.w + x) * base.ch;
+      const d = Math.max(Math.abs(top.data[i] - base.data[j]), Math.abs(top.data[i + 1] - base.data[j + 1]), Math.abs(top.data[i + 2] - base.data[j + 2]));
+      if (d > 40) n++;
+    }
+  }
+  return n;
+}
+
+// The median color, channel by channel, of a grid of pixels inside the rects.
+function medianColor(img, rects) {
+  const chans = [[], [], []];
+  for (const r of rects) {
+    const x0 = Math.max(0, Math.ceil(r.x0) + 1), y0 = Math.max(0, Math.ceil(r.y0) + 1);
+    const x1 = Math.min(img.w, Math.floor(r.x1) - 1), y1 = Math.min(img.h, Math.floor(r.y1) - 1);
+    if (x1 <= x0 || y1 <= y0) continue;
+    const sx = Math.max(1, Math.floor((x1 - x0) / 32)), sy = Math.max(1, Math.floor((y1 - y0) / 8));
+    for (let y = y0; y < y1; y += sy) for (let x = x0; x < x1; x += sx) {
+      const i = (y * img.w + x) * img.ch;
+      for (let c = 0; c < 3; c++) chans[c].push(img.data[i + c]);
+    }
+  }
+  if (!chans[0].length) return null;
+  return chans.map((v) => v.sort((a, b) => a - b)[v.length >> 1]);
+}
+
+// The text as drawn. Over the pixels where its glyphs (marked magenta, then green) cover most, the
+// difference between the two marks is q, the share of the text that reaches the screen. A pixel
+// then shows hidden + a·(magenta − hidden + q·(color − magenta)) for a text color with alpha a: the
+// computed color through opacity, blur and anything translucent drawn over it. Also returns the
+// boxes around the glyphs that show, so a card covering part of a line is not its background.
+function drawnColor(magenta, green, hidden, rects, [r, g, b, a]) {
+  let best = -1, q = 0;
+  const boxes = [];
+  for (const rect of rects) {
+    const x0 = Math.max(0, Math.floor(rect.x0)), y0 = Math.max(0, Math.floor(rect.y0));
+    const x1 = Math.min(hidden.w, Math.ceil(rect.x1)), y1 = Math.min(hidden.h, Math.ceil(rect.y1));
+    const ink = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
+    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+      const i = (y * hidden.w + x) * hidden.ch;
+      const k = (magenta.data[i] - green.data[i] + green.data[i + 1] - magenta.data[i + 1] + magenta.data[i + 2] - green.data[i + 2]) / 765;
+      if (k > q) [q, best] = [k, i];
+      if (k > 0.1) Object.assign(ink, { x0: Math.min(ink.x0, x), y0: Math.min(ink.y0, y), x1: Math.max(ink.x1, x + 1), y1: Math.max(ink.y1, y + 1) });
+    }
+    if (ink.x1 > ink.x0) boxes.push(ink);
+  }
+  if (best < 0 || q < 0.05) return null;
+  const M = [0, 1, 2].map((c) => magenta.data[best + c]), B = [0, 1, 2].map((c) => hidden.data[best + c]);
+  const fg = [r, g, b].map((v, c) => Math.min(255, Math.max(0, Math.round(B[c] + a * (M[c] - B[c] + q * (v - [255, 0, 255][c]))))));
+  return { fg, q: Math.min(1, q), boxes };
+}
+
+// WCAG 2 relative luminance and contrast ratio, for 8-bit sRGB colors.
+const luminance = (c) => {
+  const [r, g, b] = c.map((v) => { v /= 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+const contrast = (a, b) => { const [x, y] = [luminance(a), luminance(b)]; return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+const hexOf = (c) => `#${c.slice(0, 3).map((v) => Math.round(v).toString(16).padStart(2, "0")).join("").toUpperCase()}`;
+const pct = (f) => `${Math.round(f * 100)}%`;
+
+async function lint(src, o) {
+  const { page, fps, width: W, height: H } = src;
+  const every = numOpt(o, "every", Math.max(1, Math.round(fps / 2)), { min: 1, int: true });
+  const minSize = numOpt(o, "min-size", +((28 * Math.min(W, H)) / 1080).toFixed(1), { min: 1 });
+  const safe = safeArea(o, W, H);
+  const allow = o.allow ? readAllow(o.allow) : [];
+  const out = o.out ? outPath(o) : null;
+  const frame = { x0: 0, y0: 0, x1: W, y1: H };
+  const tty = process.stderr.isTTY;
+  await page.evaluate(lintPage);
+  await page.evaluate((list) => window.__lint.allowIn(list), allow.map((a) => a.match));
+
+  // 1. Settle frames: the text stops moving and stays still for at least 0.25 s.
+  const step = Math.max(1, Math.round(fps / 30));
+  const scanned = [];
+  for (let n = 0; n <= src.last; n += step) scanned.push(n);
+  if (scanned.at(-1) !== src.last) scanned.push(src.last);
+  if (tty) process.stderr.write(`lint: looking for settle frames in ${scanned.length} frames...`);
+  const moved = await page.evaluate(({ frames, fps }) => window.__lint.scan(frames, fps), { frames: scanned, fps });
+  const hold = Math.max(1, Math.ceil((0.25 * fps) / step));
+  const settled = new Set();
+  for (let j = 0; j < scanned.length - 1; j++) {
+    if (j > 0 && moved[j] < 0.5) continue;   // still moving into this frame, or already at rest
+    let still = true;
+    for (let k = j + 1; k <= Math.min(scanned.length - 1, j + hold); k++) if (moved[k] >= 0.5) { still = false; break; }
+    if (still) settled.add(scanned[j]);
+  }
+
+  // 2. Samples: every `every` frames, and every settle frame.
+  const regular = [];
+  for (let n = 0; n <= src.last; n += every) regular.push(n);
+  const samples = [...new Set([...regular, ...settled])].sort((a, b) => a - b);
+  const capture = async (clip) => decodePng(await page.screenshot({ type: "png", animations: "disabled", caret: "hide", timeout: 120_000, ...(clip ? { clip } : {}) }));
+  const setMode = (m, id = null) => page.evaluate(([m, id]) => window.__lint.mode(m, id), [m, id]);
+  const seen = new Map();   // finding key -> [{i: sample index, hit}]
+  for (let i = 0; i < samples.length; i++) {
+    const n = samples[i];
+    if (tty) process.stderr.write(`\rlint: frame ${n} (${i + 1} of ${samples.length})                    `);
+    const els = await page.evaluate(async (t) => { await window.seek(t); return window.__lint.collect(); }, src.timeOf(n));
+    await setMode("hide");
+    const hidden = await capture();
+    await setMode("magenta");
+    const marked = await capture();
+    await setMode("green");
+    const green = await capture();
+    await setMode(null);
+
+    const hits = [];
+    let within = [];   // the allow selectors around the element being checked
+    const add = (check, key, label, detail, rects) => hits.push({ check, key: `${check} ${key}`, label, detail, rects, within });
+    // The text inside the frame and its clipping boxes.
+    const inFrame = [];
+    for (const e of els) {
+      const clip = e.clips.reduce((a, c) => (a ? meet(a, c.box) : null), frame);
+      const vis = clip ? e.full.map((r) => meet(r, clip)).filter(Boolean) : [];
+      if (vis.length) inFrame.push({ ...e, vis, label: `${e.sel} "${e.text}"` });
+    }
+    // Texts whose boxes cross. In the all-magenta frame either one's glyphs could be the other's, so
+    // each gets a screenshot of its own glyphs alone ("probe"). That also finds text under a card.
+    const touching = [];
+    for (let a = 0; a < inFrame.length; a++) {
+      for (let b = a + 1; b < inFrame.length; b++) {
+        let any = false, best = null;
+        for (const ra of inFrame[a].vis) for (const rb of inFrame[b].vis) {
+          const r = meet(ra, rb);
+          if (!r || r.x1 - r.x0 <= 1 || r.y1 - r.y0 <= 1) continue;
+          any = true;
+          if (r.x1 - r.x0 > 2 && r.y1 - r.y0 > 0.3 * Math.min(ra.y1 - ra.y0, rb.y1 - rb.y0) && (!best || rectArea(r) > rectArea(best))) best = r;
+        }
+        if (any) touching.push({ a: inFrame[a], b: inFrame[b], r: best });
+      }
+    }
+    const probes = new Map();
+    for (const el of new Set(touching.flatMap((p) => [p.a, p.b]))) {
+      const u = el.vis.reduce(rectUnion);
+      const clip = { x: Math.floor(u.x0), y: Math.floor(u.y0), width: Math.ceil(u.x1) - Math.floor(u.x0), height: Math.ceil(u.y1) - Math.floor(u.y0) };
+      await setMode("probe", el.id);
+      probes.set(el, { img: await capture(clip), x: clip.x, y: clip.y });
+    }
+    if (probes.size) await setMode(null);
+    const glyphsIn = (el, r) => { const p = probes.get(el); return p ? glyphCount(p.img, hidden, r, p.x, p.y) : glyphCount(marked, hidden, r); };
+    const shown = new Set();
+    for (const e of inFrame) {
+      const vis = e.vis, area = vis.reduce((s, r) => s + rectArea(r), 0);
+      if (vis.reduce((s, r) => s + glyphsIn(e, r), 0) < Math.max(6, 0.01 * area)) continue;   // covered
+      shown.add(e);
+      within = e.within;
+
+      // Clipped: a line crosses the edge of a box that clips it, or of the frame.
+      let cut = null;
+      for (const r of e.full) {
+        for (const c of [...e.clips, { by: "the frame", box: frame }]) {
+          const sides = sidesOutside(inkBox(r), c.box);
+          if (sides.length) { cut = { by: c.by, sides }; break; }
+        }
+        if (cut) break;
+      }
+      if (cut) {
+        const seenPart = area / e.full.reduce((s, r) => s + rectArea(r), 0);
+        add("clipped", e.id, e.label, `cut by ${cut.by} at the ${cut.sides.join(" and ")}; ${pct(seenPart)} shows`, vis);
+      }
+      // Safe area: margins, and the platform's bands.
+      if (safe) {
+        const where = new Set();
+        const [l, t, r, b] = safe.margin;
+        for (const v of vis) {
+          const k = inkBox(v);
+          for (const s of sidesOutside(k, { x0: l * W, y0: t * H, x1: (1 - r) * W, y1: (1 - b) * H })) {
+            where.add(`the ${s} ${pct({ left: l, top: t, right: r, bottom: b }[s])}`);
+          }
+          for (const band of safe.bands) if (meet(k, { x0: band.x0 * W, y0: band.y0 * H, x1: band.x1 * W, y1: band.y1 * H })) where.add(band.name);
+        }
+        if (where.size) add("safe", e.id, e.label, `in ${[...where].join(" and ")} (${safe.name} safe area)`, vis);
+      }
+      // Small type, as drawn (camera included).
+      if (e.size < minSize - 0.05) add("small", e.id, e.label, `${e.size.toFixed(1)} px, needs ${minSize} px`, vis);
+      // Contrast: the text's computed color, as drawn, over the median of the real pixels behind it.
+      const drawn = e.fill[3] > 0.01 ? drawnColor(marked, green, hidden, vis, e.fill) : null;
+      const bg = drawn && medianColor(hidden, drawn.boxes.map((b) => ({ x0: b.x0 - 1, y0: b.y0 - 1, x1: b.x1 + 1, y1: b.y1 + 1 })));
+      if (bg) {
+        let { fg } = drawn, ratio = contrast(fg, bg);
+        const strength = drawn.q * e.fill[3];
+        let what = strength < 0.97 ? ` (${hexOf(e.fill)} showing at ${pct(strength)})` : "";
+        if (e.stroke && e.stroke[3] > 0.01) {
+          const s = drawnColor(marked, green, hidden, vis, e.stroke);
+          if (s && contrast(s.fg, bg) > ratio) [fg, ratio, what] = [s.fg, contrast(s.fg, bg), " (its outline)"];
+        }
+        if (ratio < MIN_CONTRAST) add("contrast", e.id, e.label, `${ratio.toFixed(2)}:1, ${hexOf(fg)}${what} on ${hexOf(bg)}; needs ${MIN_CONTRAST}:1`, vis);
+      }
+    }
+    // Overlap: two texts' lines cross, and each one's own glyphs show in the shared area.
+    for (const p of touching) {
+      if (p.r && shown.has(p.a) && shown.has(p.b) && glyphsIn(p.a, p.r) >= 6 && glyphsIn(p.b, p.r) >= 6) {
+        const [x, y] = p.a.id < p.b.id ? [p.a, p.b] : [p.b, p.a];
+        within = x.within.filter((s) => y.within.includes(s));
+        add("overlap", `${x.id} ${y.id}`, `${x.label} × ${y.label}`, `${Math.round(rectArea(p.r))} px² shared`, [...x.vis, ...y.vis]);
+      }
+    }
+    for (const h of hits) (seen.get(h.key) ?? seen.set(h.key, []).get(h.key)).push({ i, hit: h });
+  }
+  if (tty) process.stderr.write("\r\x1b[K");
+
+  // 3. A finding counts when it holds on 2 samples in a row at least 0.2 s apart, or on a settle frame.
+  const findings = [];
+  let brief = 0;
+  for (const [key, list] of seen) {
+    const runs = [];
+    for (const x of list) { const r = runs.at(-1); if (r && x.i === r.at(-1).i + 1) r.push(x); else runs.push([x]); }
+    const settles = (r) => r.some((x) => settled.has(samples[x.i]));
+    const kept = runs.filter((r) => settles(r) || (r.length >= 2 && src.timeOf(samples[r.at(-1).i] - samples[r[0].i]) >= 0.2 - 1e-9));
+    brief += runs.length - kept.length;
+    if (!kept.length) continue;
+    // Its numbers and picture come from one sample: the first settle frame, else the middle of a run.
+    const all = kept.flat();
+    const rep = all.find((x) => settled.has(samples[x.i])) ?? kept[0][(kept[0].length - 1) >> 1];
+    findings.push({
+      key, check: rep.hit.check, label: rep.hit.label, detail: `at f${samples[rep.i]}: ${rep.hit.detail}`, within: rep.hit.within,
+      spans: kept.map((r) => ({ f0: samples[r[0].i], f1: samples[r.at(-1).i], n: r.length, settled: settles(r) })),
+      rep: { n: samples[rep.i], rects: rep.hit.rects },
+    });
+  }
+  for (const f of findings) {
+    const t0 = src.timeOf(f.spans[0].f0), t1 = src.timeOf(f.spans.at(-1).f1), slack = 1 / fps + 1e-6;
+    f.allowed = allow.find((a) => (a.check === "*" || a.check === f.check) &&
+      (a.match === "*" || f.label.includes(a.match) || f.within.includes(a.match)) &&
+      (!a.range || (t0 >= a.range[0] - slack && t1 <= a.range[1] + slack))) ?? null;
+    if (f.allowed) f.allowed.used++;
+  }
+  const order = (a, b) => a.spans[0].f0 - b.spans[0].f0 || LINT_CHECKS.indexOf(a.check) - LINT_CHECKS.indexOf(b.check) || a.label.localeCompare(b.label);
+  const errors = findings.filter((f) => !f.allowed).sort(order), allowed = findings.filter((f) => f.allowed).sort(order);
+  [...errors, ...allowed].forEach((f, k) => { f.no = k + 1; });
+
+  // 4. Report.
+  const spanText = (s) => (s.f0 === s.f1 ? `f${s.f0} (${sec(src.timeOf(s.f0))}` : `f${s.f0}–f${s.f1} (${secs(src.timeOf(s.f0), src.timeOf(s.f1))}`) +
+    `, ${s.n} sample${s.n > 1 ? "s" : ""}${s.settled ? ", settled" : ""})`;
+  const spansText = (f) => f.spans.slice(0, 3).map(spanText).join("; ") + (f.spans.length > 3 ? `; and ${f.spans.length - 3} more` : "");
+  const lines = [
+    `lint: ${src.name}  ${W}x${H} · ${sec(src.timeOf(src.last) + 1 / fps)} · ${fmtFps(fps)} fps`,
+    `  ${samples.length} frames: every ${every} (${sec(every / fps)}), and ${settled.size} where the text settles`,
+    `  ${safe ? `safe area ${safe.name}: ${safe.about}` : "no safe area (--safe to set one)"}; type ${minSize} px or larger; contrast ${MIN_CONTRAST}:1 or more`,
+  ];
+  const show = (f) => [`  ${String(f.no).padStart(2)}  ${f.check.padEnd(8)}  ${f.label}`, `        ${spansText(f)}: ${f.detail}`];
+  if (errors.length) lines.push("", ...errors.flatMap(show));
+  if (allowed.length) lines.push("", "allowed:", ...allowed.flatMap((f) => [...show(f), `        allowed by ${f.allowed.where}: ${f.allowed.reason}`]));
+  const unused = allow.filter((a) => !a.used);
+  if (unused.length) lines.push("", ...unused.map((a) => `note: ${a.where} (${a.check} ${a.match}) matched no finding`));
+  const byCheck = LINT_CHECKS.map((c) => [c, errors.filter((f) => f.check === c).length]).filter(([, n]) => n).map(([c, n]) => `${n} ${c}`);
+  lines.push("", `${errors.length ? `${errors.length} finding${errors.length > 1 ? "s" : ""} to fix (${byCheck.join(", ")})` : "no findings to fix"}, ` +
+    `${allowed.length} allowed, ${brief} brief one${brief === 1 ? "" : "s"} ignored (on one sample while the text moves)`);
+  if (out) lines.push(await lintImage(src, { out, findings: [...errors, ...allowed], safe, samples, settled }));
+  console.log(lines.join("\n"));
+  return errors.length ? 1 : 0;
+}
+
+// Each finding drawn on its frame: the settle frame where it shows, else the middle of its first run.
+async function lintImage(src, { out, findings, safe, samples, settled }) {
+  const W = src.width, H = src.height;
+  const byFrame = new Map();
+  for (const f of findings) (byFrame.get(f.rep.n) ?? byFrame.set(f.rep.n, []).get(f.rep.n)).push(f);
+  const frames = [...byFrame.keys()].sort((a, b) => a - b).slice(0, 12);
+  const extra = byFrame.size - frames.length;
+  // Cells are sized for two wide frames or three square or tall ones across 2400 px.
+  const pad = 48, gap = 28, cols = W > H * 1.2 ? 2 : 3;
+  const cellW = Math.floor((MAX_SHEET_WIDTH - 2 * pad - (cols - 1) * gap) / cols), k = cellW / W, cellH = Math.round(H * k);
+  const pngs = frames.length ? await src.grab(frames, cellW) : [];
+  const box = (r, cls, no) => `<div class="box ${cls}" style="left:${((r.x0 - 3) * k).toFixed(1)}px;top:${((r.y0 - 3) * k).toFixed(1)}px;` +
+    `width:${((r.x1 - r.x0 + 6) * k).toFixed(1)}px;height:${((r.y1 - r.y0 + 6) * k).toFixed(1)}px">${no ? `<b>${no}</b>` : ""}</div>`;
+  const guide = safe ? (() => {
+    const [l, t, r, b] = safe.margin;
+    return `<div class="safe" style="left:${(l * W * k).toFixed(1)}px;top:${(t * H * k).toFixed(1)}px;width:${((1 - l - r) * W * k).toFixed(1)}px;height:${((1 - t - b) * H * k).toFixed(1)}px"></div>` +
+      safe.bands.map((s) => `<div class="band" style="left:${(s.x0 * W * k).toFixed(1)}px;top:${(s.y0 * H * k).toFixed(1)}px;width:${((s.x1 - s.x0) * W * k).toFixed(1)}px;height:${((s.y1 - s.y0) * H * k).toFixed(1)}px"></div>`).join("");
+  })() : "";
+  const cells = frames.map((n, i) => {
+    const list = byFrame.get(n);
+    const boxes = list.map((f) => {
+      const cls = f.allowed ? "ok" : "bad";
+      const u = f.rep.rects.reduce(rectUnion);
+      return f.check === "overlap" ? f.rep.rects.map((r) => box(r, `${cls} thin`, "")).join("") + box(u, cls, f.no) : box(u, cls, f.no);
+    }).join("");
+    const items = list.map((f) => `<li class="${f.allowed ? "ok" : "bad"}"><b>${f.no}</b><span class="c">${f.check}</span>` +
+      `<span class="what">${esc(f.label)}</span><span class="d">${esc(f.allowed ? `allowed: ${f.allowed.reason}` : f.detail)}</span></li>`).join("");
+    return `<figure class="cell"><div class="shot" style="width:${cellW}px;height:${cellH}px">
+      <img class="frame-img" src="f${i}.png" width="${cellW}" height="${cellH}">${guide}${boxes}</div>
+      <figcaption><div class="row1"><span class="k">Frame</span><span class="f">${n}</span><span class="t">${sec(src.timeOf(n))}</span>
+        ${settled.has(n) ? `<span class="tag">settled</span>` : ""}</div><ol>${items}</ol></figcaption></figure>`;
+  });
+  const errs = findings.filter((f) => !f.allowed).length;
+  const used = Math.max(1, Math.min(cols, frames.length));
+  const width = 2 * pad + used * cellW + (used - 1) * gap;
+  const html = `<!doctype html><meta charset="utf-8"><style>${BASE_CSS}
+    body { width: ${Math.max(width, 1200)}px; }
+    .grid { display: grid; grid-template-columns: repeat(${used}, ${cellW}px); gap: 40px ${gap}px; align-items: start; }
+    .shot { position: relative; }
+    .shot img { width: ${cellW}px; height: ${cellH}px; }
+    .box { position: absolute; border-radius: 4px; border: 2.5px solid var(--critical); box-shadow: 0 0 0 1.5px rgba(255,255,255,0.9); }
+    .box.ok { border-color: #8A8478; border-style: dashed; }
+    .box.thin { border-width: 1.5px; box-shadow: none; opacity: 0.8; }
+    .box b { position: absolute; left: -2px; top: -30px; min-width: 26px; height: 24px; padding: 0 7px; border-radius: 7px;
+      display: grid; place-items: center; background: var(--critical); color: #fff; font-size: 15px; font-weight: 650; }
+    .box.ok b { background: #8A8478; }
+    .safe { position: absolute; border: 1.5px dashed rgba(47,106,87,0.7); border-radius: 2px; }
+    .band { position: absolute; background: rgba(47,106,87,0.06); border: 1px dashed rgba(47,106,87,0.45); }
+    figcaption { margin-top: 13px; padding: 0 2px; }
+    .row1 { display: flex; align-items: baseline; gap: 10px; }
+    .row1 .f { font-size: 23px; font-weight: 650; } .row1 .t { margin-left: 6px; font-size: 20px; color: var(--muted); }
+    .tag { margin-left: auto; align-self: center; padding: 3px 10px 4px; border-radius: 999px; background: var(--pine-soft);
+      color: var(--pine); font-size: 15px; font-weight: 600; }
+    ol { list-style: none; margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+    li { display: grid; grid-template-columns: 30px 80px 1fr; column-gap: 10px; row-gap: 2px; align-items: baseline; font-size: 17px; color: var(--body); }
+    li b { grid-row: span 2; justify-self: start; min-width: 26px; height: 24px; padding: 0 7px; border-radius: 7px; display: grid; place-items: center;
+      background: var(--critical); color: #fff; font-size: 15px; font-weight: 650; }
+    li.ok b { background: #8A8478; }
+    li .c { font-weight: 600; color: var(--ink); }
+    li .what { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    li .d { grid-column: 2 / 4; color: var(--muted); font-size: 16px; }
+    .none { font-size: 22px; color: var(--muted); }
+  </style>
+  <header><div><div class="eyebrow">Lint</div><h1>${esc(src.meta.title || src.name)}</h1></div>
+    <div class="meta"><b>${errs} to fix</b> · ${findings.length - errs} allowed<br>${samples.length} frames checked${safe ? ` · ${safe.name} safe area` : ""}</div></header>
+  ${frames.length ? `<main class="grid">${cells.join("")}</main>` : `<p class="none">No findings.</p>`}
+  ${extra > 0 ? `<p class="none" style="margin-top:28px">${extra} more frame${extra > 1 ? "s" : ""} with findings are printed, not drawn.</p>` : ""}`;
+  const [w, h] = await compose(src.browser, { html, width: Math.max(width, 1200), out, assets: pngAssets(pngs, "f") });
+  return `wrote ${out}  ${w}x${h}`;
 }
 
 // ---------- main ----------
@@ -945,8 +1747,9 @@ async function main() {
   if (!argv.length) { console.error(usage()); return 1; }
   const { pos, o } = parseArgs(argv);
   const [cmd, input, extra] = pos;
-  if (!COMMANDS[cmd]) fail(`${cmd ? `unknown command ${JSON.stringify(cmd)}` : "no command"}; use sheet, onion, graph, holds or audit (--help shows how)`);
-  if (!input) fail(`${cmd} needs a ${cmd === "graph" || cmd === "audit" ? "page (.html)" : cmd === "holds" ? "video" : "page or video"} to read`);
+  if (!COMMANDS[cmd]) fail(`${cmd ? `unknown command ${JSON.stringify(cmd)}` : "no command"}; use board, sheet, onion, graph, holds, audit or lint (--help shows how)`);
+  const pageOnly = ["board", "graph", "audit", "lint"].includes(cmd);
+  if (!input) fail(`${cmd} needs a ${pageOnly ? "page (.html)" : cmd === "holds" ? "video" : "page or video"} to read`);
   if (extra) fail(`unexpected argument ${JSON.stringify(extra)}`);
   for (const k of Object.keys(o)) if (!COMMANDS[cmd].includes(k)) fail(`--${k} does not apply to ${cmd}`);
   const file = path.resolve(input);
@@ -956,7 +1759,8 @@ async function main() {
   try {
     if (src.kind === "video" && o.fps !== undefined) console.warn(`note: a video keeps its own ${fmtFps(src.fps)} fps; --fps applies to pages`);
     if (cmd === "audit") return await audit(src, o);
-    await { sheet, onion, graph }[cmd](src, o);
+    if (cmd === "lint") return await lint(src, o);
+    await { board, sheet, onion, graph }[cmd](src, o);
   } finally {
     await src.close();
   }
@@ -967,8 +1771,23 @@ async function main() {
 function checkEarly(cmd, file, o) {
   if (!fs.existsSync(file) || fs.statSync(file).isDirectory()) fail(`no such file: ${file}`);
   if (cmd === "graph" && !isPagePath(file)) fail("graph reads the element from the page's DOM, so it needs the page (.html), not a video");
+  if (cmd === "board" && !isPagePath(file)) fail("board renders the page's shots through seek(t), so it needs the page (.html)");
   if (cmd === "audit") {
     if (!isPagePath(file)) fail("audit runs the page's own checks, so it needs the page (.html)");
+    if (o.grep !== undefined && !o.grep.trim()) fail("--grep needs some text to look for in the check names");
+    return;
+  }
+  if (cmd === "lint") {
+    if (!isPagePath(file)) fail("lint measures the text in the page's DOM, so it needs the page (.html)");
+    if (o.safe !== undefined && o.safe !== "off" && !SAFE[o.safe]) fail(`--safe must be one of ${Object.keys(SAFE).join(", ")} or off, not ${JSON.stringify(o.safe)}`);
+    if (o.allow !== undefined) readAllow(o.allow);
+    if (o.out !== undefined) outPath(o);
+    return;
+  }
+  if (cmd === "board") {
+    if (o.out !== undefined) outPath(o);
+    if (o.count !== undefined && !o.look) fail("--count sets the number of look frames; use it with --look");
+    if (o.count !== undefined && o.at !== undefined && o.at !== "stills") fail("use --at or --count for look frames, not both");
     return;
   }
   outPath(o);
