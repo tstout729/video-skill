@@ -61,7 +61,9 @@ Slow down. Agent-made animation is usually too fast and shows too much at once. 
   - `onion`: an onion skin of one move;
   - `graph`: a speed graph of an element, with a soft or hard start and stop;
   - `holds`: holds per scene;
-  - `audit`: runs checks of the brief's numbers that the page declared with `check()`, on every frame they name. It exits 1 on a failure.
+  - `audit`: runs checks of the brief's numbers that the page declared with `check()`, on every frame they name (`--grep` picks checks by name). It exits 1 on a failure;
+  - `board`: a numbered storyboard of the page's shots, or 2–4 full-size look frames (`--look`), for the user to approve by panel number;
+  - `lint`: finds text that is clipped, outside the safe area, over other text, under 28 px, or under 4.5:1 contrast with the real pixels behind it. It exits 1 on a finding that is not allowed ([storyboard and lint](references/storyboard-lint.md)).
 
   Run `--help` for the options. When something breaks, see [When things break](references/troubleshooting.md).
 - **Deliver.** Put the MP4 and `.srt` in the project's `out/` folder, or where the user's preferences say. Re-rendering replaces the project's own `out/` files; when you copy a video anywhere else, never overwrite an existing file (`cp -n`). Report the path, the length and the voice, and anything you simplified. For a walkthrough, say that the screen is a redraw with sample data.
@@ -158,12 +160,13 @@ Pipeline:
 
 1. **Research** (shared steps). Read the real screen's code or screenshots and the docs for the facts.
 2. **Plan.** List the states and when each happens (word cues or beat numbers), and check the list against [animation principles](animation-principles.md). Show the plan to the user before animating if the request is open-ended. For a clear request, go ahead.
+   - For sign-off before narration and full renders, build the key poses at planned times. Render look frames with `review.mjs board index.html --look`. Then list the shots in `window.SHOTS = [{t, title, note, sound}]` and render the numbered storyboard with `review.mjs board index.html`. The user approves or rejects each panel by its number ([storyboard and lint](references/storyboard-lint.md)).
 3. **Audio first.**
    - Walkthrough: write `narration.json` and run `narrate.py` (shared steps), then `uv run --script <skill>/scripts/timeline.py .`. This writes `audio/narration.wav` and `words.js` (global word times).
    - Loop with music: `uv run --script <skill>/scripts/beats.py track.mp3 --out beats.js`, then use `beat(n)` for every action. Start on `BEATS.first` (a downbeat). Use only a track the user has the right to use (their own, or royalty-free with a license that allows it).
    - Silent loop: no audio step. Define `window.BEATS = {bpm: 120, first: 0.5}` in the page and use `beat(n)` the same way.
 4. **Build `index.html`.** Load `words.js` or `beats.js`, then `import {...} from "/_skill/runtime/motion.js"`. Build all tracks once at load, measure element positions with the camera at identity, then define `window.seek(t)` and finally `window.VIDEO = {width, height, duration, stills: [...], cuts: [...]}`.
-5. **Check stills.** `node <skill>/scripts/review.mjs sheet index.html --out qa/sheet.png --at stills` (or `--frames 12`, `--from`, `--to`) renders a labeled contact sheet. Look at every cell: clipping, overlaps, unreadable text, empty or gray frames, anything off the cue. Write your notes in `log.md` before you change code.
+5. **Check stills.** `node <skill>/scripts/review.mjs sheet index.html --out qa/sheet.png --at stills` (or `--frames 12`, `--from`, `--to`) renders a labeled contact sheet. Look at every cell: clipping, overlaps, unreadable text, empty or gray frames, anything off the cue. Then run `review.mjs lint index.html`, which measures what the eye misses at thumbnail size. Write your notes in `log.md` before you change code.
 6. **Draft.** `node <skill>/scripts/render.mjs index.html --out qa/draft.mp4 --fps 30 --sub 1 --scale 0.5 --debug` takes about 10 seconds per minute of video on a fast machine. `--debug` prints the frame, time and current cue on every frame. Graph each hero move (`review.mjs graph index.html --select "#card" --from 3 --to 5`), check the onion skin of anything that travels, and run `review.mjs holds`.
 7. **Final.** `node <skill>/scripts/render.mjs index.html --out render/video.mp4` (60 fps, 4 subframes; about 100 seconds per minute of 1080p). It also writes `render/video.sfx.json`.
 8. **Mix.** `uv run --script <skill>/scripts/mux.py render/video.mp4 --out "out/<Title>.mp4" --narration audio/narration.wav --words words.js --sfx-dir sfx`. Add `--music bed.wav` for a bed that ducks under the voice, and `--social` for −14 LUFS. A silent loop needs only `--sfx-dir sfx`, or `--music`. The output gets soft captions and a sidecar `.srt` when there is narration. Then run `check_sync.py` ([Sound](#sound)).
