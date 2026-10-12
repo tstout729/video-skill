@@ -254,6 +254,16 @@ window.VIDEO = {
   stills: [0, 1.45, 1.85, 2.3, 3.5, 5.3, 5.7, 6.4, 7.15, 7.35, 7.55, 8.5, 9.8, 10.1, 12, 14.3, 14.7, 15.2, 15.98],
 };
 
+// The storyboard (review.mjs board): each shot's key pose, settled, for sign-off by panel number.
+window.SHOTS = [
+  { t: 0, title: "Pay button", note: "Pay $48.00 on an ink pill; the pointer rests at the lower right." },
+  { t: 3.5, title: "Card sheet", note: "The button grows into the sheet; the pointer waits by its Pay button.", sound: "tap on beat 2" },
+  { t: 6.4, title: "Processing", note: "The sheet folds into a ring that turns at a steady speed.", sound: "tap on beat 9" },
+  { t: 8.5, title: "Paid", note: "The ring closes into a green check.", sound: "success on beat 13" },
+  { t: 12, title: "Receipt", note: "The check rises into the badge; amount, payee and Done follow.", sound: "whoosh on beat 18" },
+  { t: 15.2, title: "Back to Pay", note: "Done shrinks the receipt into the Pay button.", sound: "tap on beat 27", next: "loops to 1" },
+];
+
 // Preview one moment with ?t=12.5 (render.mjs --serve).
 window.seek(Number(new URLSearchParams(location.search).get("t")) || 0);
 </script>

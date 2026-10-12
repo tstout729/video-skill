@@ -627,23 +627,25 @@ window.seek = (t) => {
   drawCamera(t);
 };
 
-// ========== 6. Video settings and review stills ==========
-// Each still is a settled state, a moment after its change, so a contact sheet shows the story.
+// ========== 6. Video settings, shots and review stills ==========
+// Each shot is a settled state, a moment after its change, so the storyboard (review.mjs board)
+// and a contact sheet of the stills both tell the story. Panels list the sounds since the last one.
+window.SHOTS = [
+  { t: 2.0, title: "Intro card", note: "The title holds while the narrator sets up the task." },
+  { t: T.step1 - 0.3, title: "App and steps", note: "The card has become the Acme window; five steps wait on the left." },
+  { t: T.members - TRAVEL - 0.1, title: "Settings page", note: "Step 1 is lit; the sidebar pill sits on Settings." },
+  { t: T.step2 - 0.2, title: "Member list", note: "The camera frames the list of four people." },
+  { t: T.email - TRAVEL - 0.05, title: "Invite card", note: "Invite grew into the card; the page behind it dims." },
+  { t: T.step4 - 0.1, title: "Email typed", note: "jordan@example.com, typed at a steady rhythm." },
+  { t: T.step5 - 0.2, title: "Role: Member", note: "The role pill slides to Member; its description swaps." },
+  { t: T.fly - 0.1, title: "Back on the list", note: "The camera eases back out before the card lands." },
+  { t: T.recap - 0.2, title: "Pending row", note: "The card is the new row, marked Pending; every step is done." },
+  { t: T.points[2] - 0.2, title: "Recap", note: "Two of the three points are in." },
+  { t: DURATION - 0.3, title: "Last frame", note: "All three points, held to the end." },
+].map((s) => ({ ...s, t: +s.t.toFixed(2) }));
 window.VIDEO = {
   width: 1920, height: 1080, duration: DURATION,
-  stills: [
-    2.0,                         // intro card
-    T.step1 - 0.3,               // app window and step list
-    T.members - TRAVEL - 0.1,    // Settings page
-    T.step2 - 0.2,               // member list, framed
-    T.email - TRAVEL - 0.05,     // invite card open, camera on the card
-    T.step4 - 0.1,               // email typed
-    T.step5 - 0.2,               // Member chosen
-    T.fly - 0.1,                 // camera back on the list
-    T.recap - 0.2,               // the Pending row; every step done
-    T.points[2] - 0.2,           // recap, two points
-    DURATION - 0.3,              // last frame
-  ].map((t) => +t.toFixed(2)),
+  stills: window.SHOTS.map((s) => s.t),
 };
 const q = new URLSearchParams(location.search);
 window.seek(q.has("t") ? Number(q.get("t")) : 0);          // preview: index.html?t=12.5
