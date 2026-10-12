@@ -42,13 +42,13 @@
 
   /* The card system: the same grid in every scene, so only the content changes. */
   .top { position: absolute; left: 120px; right: 120px; top: 92px; display: flex; justify-content: space-between;
-    font: 500 24px/1 "Geist Mono", monospace; letter-spacing: 0.06em; }
+    font: 500 28px/1 "Geist Mono", monospace; letter-spacing: 0.06em; }
   .top .meta, .foot { color: var(--muted); }
   .title { position: absolute; left: 112px; top: 318px; width: 900px; }
   h2 { font-size: 232px; font-weight: 600; letter-spacing: -0.055em; line-height: 0.88; white-space: nowrap; }
   .use { margin: 44px 0 0 10px; font-size: 48px; font-weight: 440; letter-spacing: -0.015em; color: var(--muted); }
-  code { position: absolute; left: 120px; top: 806px; padding: 15px 24px 16px; border-radius: 14px;
-    font: 500 27px/1 "Geist Mono", monospace; letter-spacing: -0.01em; white-space: nowrap;
+  code { position: absolute; left: 120px; top: 806px; padding: 16px 26px 17px; border-radius: 15px;
+    font: 500 30px/1 "Geist Mono", monospace; letter-spacing: -0.01em; white-space: nowrap;
     box-shadow: inset 0 0 0 1.5px color-mix(in srgb, currentColor 26%, transparent); }
   code b { font-weight: 700; }
   .motif { position: absolute; left: 1100px; top: 210px; width: 640px; height: 640px; }
@@ -60,7 +60,7 @@
   .flip .motif { left: 180px; }
   .foot { position: absolute; left: 120px; right: 120px; bottom: 74px; padding-top: 22px; display: flex;
     justify-content: space-between; border-top: 1.5px solid color-mix(in srgb, currentColor 22%, transparent);
-    font: 500 21px/1 "Geist Mono", monospace; letter-spacing: 0.08em; text-transform: uppercase; }
+    font: 500 28px/1 "Geist Mono", monospace; letter-spacing: 0.06em; text-transform: uppercase; }
 
   /* 00: the opener */
   #s0 h2 { font-size: 214px; }
@@ -94,7 +94,7 @@
 import { sfx, clamp, $ } from "/_skill/runtime/motion.js";
 import { scenes, finish } from "/_skill/runtime/transitions.js";
 
-await Promise.all([document.fonts.load("600 232px Geist"), document.fonts.load("500 27px 'Geist Mono'")]);
+await Promise.all([document.fonts.load("600 232px Geist"), document.fonts.load("500 30px 'Geist Mono'")]);
 
 // ---------- the timeline ----------
 // Each change starts when the scene before it has held long enough to read.
@@ -117,8 +117,8 @@ const CARDS = [
     <rect x="34" y="150" width="244" height="300" rx="16" fill="currentColor"/>
     <rect x="322" y="151.5" width="241" height="297" rx="15" fill="none" stroke="currentColor" stroke-width="3"/>
     <line x1="300" y1="96" x2="300" y2="504" stroke="${C.saffron}" stroke-width="4"/>
-    <text x="156" y="518" text-anchor="middle" font-family="Geist Mono" font-size="24" fill="#A8A49C">f155</text>
-    <text x="442" y="518" text-anchor="middle" font-family="Geist Mono" font-size="24" fill="#A8A49C">f156</text>`)],
+    <text x="156" y="518" text-anchor="middle" font-family="Geist Mono" font-size="28" fill="#A8A49C">f155</text>
+    <text x="442" y="518" text-anchor="middle" font-family="Geist Mono" font-size="28" fill="#A8A49C">f156</text>`)],
   ["s2", "pine", "Dissolve", "Time passes.", `{ kind: <b>"dissolve"</b>, dur: 0.8 }`, svg(`
     <circle cx="222" cy="300" r="178" fill="currentColor" opacity=".2"/>
     <circle cx="378" cy="300" r="178" fill="currentColor" opacity=".46"/>`)],

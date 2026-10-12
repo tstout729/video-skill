@@ -1,0 +1,7 @@
+# Deliberate findings for `review.mjs lint index.html --allow lint-allow.txt`.
+# Format: <check> <element or text> [@ t0-t1] -- <reason> (references/storyboard-lint.md)
+small #cam -- the Acme app is drawn at its real desktop size; the camera pushes in before each step, and the step list and narration carry the instruction
+small .num -- a step's number sits in a 44 px badge; the label beside it carries the step
+contrast .step[data-state=upcoming] -- upcoming steps recede on purpose so the active step leads; each turns dark when its turn comes
+contrast #page-settings @ 19-33.5 -- the page behind the invite card is dimmed by its scrim on purpose
+clipped #page-settings @ 19-33.5 -- the camera's push on the invite card crops the dimmed page behind it

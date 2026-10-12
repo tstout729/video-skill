@@ -148,11 +148,18 @@ set +e; out="$(node "$review" audit index.html --grep nothing 2>&1)"; code=$?; s
 [ "$code" = 1 ] && grep -q 'no check name contains "nothing"' <<<"$out" || fail "audit --grep nothing: $out"
 echo "ok: audit --grep runs only the checks it names"
 
-# ---------- a clean page passes, and board draws its shots ----------
-loop="$repo/skills/video/examples/loop/index.html"
-node "$review" lint "$loop" > clean.log 2>&1 || { cat clean.log; fail "lint fails the loop example"; }
-grep -q '^no findings to fix' clean.log || fail "the loop example has findings"
-echo "ok: the loop example passes lint"
+# ---------- every HTML example passes lint, and board draws its shots ----------
+# An example's deliberate findings are in its lint-allow.txt, each with a reason; a line that
+# matches nothing means the file is out of date.
+examples="$repo/skills/video/examples"
+for page in "$examples"/*/index.html "$examples"/styles/*/index.html; do
+  dir="$(dirname "$page")"; name="${dir#"$examples/"}"; log="lint-${name//\//-}.log"
+  allow=(); [ -f "$dir/lint-allow.txt" ] && allow=(--allow "$dir/lint-allow.txt")
+  node "$review" lint "$page" ${allow[@]+"${allow[@]}"} > "$log" 2>&1 || { cat "$log"; fail "lint fails the $name example"; }
+  grep -q '^no findings to fix' "$log" && ! grep -q 'matched no finding' "$log" || { cat "$log"; fail "the $name example's lint-allow.txt is out of date"; }
+  echo "ok: the $name example passes lint$([ -f "$dir/lint-allow.txt" ] && echo ", its deliberate findings allowed")"
+done
+loop="$examples/loop/index.html"
 
 node "$review" board "$loop" --out board.png > board.log
 grep -q '^board: 6 panels from window.SHOTS' board.log && grep -q 'Back to Pay' board.log || { cat board.log; fail "board did not use window.SHOTS"; }

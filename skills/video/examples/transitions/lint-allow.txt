@@ -1,0 +1,3 @@
+# Deliberate findings for `review.mjs lint index.html --allow lint-allow.txt`.
+# Format: <check> <element or text> [@ t0-t1] -- <reason> (references/storyboard-lint.md)
+contrast #s6 @ 18-19 -- the light leak is still dissolving scene 6 in; its text is read once the leak has cleared
