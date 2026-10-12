@@ -5,6 +5,7 @@
 //   node render.mjs <page.html> --stills qa/ [--at 1.5,3,4.2 | --every 0.5]
 //   node render.mjs <page.html> --out draft.mp4 --fps 30 --sub 1 --scale 0.5 --debug   (fast draft)
 //   node render.mjs <page.html> --serve [--port 8080]       preview in a browser (?t=12.5, ?debug=1)
+//   --query "finish=0"  pass options to the page's URL (any render or stills)
 //
 // The page must define window.VIDEO = {width, height, duration, cuts?} and window.seek(t); see
 // page.mjs for what the local server serves. --debug adds ?debug=1, which shows the frame
@@ -42,7 +43,8 @@ const shutter = Number(opt("shutter", 0.4));
 const out = opt("out");
 const stills = opt("stills");
 const from = Number(opt("from", 0));
-const query = args.includes("--debug") ? "debug=1" : "";
+// --query passes page options (for example finish=0 to render without the film finish); --debug adds debug=1.
+const query = [opt("query"), args.includes("--debug") ? "debug=1" : ""].filter(Boolean).join("&");
 // --blur gamma averages subframes in gamma space (the older look); linear is the default.
 const linear = opt("blur", "linear") !== "gamma";
 
