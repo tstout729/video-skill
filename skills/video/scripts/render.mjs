@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Render a seek(t) HTML page to MP4 with Playwright + ffmpeg.
 //
-//   node render.mjs <page.html> --out video.mp4 [--fps 60] [--sub 4] [--workers 4]
+//   node render.mjs <page.html> --out video.mp4 [--fps 60] [--sub 4] [--workers 4]   (defaults: VIDEO.fps, VIDEO.sub)
 //   node render.mjs <page.html> --stills qa/ [--at 1.5,3,4.2 | --every 0.5]
 //   node render.mjs <page.html> --out draft.mp4 --fps 30 --sub 1 --scale 0.5 --debug   (fast draft)
 //   node render.mjs <page.html> --serve [--port 8080]       preview in a browser (?t=12.5, ?debug=1)
@@ -31,8 +31,9 @@ if (!args[0] || !fs.existsSync(page)) {
   console.error("usage: render.mjs <page.html> --out video.mp4 | --stills dir | --serve");
   process.exit(1);
 }
-const fps = Number(opt("fps", 60));
-const sub = Number(opt("sub", 4));
+// fps and sub default to the page's VIDEO.fps and VIDEO.sub (a stepped style sets 24 and 1), else 60 and 4.
+let fps = Number(opt("fps", 0));
+let sub = Number(opt("sub", 0));
 const scale = Number(opt("scale", 1));
 const workers = Number(opt("workers", process.env.RENDER_WORKERS || Math.max(2, Math.min(6, os.cpus().length - 2))));
 // Fraction of the frame interval the subframes cover. 1 = 360-degree shutter (heavy blur;
@@ -55,6 +56,8 @@ const browser = await launch();
 const first = await openVideoPage(browser, url, { scale, query });
 const { video } = first;
 const duration = Number(opt("to", video.duration));
+fps ||= Number(video.fps) || 60;
+sub ||= Number(video.sub) || 4;
 const cuts = (video.cuts ?? []).map(Number).filter(Number.isFinite).sort((a, b) => a - b);
 
 // Selectors that style() could not find are usually typos ("title" for "#title").

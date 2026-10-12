@@ -35,6 +35,8 @@ Pick the frame for where the video will play:
 
 Feeds autoplay without sound, so a feed video must make sense from its pictures and captions alone.
 
+For an explainer or social short that should look made by hand, draw the HTML page with a style pack: riso print, pixel art or cut paper ([Style packs](references/styles.md)). Each pack brings its own LOOK, MOTION and BAN lines for the brief. Never use one for a product walkthrough.
+
 ## Direct it
 
 Write `brief.md` in the project folder before you animate, from the [directed brief](references/brief.md) template:

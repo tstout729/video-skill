@@ -2,13 +2,22 @@
 # Render every example end to end at draft quality, with no API key, and check the output.
 #   bash tests/render-examples.sh            all examples
 #   bash tests/render-examples.sh loop       one example
+#   bash tests/render-examples.sh styles/riso   one example inside a group folder
+# A folder with neither video.py nor index.html is a group: each subfolder that has one is an example.
 # Each example is copied to a temporary folder first, so the repo stays clean.
 set -euo pipefail
 repo="$(cd "$(dirname "$0")/.." && pwd)"
 skill="$repo/skills/video"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
-names=("$@"); [[ ${#names[@]} -gt 0 ]] || names=($(ls "$skill/examples"))
+names=("$@")
+if [[ ${#names[@]} -eq 0 ]]; then
+  for d in $(ls "$skill/examples"); do
+    if [[ -f "$skill/examples/$d/video.py" || -f "$skill/examples/$d/index.html" ]]; then names+=("$d")
+    else for s in $(ls "$skill/examples/$d"); do [[ -f "$skill/examples/$d/$s/index.html" || -f "$skill/examples/$d/$s/video.py" ]] && names+=("$d/$s"); done
+    fi
+  done
+fi
 manim=(uv run -q --python 3.12 --with manim==0.21.0 manim)
 
 check_video() {  # file, minimum seconds
@@ -21,6 +30,7 @@ for name in "${names[@]}"; do
   src="$skill/examples/$name"
   [[ -d "$src" ]] || { echo "no example: $name"; exit 1; }
   echo "== $name"
+  mkdir -p "$(dirname "$work/$name")"
   cp -R "$src" "$work/$name"
   cd "$work/$name"
   mkdir -p out

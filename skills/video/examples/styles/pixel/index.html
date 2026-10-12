@@ -1,0 +1,199 @@
+<!doctype html>
+<!--
+  Pixel example: "How a seed grows" as pixel art. A 216x216 framebuffer in the 16-colour meadow
+  palette, scaled 5x with no smoothing to 1080x1080. 10.5 s at 24 fps, on twos (12 drawings a
+  second), no voice. The story and its timing live in ../story.js, shared with the riso and
+  cut-paper examples, so the three can be compared frame by frame.
+
+  Look: hard square pixels, 1-pixel ink outlines on everything that moves, 4x4 Bayer dithers for
+  the sky, the hills and every shade, the 5x7 bitmap font at 2x. Motion: whole pixels on twos;
+  the label types itself (backspace, then type, with a blinking block); things blink, never fade.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>How a seed grows (pixel)</title>
+<style>
+  html, body { margin: 0; width: 1080px; height: 1080px; overflow: hidden; background: #1b1b2f; }
+  #art { display: block; width: 1080px; height: 1080px; }
+</style>
+</head>
+<body>
+<canvas id="art"></canvas>
+<script type="module">
+import { clamp, lerp } from "/_skill/runtime/motion.js";
+import { pixel, PALETTES } from "/_skill/runtime/styles/pixel.js";
+import { curve, hash } from "/_skill/runtime/styles/common.js";
+import { story, stemAt, stemPoints, cloudShape, leafShape, PLACE, DURATION, STILLS }
+  from "/_skill/examples/styles/story.js";
+
+const N = 216, S = 1080 / N;                          // art pixels across; screen pixels per art pixel
+const px = pixel("#art", { width: N, height: N, palette: PALETTES.meadow });
+window.STYLE_PACK = px;
+
+// The meadow palette by name.
+const [INK, NAVY, BLUE, SKY, PALE, CREAM, SHADE, FOREST, GRASS, LEAF, SOIL_D, SOIL, SUN, ORANGE, PINK, ROSE] = PALETTES.meadow;
+const q = (v) => v / S;                               // 1080 space -> art pixels
+const Q = (points) => points.map(([x, y]) => [q(x), q(y)]);
+
+// ---------- the land: the same outlines as the other two styles, in art pixels ----------
+const land = (pts) => [...curve(Q(pts), { samples: 10 }), [N + 1, N + 1], [-1, N + 1]];
+const FAR = land([[-30, 636], [170, 592], [390, 626], [610, 598], [830, 570], [1110, 620]]);
+const BACK = land([[-30, 704], [210, 670], [470, 694], [720, 662], [910, 646], [1110, 680]]);
+const FRONT = land([[-30, 826], [250, 814], [540, 834], [830, 810], [1110, 822]]);
+const MOUND = Q([
+  ...Array.from({ length: 33 }, (_, i) => { const a = Math.PI + (i / 32) * Math.PI; return [540 + 214 * Math.cos(a), 864 + 80 * Math.sin(a)]; }),
+  ...Array.from({ length: 15 }, (_, i) => { const a = (i / 16) * Math.PI + Math.PI / 16; return [540 + 214 * Math.cos(a), 864 + 12 * Math.sin(a)]; }),
+]);
+const CLODS = Array.from({ length: 14 }, (_, i) => {
+  const a = Math.PI * (1.08 + 0.84 * hash("clod-a", i)), r = 0.25 + 0.65 * hash("clod-r", i);
+  return [Math.round(108 + 42 * r * Math.cos(a)), Math.round(172.8 + 15 * r * Math.sin(a) + 3)];
+});
+const TUFT = [".a..a.", "a.aa.a", ".aaaa."];
+const TUFTS = Q([[96, 872], [262, 906], [838, 876], [968, 920], [700, 1004], [905, 1032], [430, 1044]]);
+
+// ---------- sprites ----------
+const SEED = ["..k..", ".kbk.", "kbbbk", "kbbbk", "kbbbk", ".kbk.", "..k.."];
+const SEED_SQUASH = [".kkkk.", "kbbbbk", "kbbbbk", ".kkkk."];
+// A shape with a 1-pixel ink outline: the outline is the shape stamped one pixel each way.
+function outlined(g, points, fill, ink = INK) {
+  for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) g.poly(points.map(([x, y]) => [x + dx, y + dy]), ink);
+  g.poly(points, fill);
+}
+
+function sky(g, s) {
+  g.gradient(0, 0, N, 134, [BLUE, SKY, PALE], { ease: (u) => u * u });
+  const sx = Math.round(q(s.sun.x)), sy = Math.round(q(s.sun.y));
+  const rise = clamp((PLACE.sunFrom - s.sun.y) / (PLACE.sunFrom - PLACE.sunTo));
+  if (rise > 0) g.glow(sx, sy, 19, 19 + 17 * rise, CREAM, 0.55);
+  // The rays blink between two sets every 4 drawings: ambient life that never fades.
+  const diag = Math.floor(g.step / 4) % 2;
+  for (let k = diag; k < 8; k += 2) {
+    const a = (k * Math.PI) / 4;
+    g.line(sx + Math.cos(a) * 22, sy + Math.sin(a) * 22, sx + Math.cos(a) * 27, sy + Math.sin(a) * 27, SUN, { width: 2 });
+  }
+  g.circle(sx, sy, 18, INK);
+  g.circle(sx, sy, 17, g.mix(SUN, ORANGE, (x, y) => (x - sx + (y - sy)) / 28 + 0.15));
+  g.circle(sx - 6, sy - 6, 3, CREAM);
+}
+
+function cloud(g, s) {
+  if (!s.cloud.shown) return;
+  const C = Q(cloudShape(Math.round(s.cloud.x / S) * S, s.cloud.y, 1.15, 90));
+  const top = Math.min(...C.map((p) => p[1]));
+  outlined(g, C, g.mix(CREAM, SHADE, (x, y) => (y - top - 17) / 12), NAVY);
+  for (const d of s.rain) {
+    const x = Math.round(q(d.x)), y = Math.round(q(d.y));
+    g.rect(x, y - 5, 1, 5, BLUE);
+    g.pset(x, y - 6, NAVY);
+  }
+}
+
+function ground(g) {
+  g.poly(FAR, g.mix(SKY, BLUE, 0.5));
+  outlined(g, BACK, g.mix(FOREST, GRASS, (x, y) => 0.75 - (y - 130) / 24), FOREST);
+  g.poly(FRONT.map(([x, y]) => [x, y - 1]), LEAF);                      // a lit edge along the top
+  g.poly(FRONT, g.mix(GRASS, FOREST, (x, y) => (y - 180) / 48));
+  for (const [x, y] of TUFTS) g.sprite(TUFT, { a: FOREST }, x, y, { anchor: "bc" });
+}
+
+function plant(g, s) {
+  if (s.seed.shown) {
+    const squash = s.seed.sy < 0.85;
+    g.sprite(squash ? SEED_SQUASH : SEED, { k: INK, b: SOIL }, Math.round(q(s.seed.x)), Math.round(q(s.seed.y)) + (squash ? 2 : 4), { anchor: "bc" });
+  }
+  if (s.stem > 0) {
+    const P = stemPoints(s.stem, 12).map(([x, y]) => [Math.round(q(x)), Math.round(q(y))]);
+    g.path(P.map(([x, y]) => [x - 1, y]), INK);
+    g.path(P.map(([x, y]) => [x + 2, y]), INK);
+    g.path(P, GRASS, { width: 2 });
+    g.path(P, LEAF);
+    [[0.32, -150], [0.5, -32]].forEach(([u, angle], i) => {
+      const k = s.leaves[i];
+      if (k <= 0.05 || s.stem < u) return;
+      const [x, y] = stemAt(u);
+      const L = Q(leafShape(x, y, 118 * k, 58 * k, lerp(-92, angle, Math.min(1, k))));
+      outlined(g, L, g.mix(LEAF, GRASS, (px2, py2) => (py2 - q(y)) / 10 + 0.35));
+      const tip = L[14];
+      g.line(q(x), q(y), lerp(q(x), tip[0], 0.7), lerp(q(y), tip[1], 0.7), GRASS);
+    });
+  }
+  // The soil darkens as it soaks: the dither creeps from the bottom up.
+  outlined(g, MOUND, g.mix(SOIL, SOIL_D, (x, y) => (y - 157) / 20 - 0.15 + s.wet * 1.1));
+  for (const [x, y] of CLODS) g.pset(x, y, s.wet > 0.6 ? SOIL : SOIL_D);
+}
+
+function flower(g, s) {
+  if (s.stem < 0.999) return;
+  const [cx, cy] = stemAt(1);
+  const open = s.petals[0];
+  if (s.bud > 0.05 && open < 0.35) {
+    const b = s.bud;
+    outlined(g, Q(leafShape(cx, cy + 6, 70 * b, 52 * b, -90, 1.7)), PINK);
+    outlined(g, Q(leafShape(cx, cy + 8, 30 * b, 22 * b, -130)), GRASS);
+    outlined(g, Q(leafShape(cx, cy + 8, 30 * b, 22 * b, -50)), GRASS);
+  }
+  const petals = s.petals.filter((k) => k > 0.05).map((k, i) => Q(leafShape(cx, cy, 86 * k, 62 * k, -90 + i * 60 + 18, 1.9)));
+  for (const P of petals) for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) g.poly(P.map(([x, y]) => [x + dx, y + dy]), INK);
+  for (const P of petals) g.poly(P, g.mix(PINK, ROSE, (x, y) => 0.8 - Math.hypot(x - q(cx), y - q(cy)) / 14));
+  if (open > 0.05) {
+    const r = Math.round(6 * Math.min(1, open * 1.4));
+    g.circle(q(cx), q(cy), r + 1, INK);
+    g.circle(q(cx), q(cy), r, g.mix(SUN, ORANGE, (x, y) => (x - q(cx) + y - q(cy)) / 9 + 0.3));
+  }
+}
+
+// The bee faces left: ink head, a striped body, a sting, and two wings that flap on twos.
+function bee(g, s) {
+  const b = s.bee;
+  if (!b.shown) return;
+  const x = Math.round(q(b.x)), y = Math.round(q(b.y));
+  const ink = g.index(INK), sun = g.index(SUN);
+  const up = b.flap === 0;
+  const wing = (wx, wy, rx, ry) => { g.ellipse(wx, wy, rx + 1, ry + 1, INK); g.ellipse(wx, wy, rx, ry, g.mix(CREAM, PALE, (px2, py2) => (py2 - wy + ry) / (2 * ry + 1))); };
+  if (up) { wing(x - 1, y - 7, 3, 4); wing(x + 4, y - 7, 3, 4); }
+  else { wing(x + 3, y - 4, 5, 2); wing(x + 7, y - 3, 4, 2); }
+  g.ellipse(x + 1, y, 8, 5, INK);
+  g.ellipse(x + 1, y, 7, 4, (px2) => ((px2 - x + 40) % 5 < 2 ? ink : sun));   // stripes
+  g.rect(x + 9, y, 3, 1, INK);                                               // the sting
+  g.circle(x - 7, y, 4, INK);                                                // the head
+  g.pset(x - 8, y - 1, CREAM);                                               // an eye
+}
+
+// The label types itself: the old word is deleted a letter per drawing, then the new one typed.
+function label(g, s) {
+  g.rect(6, 182, 104, 27, INK);
+  g.rect(7, 183, 102, 25, NAVY);
+  g.rect(8, 184, 100, 23, INK);
+  const cur = s.label, old = s.prev;
+  const drawn = Math.floor(s.since * 12 + 1e-6);          // drawings since the label changed
+  let word = cur.word, n = cur.n, count = word.length, typing = false;
+  if (old && drawn < old.word.length) { word = old.word; n = old.n; count = old.word.length - drawn; typing = true; }
+  else if (old && drawn <= old.word.length + cur.word.length) { count = drawn - old.word.length - 1; typing = true; }
+  g.rect(13, 188, 14, 16, SUN);
+  g.text(String(n), 15, 189, INK, { scale: 2 });
+  g.text(word, 33, 189, CREAM, { scale: 2, count, cursor: typing ? SUN : false });
+}
+
+function title(g) {
+  g.text("HOW A SEED", 12, 12, CREAM, { scale: 2, shadow: INK });
+  g.text("GROWS", 12 + 11 * 12, 12, SUN, { scale: 2, shadow: INK });
+}
+
+window.seek = (t) => px.frame(t, (g) => {
+  const s = story(g.t);
+  sky(g, s);
+  ground(g);
+  cloud(g, s);
+  plant(g, s);
+  flower(g, s);
+  bee(g, s);
+  title(g);
+  label(g, s);
+});
+
+window.VIDEO = { width: 1080, height: 1080, duration: DURATION, stills: STILLS, fps: 24, sub: 1 };  // stepped: no motion blur
+window.seek(0);
+</script>
+</body>
+</html>

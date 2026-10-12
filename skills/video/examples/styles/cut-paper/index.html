@@ -1,0 +1,190 @@
+<!doctype html>
+<!--
+  Cut-paper example: "How a seed grows" as a collage of construction paper. 1080x1080, 10.5 s at
+  24 fps, on twos (12 drawings a second), no voice. The story and its timing live in ../story.js,
+  shared with the riso and pixel examples, so the three can be compared frame by frame.
+
+  Look: flat construction-paper colours, torn hills and soil, scissor-cut everything else, soft
+  shadows that grow with height (the cloud floats at z 2.5, the falling seed at 3), paper grain,
+  crayon veins that boil, and cut-out letters in Nunito Sans Bold. Motion: stop motion on twos.
+  Paper never fades or scales up from nothing: it slides in, slides out from behind something,
+  or swings open on a hinge.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>How a seed grows (cut paper)</title>
+<style>
+  @font-face { font-family: "Nunito Sans"; font-weight: 700;
+    src: url(/_skill/assets/fonts/NunitoSans-Bold.ttf) format("truetype"); }
+  html, body { margin: 0; width: 1080px; height: 1080px; overflow: hidden; background: #a9d6e9; }
+  #art { display: block; width: 1080px; height: 1080px; }
+</style>
+</head>
+<body>
+<canvas id="art" width="1080" height="1080"></canvas>
+<script type="module">
+import { lerp, progress, springStep } from "/_skill/runtime/motion.js";
+import { cutPaper, PAPERS, dots, stripes } from "/_skill/runtime/styles/cut-paper.js";
+import { circle, ellipse, curve, roundRect, hash, transform } from "/_skill/runtime/styles/common.js";
+import { story, stemAt, stemPoints, cloudShape, leafShape, dropShape, TITLE, AT, DURATION, STILLS }
+  from "/_skill/examples/styles/story.js";
+
+await document.fonts.load("700 84px 'Nunito Sans'");
+
+const cp = cutPaper("#art", { seed: "how-a-seed-grows" });
+window.STYLE_PACK = cp;
+
+const P = PAPERS;
+const LEAF = "#74b04a", HILL_FAR = "#bcd3a9", PETAL_IN = "#f6b7c5";
+
+// ---------- the land: the same outlines as the other two styles ----------
+const land = (pts) => [...curve(pts, { samples: 10 }), [1140, 1140], [-60, 1140]];
+const FAR = land([[-60, 636], [170, 592], [390, 626], [610, 598], [830, 570], [1140, 620]]);
+const BACK = land([[-60, 704], [210, 670], [470, 694], [720, 662], [910, 646], [1140, 680]]);
+const FRONT = land([[-60, 826], [250, 814], [540, 834], [830, 810], [1140, 822]]);
+const MOUND = [
+  ...Array.from({ length: 33 }, (_, i) => { const a = Math.PI + (i / 32) * Math.PI; return [540 + 214 * Math.cos(a), 864 + 80 * Math.sin(a)]; }),
+  ...Array.from({ length: 15 }, (_, i) => { const a = (i / 16) * Math.PI + Math.PI / 16; return [540 + 214 * Math.cos(a), 864 + 12 * Math.sin(a)]; }),
+];
+// Wet spots: darker scraps that appear where the rain soaks in, one after another.
+const SPOTS = Array.from({ length: 16 }, (_, i) => {
+  const a = Math.PI * (1.1 + 0.8 * hash("spot-a", i)), r = 0.2 + 0.7 * hash("spot-r", i);
+  return { x: 540 + 214 * r * Math.cos(a), y: 864 + 74 * r * Math.sin(a) + 6, r: 11 + hash("spot-s", i) * 12, at: AT.soak + (i / 16) * 0.95 };
+});
+const TUFTS = [[96, 872], [262, 906], [838, 876], [968, 920], [700, 1004], [905, 1032], [430, 1044]];
+
+function sky(s, x) {
+  x.sheet(P.sky);
+  // The sun: a disc and a ring of cut rays, all sliding up from behind the hills together.
+  const { x: sx, y: sy } = s.sun;
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2 + 0.13, r0 = 104, r1 = 150 + (i % 2) * 22, w = 0.13;
+    x.piece([[sx + Math.cos(a - w) * r0, sy + Math.sin(a - w) * r0], [sx + Math.cos(a) * r1, sy + Math.sin(a) * r1],
+      [sx + Math.cos(a + w) * r0, sy + Math.sin(a + w) * r0]], i % 2 ? P.marigold : P.butter, { key: `ray${i}`, facet: 30 });
+  }
+  x.piece(circle(sx, sy, 94), P.marigold, { key: "sun", z: 1.2 });
+  x.piece(circle(sx - 18, sy - 16, 58), P.butter, { key: "sun-in", z: 0.6 });
+}
+
+function ground(s, x) {
+  x.piece(FAR, HILL_FAR, { key: "far", edge: "torn", z: 1 });
+  x.piece(BACK, P.moss, { key: "back", edge: "torn", z: 1.2 });
+  x.piece(FRONT, "#8fc455", { key: "front", edge: "torn", z: 1.5 });
+  // Grass: clumps of long cut blades, each its own scrap.
+  TUFTS.forEach(([tx, ty], i) => {
+    [-118, -100, -82, -64].forEach((a, k) => {
+      const h = 46 + hash("blade-h", i, k) * 30;
+      x.piece(leafShape(tx + (k - 1.5) * 7, ty, h, 13, a + (hash("blade", i, k) - 0.5) * 10), k % 2 ? P.moss : "#5f9140", { key: `tuft${i}-${k}`, facet: 12, z: 0.7 });
+    });
+  });
+}
+
+function cloud(s, x) {
+  if (!s.cloud.shown) return;
+  for (const d of s.rain) x.piece(dropShape(d.x, d.y - 9, 9), P.cobalt, { key: `drop${d.i}`, z: 1.6, facet: 8 });
+  // Two layers of paper: a grey cloud behind, the white one offset up and left in front of it.
+  x.piece(cloudShape(s.cloud.x + 16, s.cloud.y + 16, 1.12), "#c9d3da", { key: "cloud-back", z: 2.6, facet: 22 });
+  x.piece(cloudShape(s.cloud.x - 6, s.cloud.y - 4, 1.08), P.white, { key: "cloud", z: 0.9, facet: 22 });
+}
+
+function plant(s, x) {
+  // The seed tumbles in lifted high (a big soft shadow), lands flat, and slides down behind the soil.
+  if (s.seed.shown) {
+    const seed = transform(ellipse(s.seed.x, s.seed.y, 16, 22), { rotate: s.seed.spin, scale: [s.seed.sx, s.seed.sy] });
+    x.piece(seed, P.soil, { key: "seed", z: s.seed.falling ? 3 : 0.8, facet: 8 });
+  }
+  if (s.stem > 0) {
+    x.strip(stemPoints(s.stem), 16, P.forest, { key: "stem", end: 11, z: 1 });
+    // Each leaf is hinged to the stem: it swings out from upright and grows a size at a time.
+    [[0.32, -150], [0.5, -32]].forEach(([u, angle], i) => {
+      const k = s.leaves[i];
+      if (k <= 0.02 || s.stem < u) return;
+      const [lx, ly] = stemAt(u);
+      const a = lerp(-92, angle, Math.min(1, k));
+      x.piece(leafShape(lx, ly, 122 * k, 60 * k, a), LEAF, { key: `leaf${i}`, z: 1.4, facet: 14 });
+      const c = Math.cos(a * Math.PI / 180), sn = Math.sin(a * Math.PI / 180);
+      x.line([[lx + c * 10, ly + sn * 10], [lx + c * 100 * k, ly + sn * 100 * k]], P.forest, { key: `vein${i}`, width: 4 });
+    });
+  }
+  x.piece(MOUND, P.bark, { key: "mound", edge: "torn", z: 1.2, rough: 1.2 });
+  for (const sp of SPOTS) {
+    if (s.t < sp.at) continue;
+    x.piece(ellipse(sp.x, sp.y, sp.r * 1.3, sp.r * 0.7), P.soil, { key: `spot${sp.x}`, z: 0.15, edge: "torn", rough: 1.6, fringe: false, light: 0 });
+  }
+}
+
+function flower(s, x) {
+  if (s.stem < 0.999) return;
+  const [cx, cy] = stemAt(1);
+  const open = s.petals[0];
+  if (s.bud > 0.02 && open < 0.4) {
+    const b = s.bud;
+    x.piece(leafShape(cx, cy + 6, 74 * b, 54 * b, -90, 1.7), P.rose, { key: "bud", z: 1.2, facet: 12 });
+    x.piece(leafShape(cx, cy + 10, 34 * b, 24 * b, -128), P.forest, { key: "sepal-l", z: 0.8, facet: 10 });
+    x.piece(leafShape(cx, cy + 10, 34 * b, 24 * b, -52), P.forest, { key: "sepal-r", z: 0.8, facet: 10 });
+  }
+  // Petals swing open from behind the centre, one after another, each a paper piece on a pin.
+  s.petals.forEach((k, i) => {
+    if (k <= 0.02) return;
+    const a = -90 + i * 60 + 18;
+    x.piece(leafShape(cx, cy, 90 * k, 64 * k, a + (1 - k) * 40, 1.9), P.rose, { key: `petal${i}`, z: 1.3, facet: 12 });
+  });
+  s.petals.forEach((k, i) => {
+    if (k <= 0.3) return;
+    const a = -90 + i * 60 + 18;
+    x.piece(leafShape(cx, cy, 52 * k, 30 * k, a, 1.6), PETAL_IN, { key: `petal-in${i}`, z: 0.5, facet: 10 });
+  });
+  if (open > 0.02) {
+    const r = 32 * Math.min(1, open * 1.4);
+    x.piece(circle(cx, cy, r), P.butter, { key: "eye", z: 1.2, facet: 9, pattern: dots("rgba(200,110,20,0.55)", 3, 11) });
+  }
+}
+
+function bee(s, x) {
+  const b = s.bee;
+  if (!b.shown) return;
+  x.group({ x: b.x, y: b.y }, () => {
+    // Two wing positions, swapped on twos: paper wings on a pin at the bee's back.
+    const up = b.flap === 0;
+    x.piece(leafShape(2, -12, 50, 32, up ? -118 : -150, 1.6), P.white, { key: "wing-b", z: 1.5, facet: 10 });
+    x.piece(ellipse(0, 0, 30, 21), P.butter, { key: "bee", z: 1.6, facet: 9, pattern: stripes(P.navy, 9, 21, 0) });
+    x.piece([[26, -6], [44, 1], [26, 7]], P.navy, { key: "sting", z: 0.4, facet: 20 });
+    x.piece(circle(-31, -2, 15), P.navy, { key: "head", z: 0.8, facet: 8 });
+    x.piece(circle(-36, -6, 4.5), P.white, { key: "eye", z: 0.3, facet: 6, edge: "clean" });
+    x.piece(leafShape(14, -12, 46, 30, up ? -70 : -40, 1.6), P.white, { key: "wing-f", z: 1.8, facet: 10 });
+  });
+}
+
+// The label is a cream tag. It changes the way paper does: the old tag slides down off the
+// bottom, then the new one slides up and settles with a little overshoot.
+function label(s, x) {
+  const leave = s.prev ? progress(s.since, 0, 0.25) : 1;
+  const enter = s.prev ? springStep(s.since - 0.32, { duration: 0.55, damping: 0.7 }) : 1;
+  const draw = (st, dy, key) => x.group({ x: 0, y: dy }, () => {
+    x.piece(roundRect(58, 924, 340, 104, 10), P.cream, { key: `tag${key}`, z: 1.6, tilt: -1.4 });
+    x.piece(circle(118, 976, 36), P.tomato, { key: `num${key}`, z: 0.8, facet: 10 });
+    x.text(String(st.n), 118, 1000, P.cream, { size: 58, align: "center", key: `n${key}`, z: 0.5, tilt: 2 });
+    x.text(st.word, 170, 1000, P.navy, { size: 66, key: `w${key}`, z: 0.6, tilt: 2.5 });
+  });
+  if (s.prev && leave < 1) draw(s.prev, 220 * leave * leave * leave, s.prev.n);
+  else draw(s.label, 220 * (1 - enter), s.label.n);
+}
+
+window.seek = (t) => cp.frame(t, (x) => {
+  const s = story(x.t);
+  sky(s, x);
+  ground(s, x);
+  cloud(s, x);
+  plant(s, x);
+  flower(s, x);
+  bee(s, x);
+  x.text(TITLE, 66, 142, P.navy, { size: 86, key: "title", z: 1.8, tilt: 6 });
+  label(s, x);
+});
+
+window.VIDEO = { width: 1080, height: 1080, duration: DURATION, stills: STILLS, fps: 24, sub: 1 };  // stepped: no motion blur
+window.seek(0);
+</script>
+</body>
+</html>

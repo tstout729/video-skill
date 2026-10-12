@@ -145,6 +145,7 @@ narration.json ─▶ narrate.py ─▶ audio + word timings
 - The explainer style is inspired by [3Blue1Brown](https://www.3blue1brown.com) and built on [Manim Community](https://www.manim.community).
 - The UI motion approach was adapted from Ross's open motion-design prompt template ([@rossaxbt](https://x.com/rossaxbt)).
 - The numbered storyboard and the checks for cut-off and overlapping text follow ideas from [cth9191/animate](https://github.com/cth9191/animate) (MIT). Measuring contrast against the real pixels behind hidden text follows the contrast report in [heygen-com/hyperframes](https://github.com/heygen-com/hyperframes) (Apache-2.0). The code in `review.mjs` is new.
+- The riso, pixel-art and cut-paper style packs follow the style kits of [cth9191/animate](https://github.com/cth9191/animate) (MIT, © 2026 cth9191). The pixel font is ported from it; its notice is in [`skills/video/runtime/styles/NOTICE`](skills/video/runtime/styles/NOTICE).
 - The fonts are [Geist and Geist Mono](https://vercel.com/font), [Nunito Sans](https://fonts.google.com/specimen/Nunito+Sans) and the Greek subset of [Inter](https://rsms.me/inter/), all under the SIL Open Font License.
 - The tools: [Playwright](https://playwright.dev), [ffmpeg](https://ffmpeg.org), [ElevenLabs](https://elevenlabs.io) and [uv](https://docs.astral.sh/uv/). Scratch voices come from macOS `say` and [eSpeak NG](https://github.com/espeak-ng/espeak-ng), run as installed programs, never bundled.
 
