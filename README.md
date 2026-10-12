@@ -2,9 +2,9 @@
 
 **Make narrated explainers, app walkthroughs, training videos and motion loops entirely in code, with your coding agent.**
 
-<a href="https://tstout729.github.io/video-skill/"><img src="docs/demo.jpg" alt="Watch the 74-second demo: the same animation rushed, then slowed down, and what the skill makes" width="540"></a>
+<a href="https://tstout729.github.io/video-skill/"><img src="docs/one-minute.jpg" alt="Watch the skill in one minute: a 3D play mark under the title Made in code." width="432"></a>
 
-*[Watch the demo](https://tstout729.github.io/video-skill/) in your browser, with the examples. It was made with this skill; its source is in [`demo/`](demo/).*
+*[Watch the skill in one minute](https://tstout729.github.io/video-skill/) in your browser, with the examples. It was made with this skill; its brief, scenes and review log are in [`one-minute/`](one-minute/). The first 74-second demo is in [`demo/`](demo/).*
 
 You ask for a video. Your agent writes the script, records the voice, animates every frame in code in time with the narrator, checks its own pacing, and hands you an MP4 with captions. There's no video editor, timeline or After Effects.
 

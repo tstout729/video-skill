@@ -1,0 +1,16 @@
+{
+  "title": "The video skill, in one minute",
+  "voice_id": "JBFqnCBsd6RMkjVDRZzb",
+  "model_id": "eleven_v4",
+  "voice_settings": {"stability": 0.5, "similarity_boost": 0.75},
+  "timeline": {"gap": 1.1, "lead_in": 0.6, "tail": 4.0},
+  "scenes": [
+    {"id": "s01", "text": "Every frame of this video was made in code, by Claude."},
+    {"id": "s02", "text": "It starts from a brief in numbers, not adjectives. Premium becomes a spring that barely bounces."},
+    {"id": "s03", "text": "One skill makes app walkthroughs, diagrams that explain an idea, 3D objects, and loops that land on the beat."},
+    {"id": "s04", "text": "Change the style pack, and the same story is printed, pixelated, or cut from paper."},
+    {"id": "s05", "text": "It writes the script, records the voice, and times every move to the words."},
+    {"id": "s06", "text": "Then it reviews its own frames, like an animator. Contact sheets. Onion skins. Speed graphs. And a test for every number in the brief."},
+    {"id": "s07", "text": "It's free and open source. Install it with one line, and make your own."}
+  ]
+}
