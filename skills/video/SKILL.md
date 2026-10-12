@@ -21,7 +21,7 @@ Each kind names its engine; [Choosing an engine](references/engines.md) covers t
 
 - **Explainer.** How a system, process or idea works: narrated diagrams in Manim, in the style of 3Blue1Brown, with every animation timed to the narrator's words. Build it with [Explainer (Manim)](#explainer-manim). Copy from `examples/explainer/`.
 - **Walkthrough.** A real screen used step by step, with a pointer that clicks each control as the narrator names it. Use it for product demos, feature tours, training and onboarding. A step list on the left and the app on the right work well for training; a full-frame app works for demos. Build it with [UI motion (HTML)](#ui-motion-html). Copy from `examples/walkthrough/`.
-- **Launch film.** A short narrated or music-driven piece for a launch or a social post: kinetic type, a redrawn UI, a 3D hero object ([3D with three.js](references/three.md)), real clips of other videos (`frames()`), burned-in captions and a music bed, all in one HTML page. The repository's `showcase/` project is a complete example, with its brief and review log.
+- **Launch film.** A short narrated or music-driven piece for a launch or a social post: kinetic type, a redrawn UI, a 3D hero object ([3D with three.js](references/three.md)), real clips of other videos (`frames()`), burned-in captions and a music bed, all in one HTML page. Change scenes with `transitions.js`, and give it a film finish if it suits ([Transitions and the film finish](references/transitions.md)). The repository's `showcase/` project is a complete example, with its brief and review log.
 - **Loop.** No voice. One shape morphs through 6–12 UI states and the last frame matches the first, for social posts and feature teasers. Each change lands on a beat, but not on every beat: change state about every 4–8 beats (2–4 s at 120 BPM), so each state holds long enough to read. Use the beats in between for the pointer's approach and small reactions. Build it with [UI motion (HTML)](#ui-motion-html). Copy from `examples/loop/`.
 
 Pick the frame for where the video will play:
@@ -66,6 +66,7 @@ Slow down. Agent-made animation is usually too fast and shows too much at once. 
   - `audit`: runs checks of the brief's numbers that the page declared with `check()`, on every frame they name (`--grep` picks checks by name). It exits 1 on a failure;
   - `board`: a numbered storyboard of the page's shots, or 2–4 full-size look frames (`--look`), for the user to approve by panel number;
   - `lint`: finds text that is clipped, outside the safe area, over other text, under 28 px, or under 4.5:1 contrast with the real pixels behind it. It exits 1 on a finding that is not allowed ([storyboard and lint](references/storyboard-lint.md)).
+  - `cuts`: the motion on each side of every cut and transition, with a strip of frames across each. It warns on a speed jump above 3× or a reversal.
 
   Run `--help` for the options. When something breaks, see [When things break](references/troubleshooting.md).
 - **Deliver.** Put the MP4 and `.srt` in the project's `out/` folder, or where the user's preferences say. Re-rendering replaces the project's own `out/` files; when you copy a video anywhere else, never overwrite an existing file (`cp -n`). Report the path, the length and the voice, and anything you simplified. For a walkthrough, say that the screen is a redraw with sample data.
@@ -155,7 +156,7 @@ Look:
   @font-face { font-family: "Geist"; src: url("/_skill/assets/fonts/geist-wght-normal.woff2"); font-weight: 100 900; }
   @font-face { font-family: "Geist"; src: url("/_skill/assets/fonts/inter-greek-wght-normal.woff2"); font-weight: 100 900; unicode-range: U+0370-03FF; }
   ```
-- Banned: bouncy easing, particle bursts, glows, gradients on UI chrome, mixed icon stroke widths, dead time, anything that looks like a template. A hold on a settled state that the viewer is reading is not dead time.
+- Banned: bouncy easing, particle bursts, glows, gradients on UI chrome, mixed icon stroke widths, dead time, anything that looks like a template. A hold on a settled state that the viewer is reading is not dead time. The film finish (grain, vignette, light sweeps, a LUT) is for launch and social films only, never walkthroughs or training.
 - For a real product, redraw the real screen from its source code or screenshots: the same words, colors and layout. Read the component and copy its strings and hex colors. Use sample data and made-up names.
 
 Pipeline:
@@ -186,6 +187,7 @@ Pipeline:
 - **Randomness and loops.** `rand(seed)` gives a seeded random function; draw from it at load, never inside `seek`. `phase(t, period)` is a 0–1 loop phase. `loopNoise(t, period, seed)` is smooth noise that repeats exactly, for ambient drift.
 - **Captions.** `captions(el, t)` burns in the caption line from `window.CAPTIONS`, which `timeline.py` writes into `words.js` with the same line breaks as the `.srt`. Words get the classes `caption-past`, `caption-active` and `caption-upcoming`. Theme them with `--caption-size`, `--caption-color`, `--caption-accent` and `--caption-bg`.
 - **Clips.** `frames(img, {dir, fps, count})` plays an image sequence from `clip.py` (`uv run --script <skill>/scripts/clip.py video.mp4 --out clip --fps 30`) frame-exactly. It returns a function of time that returns a promise; `seek` must return or await it. Chromium in the renderer cannot decode H.264, so never use a `<video>` element.
+- **Transitions.** `transitions.js` changes scene roots: `scenes([root, {at, kind}, root, ...])` returns `film(t)` and `film.cuts`. The kinds are cut, dissolve, push, zoom-through, whip, wipe, light-leak and morph. `finish(el, t, {grain, vignette, sweeps})` adds the film finish. See [Transitions and the film finish](references/transitions.md).
 - **Audit.** `check(name, at, fn)` declares a test of the brief's numbers, at a time, over `[t0, t1]` or on `"all"` frames. Two helpers measure layout: `box(el)` and `overlap(a, b)`. For example, `check("caption band clear", "all", () => overlap("#title", "#cap") === 0)`. `review.mjs audit` runs every check.
 - **Preview and debug, in any page.** `?t=12.5` shows one moment, and `?debug=1` adds a frame, time, scene and cue overlay. `cue()` records `window.CUE_TIMES` for the review tools.
 
@@ -198,5 +200,5 @@ Gotchas:
 - Put the camera inside a clipped stage when there is a side panel, and keep the zoomed focus inside a phone's edges, or a zoom shows the canvas past the screen's edge.
 - For a seamless loop, the last frame must match the first, including the pointer's position and speed. Leave about 1.5 seconds after the final morph for springs to settle.
 - Playwright is loaded only from `$PLAYWRIGHT_DIR`, the skill's cache folder (`setup.sh` installs it there), or the global npm root, never from the current folder. Where Playwright cannot download its browser (some cloud sandboxes), set `CHROMIUM_PATH` to an installed Chromium. `RENDER_WORKERS` limits the parallel pages on a busy machine.
-- List hard cuts in `VIDEO.cuts` (times in seconds). Motion blur then never blends the last frame of one shot into the first of the next; without it, the frame on each cut is a quarter new shot over three quarters old.
+- List hard cuts in `VIDEO.cuts` (times in seconds). Motion blur then never blends the last frame of one shot into the first of the next; without it, the frame on each cut is a quarter new shot over three quarters old. A transition is not a hard cut: list `film.cuts`, never the transitions.
 - Motion blur covers 40% of each frame interval (`--shutter 0.4`), and subframes are averaged in linear light, like a film camera's shutter (`--blur gamma` for the old look). A full shutter ghosts text into doubled copies during fast camera moves.

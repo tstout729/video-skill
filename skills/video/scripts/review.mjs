@@ -14,6 +14,7 @@
 //   node review.mjs audit <page.html> [--fps 60] [--every 1] [--grep name]
 //   node review.mjs lint <page.html> [--every 30] [--safe 9x16|4x5|1x1|16x9|off] [--allow allow.txt]
 //                        [--min-size 28] [--out lint.png] [--fps 60]
+//   node review.mjs cuts <page.html> --out cuts.png [--fps 60]
 //
 // board  A numbered storyboard for the user to approve before narration and full renders are
 //        paid for. One large panel per shot: the shot's key pose through the real seek(t), its
@@ -58,6 +59,14 @@
 //        line: `<check> <element or text> [@ t0-t1] -- <reason>`. Prints each finding with its
 //        frames, selector path and text; --out draws them on their frames. Exits 1 on any
 //        finding that is not allowed.
+// cuts   Page only. The motion on each side of every hard cut (VIDEO.cuts) and of the start, the
+//        handoff and the end of every transition (window.TRANSITIONS, from transitions.js): the
+//        visible elements' boxes fitted to one translation and one zoom, over 4 frames each side
+//        at 60 fps. WARN when the speed changes more than 3x across (still counts as 0.1% of the
+//        width per frame) or the direction or zoom reverses while both sides move. Writes a strip
+//        of frames across each edit with every frame's motion, prints a line per edit, and notes
+//        a cut missing from VIDEO.cuts or a VIDEO.cuts time inside a transition. Exits 0. Motion
+//        inside a canvas or WebGL is invisible to it; pin an element to the object, as for graph.
 //
 // Frames are numbered as render.mjs renders them: frame n of a page is window.seek(n / fps)
 // (--fps, default 60); a video uses its own frame rate and an exact ffmpeg seek. --debug opens
@@ -83,6 +92,7 @@ const COMMANDS = {
   holds: ["min", "scenes"],
   audit: ["fps", "every", "grep", "debug"],
   lint: ["every", "safe", "allow", "min-size", "out", "fps"],
+  cuts: ["out", "fps", "debug"],
 };
 const FLAGS = new Set(["debug", "look"]);
 
@@ -1739,6 +1749,255 @@ async function lintImage(src, { out, findings, safe, samples, settled }) {
   return `wrote ${out}  ${w}x${h}`;
 }
 
+// ---------- cuts ----------
+
+// Runs in the page after a seek: every element the viewer can see, as [id, cx, cy, w, h, weight].
+// The id is stable across seeks; the weight is the visible area times the opacity it shows with.
+// Layers marked data-fx (the finish, a light leak, a wipe's band) are decoration, not the picture.
+function cutsSample() {
+  const ids = (window.__cutsIds ||= new WeakMap());
+  const W = innerWidth, H = innerHeight, min = W * H * 0.0004;
+  const alpha = new Map();
+  const shows = (el) => {
+    if (!el || el.nodeType !== 1) return 1;
+    if (!alpha.has(el)) {
+      const cs = getComputedStyle(el);
+      alpha.set(el, cs.display === "none" ? 0 : Number(cs.opacity) * shows(el.parentElement));
+    }
+    return alpha.get(el);
+  };
+  const out = [];
+  for (const el of document.body.querySelectorAll("*")) {
+    if (/^(SCRIPT|STYLE|TEMPLATE)$/.test(el.tagName) || el.closest("[data-fx]")) continue;
+    const r = el.getBoundingClientRect();
+    const seen = Math.max(0, Math.min(r.right, W) - Math.max(r.left, 0)) * Math.max(0, Math.min(r.bottom, H) - Math.max(r.top, 0));
+    if (seen < min || getComputedStyle(el).visibility !== "visible") continue;
+    const a = shows(el);
+    if (a < 0.02) continue;
+    if (!ids.has(el)) ids.set(el, (window.__cutsNext = (window.__cutsNext || 0) + 1));
+    out.push([ids.get(el), r.left + r.width / 2, r.top + r.height / 2, r.width, r.height, seen * a]);
+  }
+  return out;
+}
+
+// The picture's motion between two samples dt seconds apart: one translation (vx, vy in px/s) and
+// one zoom rate (z, per second), fitted by weighted least squares to every element that moved,
+// v = T + z (p - center), with each element's own change of size counted toward z. A zoom about
+// any point is a zoom about the center plus a translation, so one fit covers pushes, pans and zooms.
+function fitMotion(a, b, dt, W, H, still) {
+  const before = new Map(a.map((e) => [e[0], e]));
+  const S = [[0, 0, 0], [0, 0, 0], [0, 0, 0]], R = [0, 0, 0];
+  let moving = 0;
+  for (const e of b) {
+    const o = before.get(e[0]);
+    if (!o) continue;
+    const w = Math.min(o[5], e[5]);
+    const vx = (e[1] - o[1]) / dt, vy = (e[2] - o[2]) / dt;
+    const s = o[3] * o[4] > 0 && e[3] * e[4] > 0 ? Math.log((e[3] * e[4]) / (o[3] * o[4])) / 2 / dt : 0;
+    if (Math.hypot(vx, vy) < still.v && Math.abs(s) < still.z) continue;
+    moving += w;
+    const px = (o[1] + e[1]) / 2 - W / 2, py = (o[2] + e[2]) / 2 - H / 2, lam = (Math.hypot(e[3], e[4]) / 2) ** 2;
+    S[0][0] += w; S[1][1] += w; S[0][2] += w * px; S[1][2] += w * py; S[2][2] += w * (px * px + py * py + lam);
+    R[0] += w * vx; R[1] += w * vy; R[2] += w * (px * vx + py * vy + lam * s);
+  }
+  if (!moving) return { vx: 0, vy: 0, z: 0 };
+  S[2][0] = S[0][2]; S[2][1] = S[1][2];
+  // Cramer's rule; the matrix is positive definite whenever anything moved.
+  const det = (m) => m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0])
+    + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+  const D = det(S);
+  const col = (k) => det(S.map((row, i) => row.map((x, j) => (j === k ? R[i] : x))));
+  return { vx: col(0) / D, vy: col(1) / D, z: col(2) / D };
+}
+
+const ARROWS = ["→", "↘", "↓", "↙", "←", "↖", "↑", "↗"];
+const arrowOf = (m) => ARROWS[(Math.round(Math.atan2(m.vy, m.vx) / (Math.PI / 4)) + 8) % 8];
+
+// One side of an edit against the other: a speed ratio above 3x, or a direction (or zoom) that
+// reverses while both sides clearly move, is a warning. Still counts as the still threshold, so
+// still against slow passes and still against fast does not.
+function judgeSides(a, b, still) {
+  const sa = Math.hypot(a.vx, a.vy), sb = Math.hypot(b.vx, b.vy), za = Math.abs(a.z), zb = Math.abs(b.z);
+  const ratio = (x, y, f) => Math.max(x, y, f) / Math.max(Math.min(x, y), f);
+  const rv = ratio(sa, sb, still.v), rz = ratio(za, zb, still.z);
+  const notes = [];
+  if (rv > 3) notes.push(`speed ${rv.toFixed(1)}×`);
+  if (rz > 3) notes.push(`zoom speed ${rz.toFixed(1)}×`);
+  if (sa > 2 * still.v && sb > 2 * still.v && (a.vx * b.vx + a.vy * b.vy) / (sa * sb) < -0.5) {
+    notes.push(`direction reverses ${arrowOf(a)} then ${arrowOf(b)}`);
+  }
+  if (za > 2 * still.z && zb > 2 * still.z && Math.sign(a.z) !== Math.sign(b.z)) {
+    notes.push(`zoom reverses (${a.z > 0 ? "in" : "out"} then ${b.z > 0 ? "in" : "out"})`);
+  }
+  return { notes, ratio: Math.max(rv, rz) };
+}
+
+async function cuts(src, o) {
+  const out = outPath(o);
+  const { fps, width: W, height: H } = src;
+  const still = { v: 0.001 * W * fps, z: 0.001 * fps };   // under 0.1% of the width, or of the size, per frame
+  const span = Math.max(1, Math.round(fps / 15));           // frames each side is measured over
+  const step = Math.max(1, Math.round(fps / 20));           // frames between cells of a cut's strip
+  const declared = await src.page.evaluate(async () => {
+    await window.seek(0);   // a page that calls transition() inside seek registers it on the first frame
+    return { cuts: (window.VIDEO?.cuts ?? []).map(Number).filter(Number.isFinite),
+      transitions: (window.TRANSITIONS ?? []).map((x) => ({ kind: x.kind, at: x.at, dur: x.dur, end: x.end, handoff: x.handoff, dir: x.dir })) };
+  });
+  const firstAt = (t) => src.clamp(Math.ceil(t * fps - 1e-6));   // the first frame that shows time t or later
+  const edits = [], notes = [];
+  for (const c of declared.cuts) edits.push({ kind: "cut", at: c, end: c, listed: true });
+  for (const x of declared.transitions) {
+    if (x.kind === "cut") {
+      if (!edits.some((e) => e.kind === "cut" && Math.abs(e.at - x.at) < 0.5 / fps)) {
+        edits.push({ kind: "cut", at: x.at, end: x.at, listed: false });
+        notes.push(`the cut at ${sec(x.at)} is not in VIDEO.cuts, so motion blur blends its two shots; add film.cuts to VIDEO.cuts`);
+      }
+      continue;
+    }
+    edits.push({ ...x });
+    for (const c of declared.cuts) {
+      if (c > x.at + 1e-6 && c < x.end - 1e-6) notes.push(`VIDEO.cuts lists ${sec(c)}, inside the ${x.kind} from ${sec(x.at)} to ${sec(x.end)}; a transition is not a hard cut`);
+    }
+  }
+  edits.sort((a, b) => a.at - b.at);
+  if (!edits.length) {
+    console.log("no cuts: the page lists no VIDEO.cuts and uses no transitions from transitions.js (window.TRANSITIONS)");
+    return 0;
+  }
+
+  // Samples by frame, each taken once; screenshots only for the strip's cells.
+  const samples = new Map(), pngs = new Map();
+  const sampleAt = async (n, png = false) => {
+    n = src.clamp(n);
+    if (png && !pngs.has(n)) {
+      pngs.set(n, await shot(src.page, n / fps, { type: "png" }));
+      samples.set(n, await src.page.evaluate(cutsSample));
+    } else if (!samples.has(n)) {
+      await src.page.evaluate((t) => window.seek(t), n / fps);
+      samples.set(n, await src.page.evaluate(cutsSample));
+    }
+    return samples.get(n);
+  };
+  const motion = async (n0, n1) => {
+    [n0, n1] = [src.clamp(n0), src.clamp(n1)];
+    if (n1 <= n0) return { vx: 0, vy: 0, z: 0 };
+    return fitMotion(await sampleAt(n0), await sampleAt(n1), (n1 - n0) / fps, W, H, still);
+  };
+  // Before an edit at time t: the last span frames that show the old picture. After: the first.
+  const across = async (name, t) => {
+    const F = firstAt(t), L = F - 1;
+    const a = await motion(L - span, L), b = await motion(F, F + span);
+    return { name, t, F, a, b, ...judgeSides(a, b, still) };
+  };
+
+  const rows = [];
+  for (const e of edits) {
+    const points = e.kind === "cut" ? [await across("cut", e.at)]
+      : [await across("start", e.at), await across("handoff", e.handoff), await across("end", e.end)];
+    // The strip: four frames each side of a cut, or the transition from just before to just after.
+    let cells;
+    if (e.kind === "cut") {
+      const F = firstAt(e.at);
+      cells = [-4, -3, -2, -1].map((k) => ({ n: F + (k + 1) * step - 1, side: "before" }))
+        .concat([0, 1, 2, 3].map((k) => ({ n: F + k * step, side: "after", tag: k ? "" : "cut" })));
+    } else {
+      const F = (t) => firstAt(t);
+      cells = [
+        { n: F(e.at - 0.1) }, { n: F(e.at), tag: "start" }, { n: F(e.at + 0.25 * e.dur) },
+        { n: F(e.handoff) - 1 }, { n: F(e.handoff), tag: "handoff" }, { n: F(e.at + 0.75 * e.dur) },
+        { n: F(e.end) - 1 }, { n: F(e.end), tag: "end" }, { n: F(e.end + 0.1) },
+      ];
+    }
+    cells = cells.map((c) => ({ ...c, n: src.clamp(c.n) })).filter((c, i, all) => all.findIndex((d) => d.n === c.n) === i);
+    for (const c of cells) {
+      await sampleAt(c.n, true);
+      // Each cell's own motion, measured without crossing a hard cut.
+      c.m = c.side === "after" ? await motion(c.n, c.n + 1) : await motion(c.n - 1, c.n);
+    }
+    rows.push({ e, points, cells });
+  }
+
+  // Text.
+  const pf = (v) => (v / fps).toFixed(1);
+  const fmtM = (m) => {
+    const v = Math.hypot(m.vx, m.vy), parts = [];
+    if (v >= still.v) parts.push(`${arrowOf(m)} ${pf(v)}`);
+    if (Math.abs(m.z) >= still.z) parts.push(`zoom ${m.z > 0 ? "+" : "−"}${(Math.abs(m.z) / fps * 100).toFixed(1)}%`);
+    return parts.length ? parts.join(" ") : "still";
+  };
+  const what = (e) => (e.kind === "cut" ? "cut" : `${e.kind}${e.dir ? ` ${e.dir}` : ""} ${e.dur.toFixed(2)} s`);
+  const frames = (e) => (e.kind === "cut" ? `f${firstAt(e.at) - 1}|f${firstAt(e.at)}` : `f${firstAt(e.at)}–f${firstAt(e.end)}`);
+  const warned = rows.filter((r) => r.points.some((p) => p.notes.length)).length;
+  const nCuts = edits.filter((e) => e.kind === "cut").length, nTr = edits.length - nCuts;
+  const lines = [`cuts: ${nCuts} cut${nCuts === 1 ? "" : "s"} and ${nTr} transition${nTr === 1 ? "" : "s"} in ${src.name}; ` +
+    `motion over ${span} frames each side at ${fmtFps(fps)} fps (px per frame; still is under ${pf(still.v)})`];
+  for (const { e, points } of rows) {
+    const bad = points.filter((p) => p.notes.length);
+    const detail = points.map((p) => `${points.length > 1 ? `${p.name} ` : ""}${fmtM(p.a)} → ${fmtM(p.b)}${p.notes.length ? ` (${p.notes.join(", ")})` : ""}`).join(" · ");
+    lines.push(`  ${sec(e.at).padStart(8)}  ${frames(e).padEnd(11)}  ${what(e).padEnd(26)}  ${bad.length ? "WARN" : "ok  "}  ${detail}`);
+  }
+  for (const n of notes) lines.push(`  note: ${n}`);
+  lines.push(warned ? `${warned} of ${rows.length} edits warn: match the speed and direction on each side, or hold still before a fast start` : `all ${rows.length} edits keep their motion across`);
+
+  // The image: one row per edit, its verdicts above a strip of frames with each frame's motion.
+  const n = Math.max(...rows.map((r) => r.cells.length)), pad = 48, gap = 12;
+  const cellW = Math.floor((MAX_SHEET_WIDTH - 2 * pad - (n - 1) * gap) / n), cellH = Math.round((cellW * H) / W);
+  const all = rows.flatMap((r) => r.cells.map((c) => c.n)).filter((x, i, a) => a.indexOf(x) === i);
+  const scaled = await pool(all, 4, (f) => scalePng(pngs.get(f), cellW));
+  const file = new Map(all.map((f, i) => [f, `c${i}.png`]));
+  const glyph = (m) => {
+    const v = Math.hypot(m.vx, m.vy), zoom = Math.abs(m.z) >= still.z;
+    if (v < still.v && !zoom) return `<svg class="g" viewBox="-14 -14 28 28"><circle r="3" class="dot"/></svg>`;
+    const len = v < still.v ? 0 : 5 + 8 * Math.min(1, Math.log10(1 + v / fps) / Math.log10(201));
+    const ang = (Math.atan2(m.vy, m.vx) * 180) / Math.PI;
+    const ring = zoom ? `<circle r="11" class="ring"/><path class="ring" d="${m.z > 0 ? "M-4 0H4M0 -4V4" : "M-4 0H4"}"/>` : "";
+    const arrow = len ? `<g transform="rotate(${ang.toFixed(1)})"><path class="arrow" d="M${-len} 0H${len - 1}M${len - 6} -5L${len} 0L${len - 6} 5"/></g>` : "";
+    return `<svg class="g" viewBox="-14 -14 28 28">${ring}${arrow}</svg>`;
+  };
+  const chip = (p) => `<span class="st ${p.notes.length ? "bad" : "ok"}"><i>${p.notes.length ? "!" : "✓"}</i>${esc(p.name)}` +
+    `<em>${esc(p.notes.length ? p.notes.join(", ") : `${fmtM(p.a)} → ${fmtM(p.b)}`)}</em></span>`;
+  const html = `<!doctype html><meta charset="utf-8"><style>${BASE_CSS}
+    body { width: ${2 * pad + n * cellW + (n - 1) * gap}px; }
+    .edit { margin-bottom: 34px; padding-top: 22px; border-top: 1px solid var(--line); }
+    .head { display: flex; align-items: baseline; gap: 16px; margin-bottom: 12px; }
+    .head .t { font-size: 24px; font-weight: 650; } .head .w { font-size: 22px; font-weight: 550; color: var(--body); }
+    .head .f { font-size: 18px; color: var(--muted); }
+    .sts { display: flex; flex-wrap: wrap; gap: 8px 10px; margin-bottom: 16px; }
+    .st { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px 4px 6px; border-radius: 999px;
+      background: #E9E6E0; color: var(--ink); font-size: 16px; font-weight: 600; }
+    .st em { font-style: normal; font-weight: 450; color: var(--body); }
+    .st i { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; color: #fff;
+      font-style: normal; font-size: 13px; font-weight: 700; }
+    .st.ok i { background: var(--good); } .st.bad i { background: var(--critical); } .st.bad { background: #F6E1DE; }
+    .strip { display: grid; grid-template-columns: repeat(${n}, ${cellW}px); gap: ${gap}px; }
+    .cell { position: relative; }
+    .cell img { width: ${cellW}px; height: ${cellH}px; }
+    .cell.cut::before { content: ""; position: absolute; left: ${-gap / 2 - 1.5}px; top: -6px; bottom: -6px; width: 3px;
+      border-radius: 2px; background: var(--critical); }
+    .tag { position: absolute; left: 8px; top: 8px; padding: 2px 8px 3px; border-radius: 6px; background: rgba(22,21,19,0.82);
+      color: #fff; font-size: 14px; font-weight: 600; letter-spacing: 0.02em; }
+    .cap { margin-top: 8px; display: flex; align-items: center; gap: 6px; font-size: 15px; color: var(--muted); white-space: nowrap; overflow: hidden; }
+    .cap b { font-weight: 600; color: var(--ink); }
+    .g { width: 24px; height: 24px; flex: none; overflow: visible; }
+    .g .arrow, .g .ring { fill: none; stroke: var(--ink); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+    .g .dot { fill: var(--faint); }
+  </style>
+  <header><div><div class="eyebrow">Cut check</div><h1>${esc(src.name)}</h1></div>
+    <div class="meta"><b>${rows.length} edit${rows.length === 1 ? "" : "s"}${warned ? ` · ${warned} warn` : " · all keep their motion"}</b><br>` +
+    `${fmtFps(fps)} fps · ${W}×${H} · motion over ${span} frames each side</div></header>
+  ${rows.map(({ e, points, cells }) => `<section class="edit">
+    <div class="head"><span class="t">${sec(e.at)}</span><span class="w">${esc(what(e))}</span><span class="f">${frames(e)}</span></div>
+    <div class="sts">${points.map(chip).join("")}</div>
+    <div class="strip">${cells.map((c) => `<figure class="cell${c.tag === "cut" ? " cut" : ""}">
+      <img class="frame-img" src="${file.get(c.n)}">${c.tag ? `<span class="tag">${c.tag}</span>` : ""}
+      <figcaption class="cap"><b>f${c.n}</b>${glyph(c.m)}<span>${esc(fmtM(c.m))}</span></figcaption></figure>`).join("")}</div>
+  </section>`).join("")}`;
+  const assets = Object.fromEntries(all.map((f, i) => [file.get(f), { body: scaled[i], type: "image/png" }]));
+  const [w, h] = await compose(src.browser, { html, width: 2 * pad + n * cellW + (n - 1) * gap, out, assets });
+  console.log(`${lines.join("\n")}\nwrote ${out}  ${w}x${h}`);
+  return 0;
+}
+
 // ---------- main ----------
 
 async function main() {
@@ -1747,8 +2006,8 @@ async function main() {
   if (!argv.length) { console.error(usage()); return 1; }
   const { pos, o } = parseArgs(argv);
   const [cmd, input, extra] = pos;
-  if (!COMMANDS[cmd]) fail(`${cmd ? `unknown command ${JSON.stringify(cmd)}` : "no command"}; use board, sheet, onion, graph, holds, audit or lint (--help shows how)`);
-  const pageOnly = ["board", "graph", "audit", "lint"].includes(cmd);
+  if (!COMMANDS[cmd]) fail(`${cmd ? `unknown command ${JSON.stringify(cmd)}` : "no command"}; use board, sheet, onion, graph, holds, audit, lint or cuts (--help shows how)`);
+  const pageOnly = ["board", "graph", "audit", "lint", "cuts"].includes(cmd);
   if (!input) fail(`${cmd} needs a ${pageOnly ? "page (.html)" : cmd === "holds" ? "video" : "page or video"} to read`);
   if (extra) fail(`unexpected argument ${JSON.stringify(extra)}`);
   for (const k of Object.keys(o)) if (!COMMANDS[cmd].includes(k)) fail(`--${k} does not apply to ${cmd}`);
@@ -1760,6 +2019,7 @@ async function main() {
     if (src.kind === "video" && o.fps !== undefined) console.warn(`note: a video keeps its own ${fmtFps(src.fps)} fps; --fps applies to pages`);
     if (cmd === "audit") return await audit(src, o);
     if (cmd === "lint") return await lint(src, o);
+    if (cmd === "cuts") return await cuts(src, o);
     await { board, sheet, onion, graph }[cmd](src, o);
   } finally {
     await src.close();
@@ -1772,6 +2032,7 @@ function checkEarly(cmd, file, o) {
   if (!fs.existsSync(file) || fs.statSync(file).isDirectory()) fail(`no such file: ${file}`);
   if (cmd === "graph" && !isPagePath(file)) fail("graph reads the element from the page's DOM, so it needs the page (.html), not a video");
   if (cmd === "board" && !isPagePath(file)) fail("board renders the page's shots through seek(t), so it needs the page (.html)");
+  if (cmd === "cuts" && !isPagePath(file)) fail("cuts measures motion in the page's DOM, so it needs the page (.html)");
   if (cmd === "audit") {
     if (!isPagePath(file)) fail("audit runs the page's own checks, so it needs the page (.html)");
     if (o.grep !== undefined && !o.grep.trim()) fail("--grep needs some text to look for in the check names");
@@ -1790,6 +2051,7 @@ function checkEarly(cmd, file, o) {
     if (o.count !== undefined && o.at !== undefined && o.at !== "stills") fail("use --at or --count for look frames, not both");
     return;
   }
+  if (cmd === "cuts" && !isPagePath(file)) fail("cuts reads VIDEO.cuts, the transitions and the elements' motion from the page, so it needs the page (.html)");
   outPath(o);
   if (cmd === "graph" && !o.select) fail('--select "<css selector>" is required');
   if ((cmd === "onion" || cmd === "graph") && (o.from === undefined || o.to === undefined)) fail("--from and --to (seconds) are required");

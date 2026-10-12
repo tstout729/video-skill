@@ -86,10 +86,10 @@ The examples include their recorded narration, so they render without an ElevenL
 ```sh
 git clone https://github.com/tstout729/video-skill && cd video-skill
 bash skills/video/scripts/setup.sh
-bash tests/render-examples.sh            # renders all three at draft quality
+bash tests/render-examples.sh            # renders every example at draft quality
 ```
 
-Each example's README has the full-quality commands: [explainer](skills/video/examples/explainer/), [walkthrough](skills/video/examples/walkthrough/), [loop](skills/video/examples/loop/). They're also the templates your agent copies from.
+Each example's README has the full-quality commands: [explainer](skills/video/examples/explainer/), [walkthrough](skills/video/examples/walkthrough/), [loop](skills/video/examples/loop/), [transitions](skills/video/examples/transitions/). They're also the templates your agent copies from.
 
 Your own videos work without a key too. Ask for a draft with the scratch voice, or run `narrate.py --scratch`. Your computer's built-in voice (`say` on macOS, espeak-ng on Linux) reads the script, and the skill writes the same audio files and word timings a real take has. Timing, rendering, captions and mixing all work unchanged. That helps in two ways:
 
@@ -142,6 +142,7 @@ narration.json ─▶ narrate.py ─▶ audio + word timings
 
 - The directed brief, the numbers, the render contract and the review loop build on Florence's X Article [*Opus 5.5 Motion Lab: Make Claude Animate Like a Studio*](https://x.com/flxrnc/status/2105311836190978392) (@flxrnc, September 30, 2026).
 - The principles of animation come from Disney's animators. John Lasseter applied them to computer animation in [*Principles of Traditional Animation Applied to 3D Computer Animation*](https://dl.acm.org/doi/10.1145/37402.37407) (SIGGRAPH 1987).
+- The transitions in `transitions.js` build on ideas from [AbubakrChan/product-launch-motion](https://github.com/AbubakrChan/product-launch-motion) (MIT; the zoom-through and the film grade), [haidrrrry/claude-remotion-skill](https://github.com/haidrrrry/claude-remotion-skill) (MIT; the whip) and [cth9191/animate](https://github.com/cth9191/animate) (MIT; the morph bridge). The cut check in `review.mjs cuts` follows the seam check in [heygen-com/hyperframes](https://github.com/heygen-com/hyperframes) (Apache-2.0). No code was copied.
 - The explainer style is inspired by [3Blue1Brown](https://www.3blue1brown.com) and built on [Manim Community](https://www.manim.community).
 - The UI motion approach was adapted from Ross's open motion-design prompt template ([@rossaxbt](https://x.com/rossaxbt)).
 - The numbered storyboard and the checks for cut-off and overlapping text follow ideas from [cth9191/animate](https://github.com/cth9191/animate) (MIT). Measuring contrast against the real pixels behind hidden text follows the contrast report in [heygen-com/hyperframes](https://github.com/heygen-com/hyperframes) (Apache-2.0). The code in `review.mjs` is new.

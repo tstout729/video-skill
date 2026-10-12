@@ -30,8 +30,9 @@ jobs:
           node --check skills/video/scripts/review.mjs
           node --check skills/video/runtime/motion.js
           for f in skills/video/runtime/styles/*.js; do node --check "$f"; done
+          node --check skills/video/runtime/transitions.js
           node tests/test_stepped.mjs
-          bash -n skills/video/scripts/setup.sh tests/render-examples.sh tests/test_review.sh tests/test_styles.sh
+          bash -n skills/video/scripts/setup.sh tests/render-examples.sh tests/test_review.sh tests/test_styles.sh tests/test_transitions.sh
           python3 tests/test_captions.py
           uv run -q --with numpy python3 tests/test_audio.py
           python3 -c "import json; [json.load(open(f)) for f in ['.claude-plugin/plugin.json', '.claude-plugin/marketplace.json']]"
@@ -47,3 +48,5 @@ jobs:
         run: bash tests/test_review.sh
       - name: Style packs (determinism, on twos, cost)
         run: bash tests/test_styles.sh
+      - name: Transitions, finish and cut check
+        run: bash tests/test_transitions.sh

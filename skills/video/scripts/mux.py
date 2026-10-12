@@ -7,7 +7,7 @@
 
     python3 mux.py <video.mp4> --out final.mp4 [--narration audio/narration.wav]
         [--words words.js] [--music track.mp3 --music-db -24 --music-start 0]
-        [--sfx-dir sfx/] [--sfx-db -14] [--sfx-lag 1] [--lufs -16 | --social] [--loop]
+        [--sfx-dir sfx/] [--sfx-db -14] [--sfx-lag 1] [--lufs -16 | --social] [--loop] [--lut grade.cube]
 
 UI sounds come from <video>.sfx.json (written by render.mjs). Each sound is placed so its
 measured peak lands --sfx-lag video frames (default 1) after its declared time: the picture
@@ -19,6 +19,9 @@ repeats without fades, and a sound that rings past the end wraps to the start.
 The bed sits at --music-db under narration (default -24). Without narration the bed leads:
 by default it is measured and set to -28 LUFS before normalization, so UI sounds at the
 default --sfx-db peak about 8 dB over it and the final gain stays linear.
+--lut grades the picture with a 3D LUT (.cube, .3dl, .dat, .m3d or .csp) through ffmpeg's lut3d,
+in 16-bit RGB, and re-encodes it; without it the picture is copied untouched. Only for launch and
+social films (references/transitions.md).
 Check the result with check_sync.py. When timeline.py marked scenes as read by the scratch voice
 (narrate.py --scratch), the mix ends with a loud warning that the video is a draft.
 """
@@ -51,6 +54,25 @@ from assemble import (  # noqa: E402
 
 BED_UNDER_VOICE_DB = -24.0  # bed gain under narration
 BED_ALONE_LUFS = -28.0      # bed loudness before normalization when there is no narration
+LUT_TYPES = (".cube", ".3dl", ".dat", ".m3d", ".csp")  # what ffmpeg's lut3d reads
+
+
+def lut_filter(lut: Path, tmp: Path) -> str:
+    """A video filter that grades through a 3D LUT in 16-bit RGB and returns standard-range BT.709."""
+    if lut.suffix.lower() not in LUT_TYPES:
+        raise SystemExit(f"--lut {lut}: lut3d reads {', '.join(LUT_TYPES)} files")
+    if not lut.is_file():
+        raise SystemExit(f"--lut: no such file: {lut}")
+    filters = subprocess.run(["ffmpeg", "-hide_banner", "-filters"], capture_output=True, text=True).stdout
+    if not re.search(r"^\s*\S+\s+lut3d\s", filters, re.M):
+        raise SystemExit("--lut needs ffmpeg's lut3d filter, and this ffmpeg has none. "
+                         "Install a full build (brew install ffmpeg, or apt install ffmpeg), or leave out --lut.")
+    # A copy with a plain name, so the path needs no escaping inside the filter graph.
+    graded = tmp / f"grade{lut.suffix.lower()}"
+    graded.write_bytes(lut.read_bytes())
+    return ("scale=in_color_matrix=bt709:in_range=tv,format=gbrp16le,"
+            f"lut3d=file='{graded}':interp=tetrahedral,"
+            "scale=out_color_matrix=bt709:out_range=tv,format=yuv420p")
 
 
 def probe(path: Path) -> float:
@@ -151,6 +173,7 @@ def main() -> None:
                           help="mix for social feeds: -14 LUFS")
     ap.add_argument("--loop", action="store_true", help="seamless loop: the bed repeats without fades")
     ap.add_argument("--title", default="")
+    ap.add_argument("--lut", type=Path, help="grade the picture with a 3D LUT (.cube); re-encodes the video")
     args = ap.parse_args()
     args.out.parent.mkdir(parents=True, exist_ok=True)
 
@@ -227,7 +250,13 @@ def main() -> None:
             lang = json.loads(spec.read_text()).get("language", "en") if spec.exists() else "en"
             cmd += ["-map", f"{n}:s", "-c:s", "mov_text", "-metadata:s:s:0",
                     f"language={CAPTION_LANGUAGES.get(lang, lang)}"]
-        cmd += ["-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-ar", str(SR),
+        if args.lut:  # graded and re-encoded like render.mjs; -tune film keeps grain from smearing
+            cmd += ["-vf", lut_filter(args.lut, tmp), "-c:v", "libx264", "-preset", "medium", "-crf", "15",
+                    "-tune", "film", "-color_range", "tv", "-color_primaries", "bt709", "-color_trc", "bt709",
+                    "-colorspace", "bt709"]
+        else:
+            cmd += ["-c:v", "copy"]
+        cmd += ["-c:a", "aac", "-b:a", "192k", "-ar", str(SR),
                 "-metadata", f"title={args.title}", "-movflags", "+faststart", str(args.out)]
 
         def encode(level: str) -> None:
@@ -242,7 +271,8 @@ def main() -> None:
     print(f"{args.out}  {probe(args.out):.1f}s  {lufs:.1f} LUFS  {peak:.1f} dBTP  "
           f"sfx: {len(events)} at +{args.sfx_lag:g} frame @ {fps:g} fps"
           + (f"  music: {args.music_db:+g} dB" if args.music else "")
-          + (f"  captions: {srt_path}" if srt_path else ""))
+          + (f"  captions: {srt_path}" if srt_path else "")
+          + (f"  graded: {args.lut.name}" if args.lut else ""))
     project = args.words.parent if args.words else args.narration.parent.parent if args.narration else None
     scratch_warning(scratch_scenes(args.narration, args.words), project, "run timeline.py, render and mux again")
 
