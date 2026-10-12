@@ -1,0 +1,201 @@
+<!doctype html>
+<!--
+  Riso example: "How a seed grows" printed in three Riso inks (aqua, fluorescent pink, yellow) on
+  warm paper. 1080x1080, 10.5 s at 24 fps, no voice. The story and its timing live in ../story.js,
+  shared with the pixel and cut-paper examples, so the three can be compared frame by frame.
+
+  Look: every colour is a plate tone or an overprint. Sky = aqua screened from 60% to 12%; hills =
+  aqua + yellow (green) and aqua + pink (lilac); soil = all three (brown); title = aqua + pink
+  (violet); the label word = pink printed over the green ground (near black). White is paper.
+  Motion: on ones, eased. Things never fade: tones ramp, so dots grow in and shrink away.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>How a seed grows (riso)</title>
+<style>
+  @font-face { font-family: Geist; font-weight: 100 900;
+    src: url(/_skill/assets/fonts/geist-latin-wght-normal.woff2) format("woff2"); }
+  @font-face { font-family: "Geist Mono"; font-weight: 100 900;
+    src: url(/_skill/assets/fonts/geist-mono-wght-normal.woff2) format("woff2"); }
+  html, body { margin: 0; width: 1080px; height: 1080px; overflow: hidden; background: #f3eee3; }
+  #art { display: block; width: 1080px; height: 1080px; }
+</style>
+</head>
+<body>
+<canvas id="art" width="1080" height="1080"></canvas>
+<script type="module">
+import { clamp, progress, easeOut, lerp } from "/_skill/runtime/motion.js";
+import { riso } from "/_skill/runtime/styles/riso.js";
+import { circle, ellipse, curve, rect, hash, transform } from "/_skill/runtime/styles/common.js";
+import { story, stemAt, stemPoints, cloudShape, leafShape, dropShape, TITLE, PLACE, DURATION, STILLS }
+  from "/_skill/examples/styles/story.js";
+
+await Promise.all([document.fonts.load("900 82px Geist"), document.fonts.load("700 40px 'Geist Mono'")]);
+
+const press = riso("#art", { seed: "how-a-seed-grows", pitch: 9, misregister: 3 });
+window.STYLE_PACK = press; // tests read press.stats
+
+// ---------- inks as tones ----------
+const DARK = { aqua: 1, pink: 1, yellow: 1 };   // olive-brown black: all three inks
+const GREEN = { aqua: 1, yellow: 1 };
+const VIOLET = { aqua: 1, pink: 1 };
+
+// ---------- the land, built once ----------
+const land = (pts) => [...curve(pts, { samples: 10 }), [1110, 1110], [-30, 1110]];
+const FAR = land([[-30, 636], [170, 592], [390, 626], [610, 598], [830, 570], [1110, 620]]);
+const BACK = land([[-30, 704], [210, 670], [470, 694], [720, 662], [910, 646], [1110, 680]]);
+const FRONT = land([[-30, 826], [250, 814], [540, 834], [830, 810], [1110, 822]]);
+// The soil: a dome of turned earth sitting on the ground.
+const MOUND = [
+  ...Array.from({ length: 33 }, (_, i) => { const a = Math.PI + (i / 32) * Math.PI; return [540 + 214 * Math.cos(a), 864 + 80 * Math.sin(a)]; }),
+  ...Array.from({ length: 15 }, (_, i) => { const a = (i / 16) * Math.PI + Math.PI / 16; return [540 + 214 * Math.cos(a), 864 + 12 * Math.sin(a)]; }),
+];
+// Daisies in the grass: paper knocked out of the green, with yellow centres. Seeded, clear of the
+// soil and the label.
+const DAISIES = [[110, 880], [262, 914], [838, 884], [968, 930], [700, 1008], [905, 1036], [450, 1046]].map(([x, y], i) => ({
+  x, y, r: 13 + hash("daisy", i) * 6, turn: hash("daisy-turn", i) * Math.PI,
+}));
+
+// ---------- drawing ----------
+function sky(p, s) {
+  p.flood({ aqua: p.linear(0, 0, 0, 720, [[0, 0.6], [0.6, 0.3], [1, 0.12]]) });
+  // As the sun rises it lifts the aqua out of the sky around it and leaves a yellow halo.
+  const rise = clamp((PLACE.sunFrom - s.sun.y) / (PLACE.sunFrom - PLACE.sunTo));
+  const { x, y } = s.sun;
+  if (rise > 0) {
+    p.fill(circle(x, y, 360), { aqua: p.radial(x, y, 96, 360, [[0, 1 - 0.9 * rise], [1, 1]]) }, { under: true });
+    p.fill(circle(x, y, 330), { yellow: p.radial(x, y, 90, 330, [[0, 0.6 * rise], [1, 0]]) }, { over: true });
+  }
+  p.fill(circle(x, y, 92), { yellow: 1, pink: 0.42 });  // pink screened over solid yellow: orange
+  p.fill(circle(x - 26, y - 24, 30), { yellow: 1, pink: 0.12 });
+}
+
+function cloud(p, s) {
+  if (!s.cloud.shown) return;
+  const { x, y } = s.cloud;
+  p.fill(cloudShape(x, y, 1.15), { aqua: p.linear(0, y - 120, 0, y + 56, [[0, 0.04], [0.5, 0.14], [1, 0.62]]), pink: 0.14 });
+  for (const d of s.rain) p.fill(dropShape(d.x, d.y - 8, 8), { aqua: 1 }); // drops: solid aqua
+}
+
+function ground(p, s) {
+  p.fill(FAR, { aqua: 0.42, pink: 0.22 });
+  p.fill(BACK, { aqua: 0.72, yellow: 0.82 });
+  p.fill(FRONT, GREEN);
+  for (const d of DAISIES) {
+    for (let k = 0; k < 6; k++) {
+      const a = d.turn + (k * Math.PI) / 3;
+      p.fill(circle(d.x + Math.cos(a) * d.r * 0.62, d.y + Math.sin(a) * d.r * 0.62, d.r * 0.42), {});
+    }
+    p.fill(circle(d.x, d.y, d.r * 0.34), { yellow: 1, pink: 0.25 });
+  }
+}
+
+function plant(p, s) {
+  // The seed: an almond of all three inks, sinking behind the mound's lip.
+  if (s.seed.shown) {
+    const seed = transform(ellipse(s.seed.x, s.seed.y, 15, 21), { rotate: s.seed.spin, scale: [s.seed.sx, s.seed.sy] });
+    p.fill(seed, DARK);
+  }
+  if (s.stem > 0) {
+    p.stroke(stemPoints(s.stem), GREEN, { width: 13, over: false });
+    // The leaves unfold from the stem: they swing out from upright and grow.
+    [[0.32, -150, 1], [0.5, -32, 0]].forEach(([u, angle, side], i) => {
+      const k = s.leaves[i];
+      if (k <= 0.01 || s.stem < u) return;
+      const [x, y] = stemAt(u);
+      const L = leafShape(x, y, 118 * k, 58 * k, lerp(-92, angle, Math.min(1, k)));
+      p.fill(L, { aqua: 0.88, yellow: 1 });
+      const [tx, ty] = L[14];
+      p.stroke([[x, y], [lerp(x, tx, 0.85), lerp(y, ty, 0.85)]], {}, { width: 3, over: false }); // a paper vein
+    });
+  }
+  // The dome is shaded by the screen: lighter on top, heavier below; rain soaks it darker.
+  const a0 = lerp(0.42, 0.9, s.wet), a1 = lerp(0.78, 1, s.wet);
+  p.fill(MOUND, { aqua: p.linear(0, 784, 0, 876, [[0, a0], [1, a1]]), pink: lerp(0.7, 1, s.wet), yellow: 1 });
+}
+
+function flower(p, s) {
+  if (s.stem < 0.999) return;
+  const [cx, cy] = stemAt(1);
+  const open = s.petals[0];
+  if (s.bud > 0.01 && open < 0.35) {
+    const b = s.bud * (1 - open / 0.35);
+    p.fill(leafShape(cx, cy + 6, 70 * b, 52 * b, -90, 1.7), { pink: 1 });
+    p.fill(leafShape(cx, cy + 8, 30 * b, 22 * b, -130), GREEN);
+    p.fill(leafShape(cx, cy + 8, 30 * b, 22 * b, -50), GREEN);
+  }
+  s.petals.forEach((k, i) => {
+    if (k <= 0.01) return;
+    const a = -90 + i * 60 + 18;
+    p.fill(leafShape(cx, cy, 86 * k, 62 * k, a, 1.9), { pink: 1 });
+    p.fill(leafShape(cx, cy, 44 * k, 26 * k, a, 1.6), { pink: 1, yellow: 0.35 }); // a warmer throat
+  });
+  if (open > 0.05) {
+    const r = 30 * Math.min(1, open * 1.4);
+    p.fill(circle(cx, cy, r), { yellow: 1, pink: 0.5 });
+    for (let i = 0; i < 7; i++) {
+      const a = i * 2.4, d = r * 0.55 * Math.sqrt((i + 0.5) / 7);
+      p.fill(circle(cx + Math.cos(a) * d, cy + Math.sin(a) * d, 3.5), DARK);
+    }
+  }
+}
+
+function bee(p, s) {
+  const b = s.bee;
+  if (!b.shown) return;
+  const { x, y } = b;
+  // Wings first (paper, ruled in aqua), then the body over them.
+  const lift = b.flap ? -34 : -8;
+  for (const [dx, a] of [[2, lift - 14], [16, lift + 6]]) {
+    const w = leafShape(x + dx, y - 10, 46, 30, -90 + a, 1.6);
+    p.fill(w, { aqua: 0.16 });
+    p.stroke(w, { aqua: 1 }, { width: 3, closed: true });
+  }
+  const body = ellipse(x, y, 28, 20);
+  p.fill(body, { yellow: 1 });
+  p.with({ clip: body }, () => {
+    p.fill(rect(x - 6, y - 30, 9, 60), DARK);
+    p.fill(rect(x + 11, y - 30, 9, 60), DARK);
+  });
+  p.fill([[x + 26, y - 5], [x + 40, y + 1], [x + 26, y + 6]], DARK); // the sting, at the back
+  p.fill(circle(x - 30, y - 2, 14), DARK);                           // the head, leading
+  p.fill(circle(x - 35, y - 6, 4), {});                              // a paper eye
+}
+
+// The label: a pink disc with the step number, and the word printed over the green ground.
+// A change never fades: the old word's pink plate shrinks away in dots, then the new one grows in.
+function label(p, s) {
+  const out = 0.18, gap = 0.04, enter = 0.32;
+  const cur = s.label, old = s.prev;
+  const leaving = old && s.since < out;
+  const shown = leaving ? old : cur;
+  const k = leaving ? 1 - easeOut(s.since / out) : old ? easeOut(progress(s.since, out + gap, out + gap + enter)) : 1;
+  p.fill(circle(112, 982, 42), { pink: 1 });
+  if (k > 0) {
+    p.text(String(shown.n), 112, 998, { aqua: k, yellow: k }, { font: "700 46px 'Geist Mono'", align: "center", over: true });
+    p.text(shown.word, 176, 1004, { pink: k }, { font: "900 66px Geist", tracking: -1.5, over: true });
+  }
+}
+
+function title(p) {
+  p.text(TITLE, 70, 142, VIOLET, { font: "900 82px Geist", tracking: -2.5 });
+}
+
+window.seek = (t) => press.frame(t, (p) => {
+  const s = story(t);
+  sky(p, s);
+  ground(p, s);
+  cloud(p, s);
+  plant(p, s);
+  flower(p, s);
+  bee(p, s);
+  title(p);
+  label(p, s);
+});
+
+window.VIDEO = { width: 1080, height: 1080, duration: DURATION, stills: STILLS };
+window.seek(0);
+</script>
+</body>
+</html>
