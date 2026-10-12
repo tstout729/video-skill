@@ -4,6 +4,19 @@ Every video starts with a `brief.md` in its project folder, written before any a
 
 A brief is short. Most fit on one screen. Show it to the user before animating when the request is open-ended.
 
+## Workflow
+
+brief → look frames → board → narrate → animate → review. Each step costs more than the one before, so get the user's yes before each costly step.
+
+1. **Brief.** Write it from the template below.
+2. **Look frames.** Build two to four key poses in the page at planned times, and render them at full size: `review.mjs board index.html --look`. The user approves the palette, type, materials and framing.
+3. **Board.** List each shot's key pose in `window.SHOTS` and render the storyboard: `review.mjs board index.html`. The user approves or rejects each panel by its number ("1–4 yes; 5: hold the receipt longer").
+4. **Narrate.** Record the voice only after the board is approved, because narration costs ElevenLabs credits.
+5. **Animate.** Time the approved poses to the narrator's words, and add the motion between them.
+6. **Review.** Contact sheets, speed graphs, holds, `audit` and `lint`, then the full render.
+
+[Storyboard and lint](storyboard-lint.md) has the details.
+
 ## Template
 
 ```markdown
@@ -22,7 +35,7 @@ MODEL: <for 3D: the object's locked proportions, e.g. "slab 1 : 1 : 0.28, corner
 CAMERA: <for 3D or zooms: FOV 40°, path, one push-in at f240–f300 ease-in-out, parallax 1.0 / 0.5 / 0.2>
 SOUND: <voice id | silent | bed: calm, 120 BPM>; hits land 1 frame after their picture; -14 LUFS for social, -16 for training
 BAN: <the starter list below, plus anything specific>
-QA: render stills at <frames> and a contact sheet before the full render; speed graph the hero move of each shot; check() the numbers that can be tested (settle frames, safe areas, the caption band) and run review.mjs audit
+QA: look frames, then a storyboard signed off by panel number, before narration; render stills at <frames> and a contact sheet before the full render; speed graph the hero move of each shot; check() the numbers that can be tested (settle frames, the caption band) and run review.mjs audit; review.mjs lint passes (clipping, safe area, overlap, type of 28 px or more, contrast of 4.5:1 or more), with a reason for each allowed finding
 ```
 
 Cuts are the default handoff between shots. A match cut or a wipe is a deliberate choice; write it down.
@@ -78,6 +91,7 @@ Paste this under every brief. It keeps every frame reproducible, checkable and f
 
 - Every frame is a pure function of time: `seek(t)` sets everything. No clocks, `Date.now()`, timers, CSS transitions or animations, or state carried between frames.
 - Randomness is seeded (`rand(seed)` in `motion.js`), so shapes never jitter between renders.
+- Deliberate per-frame variation (jitter, film grain) keys on `Math.round(t * fps)`, not `Math.floor`. Motion-blur subframes for frame n fall at (n − shutter … n) / fps, so floor would blend two different grains into one frame.
 - A loop renders frames 0 to N−1, never frame N, which repeats frame 0 and causes a hitch at the seam. Drive a loop from a phase (frame ÷ N) with whole-number cycles, and sample noise along a circle (`loopNoise`) so it returns to its start.
 - Frame 0 is a finished composition: it is the thumbnail people see while the video loads.
 - Text is real text in the bundled fonts, never an image of text. Fonts load before the first frame.

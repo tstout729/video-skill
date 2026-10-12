@@ -120,6 +120,9 @@ function hex(h) {
 // (mulberry32). The seed is a number or a string. Never use Math.random(). Draw values while
 // building, not inside seek(): frames render out of order, so a shared generator would give
 // each frame different numbers. Inside seek(), make a fresh rand(seed) per call instead.
+// Deliberate per-frame variation (jitter, film grain) must key on Math.round(t * fps), not
+// Math.floor: motion-blur subframes for frame n fall at (n − shutter … n) / fps, and floor would
+// put most of them on frame n − 1, blending two different grains into one frame.
 export function rand(seed) {
   let a = Number.isInteger(seed) ? seed >>> 0 : hashString(String(seed));
   return () => {
