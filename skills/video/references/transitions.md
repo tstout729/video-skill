@@ -112,7 +112,7 @@ finish("#finish", t, { grain: true, vignette: true, sweeps: { "title lands": 2.2
 - **Vignette.** The corners are darkened by this alpha; `true` is 0.15. The center is untouched.
 - **Light sweeps.** A soft band of light (12% white at its peak) crosses the frame once for each named beat. Name the beats in the brief, such as "the title lands" or "the end card". A sweep on a timer is a screensaver; a sweep on a beat is punctuation.
 - **Plain alpha only.** Every layer is drawn over the picture with plain alpha. Never use `mix-blend-mode` on an overlay. An overlay layer has no picture behind it to blend with, so a multiply vignette paints its own near-white color: product-launch-motion's first grade turned a whole film white that way. Never put `will-change` on the finish layer either: on Metal, a separately composited grain layer renders a few levels differently from run to run.
-- **Contrast.** The finish lowers measured contrast. Check text contrast with the finish off: render stills with `render.mjs index.html --stills qa/plain --query finish=0`, or open the page with `?finish=0` (with `render.mjs --serve`).
+- **Contrast.** The finish lowers measured contrast. Check text contrast with the finish off: render stills with `render.mjs index.html --stills qa/plain --query finish=0`, lint with `review.mjs lint index.html --query finish=0`, or open the page with `?finish=0` (with `render.mjs --serve`).
 
 ### A LUT at the mix step
 

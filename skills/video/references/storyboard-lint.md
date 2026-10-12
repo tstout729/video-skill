@@ -139,6 +139,7 @@ Each finding prints with its number, check, selector path and text, the frames w
 - `clip-path` and masks are not treated as clipping boxes.
 - Text below 10% opacity counts as hidden.
 - Each sample takes three screenshots, plus one for each text that crosses another. A 48-second walkthrough lints in under a minute.
+- A film finish (grain, vignette) changes the measured contrast and slows each screenshot. Lint with `--query finish=0`; every review command takes `--query`, like `render.mjs`.
 
 ## Credits
 

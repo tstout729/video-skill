@@ -150,12 +150,13 @@ echo "ok: audit --grep runs only the checks it names"
 
 # ---------- every HTML example passes lint, and board draws its shots ----------
 # An example's deliberate findings are in its lint-allow.txt, each with a reason; a line that
-# matches nothing means the file is out of date.
+# matches nothing means the file is out of date. Contrast is checked with the film finish off
+# (finish=0), as references/transitions.md advises; grain on a software GPU is also slow.
 examples="$repo/skills/video/examples"
 for page in "$examples"/*/index.html "$examples"/styles/*/index.html; do
   dir="$(dirname "$page")"; name="${dir#"$examples/"}"; log="lint-${name//\//-}.log"
   allow=(); [ -f "$dir/lint-allow.txt" ] && allow=(--allow "$dir/lint-allow.txt")
-  node "$review" lint "$page" ${allow[@]+"${allow[@]}"} > "$log" 2>&1 || { cat "$log"; fail "lint fails the $name example"; }
+  node "$review" lint "$page" --query finish=0 ${allow[@]+"${allow[@]}"} > "$log" 2>&1 || { cat "$log"; fail "lint fails the $name example"; }
   grep -q '^no findings to fix' "$log" && ! grep -q 'matched no finding' "$log" || { cat "$log"; fail "the $name example's lint-allow.txt is out of date"; }
   echo "ok: the $name example passes lint$([ -f "$dir/lint-allow.txt" ] && echo ", its deliberate findings allowed")"
 done

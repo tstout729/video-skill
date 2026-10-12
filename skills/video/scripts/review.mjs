@@ -70,7 +70,8 @@
 //
 // Frames are numbered as render.mjs renders them: frame n of a page is window.seek(n / fps)
 // (--fps, default 60); a video uses its own frame rate and an exact ffmpeg seek. --debug opens
-// the page with ?debug=1. Labels are drawn in Chromium, so ffmpeg needs no drawtext.
+// the page with ?debug=1, and --query adds page options, as for render.mjs (--query finish=0
+// turns the film finish off). Labels are drawn in Chromium, so ffmpeg needs no drawtext.
 
 import { spawn } from "node:child_process";
 import fs from "node:fs";
@@ -85,14 +86,14 @@ const MAX_SHEET_WIDTH = 2400;
 // ---------- arguments ----------
 
 const COMMANDS = {
-  board: ["out", "at", "cols", "fps", "look", "count"],
-  sheet: ["out", "frames", "at", "from", "to", "cols", "fps", "scenes", "debug"],
-  onion: ["out", "from", "to", "count", "fps", "debug"],
-  graph: ["out", "select", "from", "to", "prop", "fps", "debug"],
+  board: ["out", "at", "cols", "fps", "look", "count", "query"],
+  sheet: ["out", "frames", "at", "from", "to", "cols", "fps", "scenes", "debug", "query"],
+  onion: ["out", "from", "to", "count", "fps", "debug", "query"],
+  graph: ["out", "select", "from", "to", "prop", "fps", "debug", "query"],
   holds: ["min", "scenes"],
-  audit: ["fps", "every", "grep", "debug"],
-  lint: ["every", "safe", "allow", "min-size", "out", "fps"],
-  cuts: ["out", "fps", "debug"],
+  audit: ["fps", "every", "grep", "debug", "query"],
+  lint: ["every", "safe", "allow", "min-size", "out", "fps", "query"],
+  cuts: ["out", "fps", "debug", "query"],
 };
 const FLAGS = new Set(["debug", "look"]);
 
@@ -206,7 +207,8 @@ async function openSource(file, o) {
       closers.push(async () => server.close());
       src.browser = await launch();
       closers.push(() => src.browser.close());
-      const { p, video } = await openVideoPage(src.browser, url, { query: o.debug ? "debug=1" : "" });
+      const query = [o.query, o.debug ? "debug=1" : ""].filter(Boolean).join("&");
+      const { p, video } = await openVideoPage(src.browser, url, { query });
       const meta = await p.evaluate(() => ({
         scenes: window.SCENES ?? null,
         cues: Array.isArray(window.CUE_TIMES) ? window.CUE_TIMES : null,
