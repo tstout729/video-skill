@@ -436,21 +436,25 @@ def chord_pcs(root: int, scale: tuple, degree: int, steps: tuple) -> list[int]:
 def voice(pcs: list[int], prev: list[int] | None, lo: int, hi: int) -> list[int]:
     """The voicing in [lo, hi] that moves least from the previous chord (voice leading),
     with no semitone clusters and no muddy close intervals low down."""
+    pcs = list(dict.fromkeys(pc % 12 for pc in pcs))  # a repeated pitch class can never be voiced twice
     options = [[m for m in range(lo, hi + 1) if m % 12 == pc] for pc in pcs]
     best, best_cost = None, float("inf")
-    for combo in itertools.product(*options):
-        notes = sorted(combo)
-        if len(set(notes)) < len(notes) or notes[-1] - notes[0] > 16:
-            continue
-        gaps = np.diff(notes)
-        cost = 3.0 * np.sum(gaps == 1) + 1.5 * np.sum((gaps <= 3) & (np.array(notes[:-1]) < 55))
-        if prev:
-            cost += sum(abs(a - b) for a, b in zip(notes, prev))
-        else:
-            cost += abs(np.mean(notes) - (lo + hi) / 2)
-        if cost < best_cost:
-            best, best_cost = notes, cost
-    return best
+    for span in (16, 24, 127):  # widen the span only if a chord has no close voicing
+        for combo in itertools.product(*options):
+            notes = sorted(combo)
+            if len(set(notes)) < len(notes) or notes[-1] - notes[0] > span:
+                continue
+            gaps = np.diff(notes)
+            cost = 3.0 * np.sum(gaps == 1) + 1.5 * np.sum((gaps <= 3) & (np.array(notes[:-1]) < 55))
+            if prev:
+                cost += sum(abs(a - b) for a, b in zip(notes, prev))
+            else:
+                cost += abs(np.mean(notes) - (lo + hi) / 2)
+            if cost < best_cost:
+                best, best_cost = notes, cost
+        if best is not None:
+            return best
+    raise ValueError(f"no voicing of pitch classes {pcs} fits {lo}..{hi}")
 
 
 def nearest(pc: int, prev: int | None, lo: int, hi: int) -> int:
