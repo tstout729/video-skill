@@ -103,3 +103,88 @@ y 96–1255 at 1.04 (so a 972 px window is 932 px at 1.00).
 - Result: 47 of 47 s02–s08 checks pass; lint has no findings in f465–f1766; cuts: zoom-through, both
   whips, the dissolve and the 21.29 / 25.16 s cuts pass. Two cuts warn: 7.74 s (the s02 drop, deliberate)
   and 17.42 s (s05's reveal on its first frame). No notes left.
+
+# v2 (2026-10-13): the Apple-announcement rework
+
+Trevor on v1: "It skips through some stuff kinda quick and I do not like the music. I want it to be like
+an Apple announcement video." v2 is 110 BPM (a beat is 0.545 s, 32.73 frames), every shot on black,
+screens floating in black with a floor reflection (`.stage3d` + `.screen`), a slow push 1.00 → 1.05
+(ease-in-out across each shot, at rest on both cuts), text through `appear()`, no whips, zoom-throughs,
+whooshes or punches (except s02's slam). Mid-task the coordinator replaced headline + subhead with one
+Apple caption line (`.caption`, 64 px, white key phrase, gray rest) and asked the screens to grow.
+
+## Plan and agreed trade-offs
+- At 110 BPM three shots can't meet every hold rule. I sent the numbers to the coordinator and they
+  chose:
+  - s02: "Made in code." stays on bar 5. Its finished picture holds 1.51 s before the cut, not 2 s.
+  - s07: each wipe starts on its bar. Riso holds 1.47 s after the caption settles, pixel 1.58 s, and
+    the three-way picture is on screen the full bar 16 (settled 1.76 s).
+  - s08: three shapes (16:9 → 4:5 → 9:16). 1:1 · Feeds is dropped, because four shapes need 8.0 s and
+    the shot has 6.55 s.
+- s04 uses the new clips/explainer-hd (1920×1080, source 16–30 s).
+  - Events: the blue arrow and "example.com" go up f44–f118; a static pause f120–f166; the yellow
+    arrow and "203.0.113.10" come back f166–f218; static to f262; the next step starts at f264.
+  - Only one of the two trips fits a 2 s finished hold. I chose the answer, f161→f262. The question
+    (blue arrow, highlighted row) is already drawn at the cut, so both arrows are on screen at the end.
+- Captions measured in headless Chromium at 64 px. The push leaves 924 px at scale 1.
+  - One line: s04 866 px, s06 823, s07 862, "Made in code." 404.
+  - Two lines, split at the white/gray boundary: s03 (1148 px) and s08 (980 px).
+- Screens:
+  - s03/s04: 880 × 495 at y 520 in both shots. 880 px is the most the ±16° turn allows; the near edge
+    reaches x 1016 at push 1.05.
+  - s06/s07: 700 px squares (up from 600 / 860-with-tags) at y 350 in both, so the dissolve lays one
+    square over the other.
+  - s08: a box of 924 × 720.
+- The reflection (`-webkit-box-reflect`) renders in headless stills and with motion blur. I rendered
+  15.40–15.55 s at 4 subframes and the reflection's brightness matches the still within 1–2 levels
+  (keynote/qa/range/v2/blur-test.mp4). In s08 `none` is ignored; `initial` turns it off. s08 has no
+  reflection because its labels sit under the screen.
+- s07 has no tags: the caption names riso, pixel and paper in the order of the thirds.
+
+## v2 round 1: stills, sheets, audit, lint, cuts, graphs
+- Checked:
+  - Stills keynote/qa/range/v2/r1 (25 frames: landings, cut-ins, pre-cut).
+  - Sheets keynote/qa/range-s02/03/04/06/07/08.png.
+  - `audit --grep s0`; `lint --query finish=0 --allow keynote/lint-allow.txt`; `cuts`.
+  - Graphs range-graph-s02 (the slam's scale), -s03 (the screen's size), -s07 (the pixel edge),
+    -s08 (the screen's size).
+- f2226–f2642 (s08): a reflection still showed under the screen; inline `webkitBoxReflect: "none"` didn't
+  apply. Fix: `style.setProperty("-webkit-box-reflect", "initial")`, with a check.
+- f1809–f1857 (the s06 → s07 dissolve): both captions sit at y 220–294, so "Seamless loops, on the beat"
+  and "Any style. Riso, pixel or paper." were cross-fading on top of each other. Fix: s06's caption
+  leaves with appear()'s 0.54 s exit from the dissolve's start (f1809), gone by f1841. s07's caption
+  comes in from f1831 on bar 14's boom. s06's finished picture still holds 2.29 s before the dissolve.
+- f786 (graph only): a 28.6 px jump on the graph's first sample of #s03-screen. It isn't there from
+  f787, and the still at f786 shows the screen turned correctly, so it's an artifact of the graph's first
+  seek. The official graph starts at f787.
+- Sheets as an Apple film:
+  - s02: the one slam reads, and "Made in code." is a quiet line under the counter.
+  - s03: the modal on a turning screen; the click on bar 7 (f916) and the typing are visible.
+  - s04: the DNS card, its table and both arrows are legible.
+  - s06: check → receipt, then a long hold.
+  - s07: riso, pixel and paper in turn, then the bee lands in the hold (f2148).
+  - s08: three shapes, one per bar, with the card always whole.
+- Graphs:
+  - s02 slam: f524–f530, peak on the cut, soft stop.
+  - s03 screen: one soft move across the shot.
+  - s07 pixel edge: f1966–f1993, soft start and soft stop (v1's hard start is gone).
+  - s08 springs: f2358–f2378 and f2486–f2509, soft start and stop.
+- Lint: no findings in f524–f2642. The 14 allowed findings are s09's dim karaoke words.
+- Cuts: 13.09, 17.45, 21.82, 26.18 and 37.09 s pass, and so do both dissolves (30.15 and 43.24). Only
+  8.73 s warns: s02's slam on the drop, by design.
+
+## v2 round 2: the dissolve fix, the half-scale draft, final checks
+- Checked:
+  - Draft keynote/qa/range.mp4 (8.73–44.04 s, 30 fps, sub 1, 0.5×) and its sheet
+    keynote/qa/range-draft-sheet.png.
+  - Onion skins range-onion-dissolve.png (the s06 → s07 dissolve, from the draft) and
+    range-onion-s08.png (the 4:5 spring).
+  - The audit again after the s06 change.
+- Dissolve f1809–f1857: only s07's caption is on screen as the riso square lands on the receipt square
+  (same size and place; s06's −3° turn against s07's 0° is the only difference).
+- Draft: every shot reads from one caption and one screen; text enters on the beats, screens turn
+  slowly, and nothing is cut short. No notes left.
+- Result:
+  - Audit: 55 of 55 checks pass (s02 7, s03 8, s04 9, s06 9, s07 10, s08 12).
+  - Lint: no findings in f524–f2642.
+  - Cuts: everything passes except the deliberate 8.73 s slam.

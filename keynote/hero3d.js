@@ -25,18 +25,19 @@
 //   dim:  0..1, darkens the whole pane (every variant).
 //   yaw:  optional resting turn in degrees that replaces the pose's yaw (directed, keynote), so a
 //         page can turn the object to face the camera (yaw 0) before a match cut to a flat card.
-// keynote only (all optional; KEYNOTE below holds the durations):
+// keynote only (all optional; KEYNOTE below holds the default durations):
 //   reveal: time the key light starts to rise: 8% before it, 100% 1.2 s later (ease-in-out).
-//           Without it the key is at 100% throughout.
+//           Or {at, dur} for another rise time. Without it the key is at 100% throughout.
 //   dark:   time the key snaps back to 8% (over 3 frames) and stays there.
 //   sweep:  time the specular sweep starts: a narrow highlight crosses the glaze left to right
-//           over 0.9 s (ease-in-out), entering and leaving off the face's edges.
-//   turn:   {at, from, to} in degrees of yaw: one turn from `from` to `to` starting at `at`,
-//           critically damped (ζ 1.0), exactly at `to` 1.6 s later and still after. Before `at`
-//           the yaw is `from`. `yaw` wins over `turn`.
-//   drift:  {from, to, amount = 0.018}: a linear dolly-in that closes `amount` of the camera's
-//           distance between the two times. hero.drift(t, state) is the matching 2D scale for a
-//           type layer (transform-origin at the framing centre).
+//           over 0.9 s (ease-in-out), entering and leaving off the face's edges. Or {at, dur}.
+//   turn:   {at, from, to, dur = 1.6, ease = "spring"} in degrees of yaw: one turn from `from` to
+//           `to` starting at `at`, critically damped (ζ 1.0) or "inout" (sine ease-in-out), exactly
+//           at `to` `dur` seconds later and still after. Before `at` the yaw is `from`. `yaw` wins.
+//   drift:  {from, to, amount = 0.018, scale, ease = "linear"}: a dolly-in that closes `amount` of
+//           the camera's distance between the two times (or reaches a picture scale of `scale`,
+//           e.g. 1.05), linear or "inout" (sine ease-in-out). hero.drift(t, state) is the matching
+//           2D scale for a type layer (transform-origin at the framing centre).
 // Every frame is a pure function of (t, state): no clocks, timers, Math.random or carried state.
 // The only import is three.js r186 from /_vendor/, so the page needs no import map.
 
@@ -207,22 +208,27 @@ LAND.settle = settleFrame({ land: 0 }, LAND.contact, 0);
 export const KEYNOTE = { keyFloor: 0.08, rise: 1.2, snap: 3, sweep: 0.9, turn: 1.6, fov: 35 };
 
 /** The key light's level at t, 0.08..1 (keynote): `reveal` raises it, `dark` snaps it back. */
+// A cue given as a time or as {at, dur}: returns {at, dur} (at NaN when absent).
+const cue = (c, dur) => (c && typeof c === "object" ? { at: c.at, dur: c.dur ?? dur } : { at: c, dur });
+
 export function keyLevel(t, state = {}) {
   const lo = KEYNOTE.keyFloor;
-  let k = Number.isFinite(state.reveal) ? lo + (1 - lo) * inOutCubic((t - state.reveal) / KEYNOTE.rise) : 1;
+  const r = cue(state.reveal, KEYNOTE.rise);
+  let k = Number.isFinite(r.at) ? lo + (1 - lo) * inOutCubic((t - r.at) / r.dur) : 1;
   if (Number.isFinite(state.dark)) k = lerp(k, lo, sine(((t - state.dark) * FPS) / KEYNOTE.snap));
   return k;
 }
 
 // The reveal turn: a critically damped spring from rest, (1 + ωt)e^(-ωt), with ω set so 0.5% of
-// the turn is left at 1.6 s, rescaled to reach exactly 0 there (the last 0.12° of a 24° turn).
-const TURN_W = 7.4 / KEYNOTE.turn;
-const turnG = (x) => (1 + TURN_W * x) * Math.exp(-TURN_W * x);
-/** Yaw in degrees at t for state.turn = {at, from, to} (keynote). */
-export function turnYaw(t, { at, from, to }) {
+// the turn is left at its duration, rescaled to reach exactly 0 there (the last 0.12° of a 24° turn).
+// ease "inout" is a sine ease-in-out instead: a slow, even turn with no long tail.
+/** Yaw in degrees at t for state.turn = {at, from, to, dur = 1.6, ease = "spring"} (keynote). */
+export function turnYaw(t, { at, from, to, dur = KEYNOTE.turn, ease = "spring" }) {
   if (!(t > at)) return from;
-  const T = KEYNOTE.turn, u = Math.min(t - at, T);
-  return to + (from - to) * ((turnG(u) - turnG(T)) / (1 - turnG(T)));
+  if (ease === "inout") return t >= at + dur ? to : from + (to - from) * sine((t - at) / dur);
+  const w = 7.4 / dur, g = (x) => (1 + w * x) * Math.exp(-w * x);
+  const u = Math.min(t - at, dur);
+  return to + (from - to) * ((g(u) - g(dur)) / (1 - g(dur)));
 }
 
 // ---------- geometry ----------
@@ -651,7 +657,8 @@ function screenQuad(material) {
  *   yaw     resting turn in degrees (default -20: three-quarter view toward the key)
  *   x0      resting x before the hop (default -0.6; the hop ends at about +0.6)
  * keynote only: landYaw (degrees the drop-in comes to rest at, default 0: facing the camera),
- *   elevation (camera elevation in degrees, default 10).
+ *   elevation (camera elevation in degrees, default 10), hopTravel (the hop's sideways travel as a
+ *   fraction of the standard 1.1 widths, default 1, so a larger mark can hop and still land in frame).
  */
 export function createHero(canvas, { variant = "directed", width = 1080, height = 620, seed = 1, framing = {} } = {}) {
   const rand = mulberry32(seed * 2654435761 + 1013904223);
@@ -987,10 +994,11 @@ void main() {
     scene.add(floor);
 
     // Camera: FOV 35°, low three-quarter elevation, the directed studio's drift, an optional push-in
-    // and an optional linear dolly (state.drift).
+    // and an optional dolly (state.drift).
     const ph = [rand() * TAU, rand() * TAU, rand() * TAU, rand() * TAU];
     const cfg = { x0: framing.x0 ?? -0.6, yaw: framing.yaw ?? -20, landX: 0, dropFrom: 3 };
     const landYaw = framing.landYaw ?? 0;
+    const hopTravel = framing.hopTravel ?? 1;
     const aim0 = framing.aim ?? [0, 0.95];
     const center = framing.center ?? [0.5, 0.5];
     const elevation = (framing.elevation ?? 10) * DEG;
@@ -1001,13 +1009,17 @@ void main() {
       const p = heroPose(t, state, cfg);
       if (Number.isFinite(state.land)) p.yaw += landYaw;
       else if (state.turn) p.yaw = turnYaw(t, state.turn);
+      if (!Number.isFinite(state.land) && hopTravel !== 1) p.x = cfg.x0 + (p.x - cfg.x0) * hopTravel;
       if (Number.isFinite(state.yaw)) p.yaw = state.yaw;
       return p;
     }
 
     const dolly = (t, state) => {
       const d = state.drift;
-      return d ? (d.amount ?? 0.018) * clamp((t - d.from) / (d.to - d.from)) : 0;
+      if (!d) return 0;
+      const amount = Number.isFinite(d.scale) ? 1 - 1 / d.scale : d.amount ?? 0.018;
+      const p = clamp((t - d.from) / (d.to - d.from));
+      return amount * (d.ease === "inout" ? sine(p) : p);
     };
 
     function frame(w, h) {
@@ -1089,7 +1101,8 @@ void main() {
       // The sweep: the stripe's direction crosses from 1.3 half-faces left of the face's
       // reflections to 1.3 right of them (sine ease-in-out), so it glints on the left bevel,
       // crosses the face in about half a second and leaves over the right bevel.
-      const q = Number.isFinite(state.sweep) ? (t - state.sweep) / KEYNOTE.sweep : -1;
+      const sw = cue(state.sweep, KEYNOTE.sweep);
+      const q = Number.isFinite(sw.at) ? (t - sw.at) / sw.dur : -1;
       let sweepI = 0;
       if (q > 0 && q < 1 && p.visible) {
         N.set(0, 0, 1).transformDirection(body.matrixWorld);

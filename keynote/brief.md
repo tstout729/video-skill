@@ -1,69 +1,63 @@
-# Video Skill: the keynote film
+# Video Skill: the keynote film (v2)
 
-GOAL: In under a minute, a LinkedIn viewer feels the energy of a product launch and sees the range of what the skill can make: walkthroughs, diagrams, 3D, loops, style packs, every frame size, a real voice timed to the word, and the self-review. Every clip is real output of the skill, and the film itself is made with it.
-AUDIENCE: LinkedIn feeds, mostly phones, often muted at first. Every shot reads from its picture and one or two words. Trevor asked for "more upbeat, more like an Apple announcement keynote video, showing off the cool stuff that can be done" (2026-10-12), replacing the calmer narrated cut in `one-minute/`.
-TIME: 28.5 bars at 124 BPM = 55.16 s, 3,310 frames at 60 fps. A bar is 1.935 s, a beat 0.484 s (29.03 frames). Bar 0 starts at t = 0. Every time is `barT(bar, beat)` from kit.js, computed from the beat number.
+GOAL: In about a minute, a LinkedIn viewer feels they are watching an Apple product announcement, and sees the range of what the skill can make: walkthroughs, diagrams, 3D, loops, style packs, every frame size, a voice timed to the word, and the self-review. Every clip is real output of the skill, and the film itself is made with it.
+AUDIENCE: LinkedIn feeds, mostly phones, often muted at first. Every shot reads from its picture and its headline alone.
+FEEDBACK THAT SHAPED v2 (Trevor, 2026-10-13, on v1): "It skips through some stuff kinda quick and I do not like the music. I want it to be like an Apple announcement video." v1 gave diagrams, 3D and loops one bar (1.9 s) each, changed the frame shape every 0.8 s, landed ten tiles in one bar, and ran on an EDM track (claps, saws, offbeat open hats).
+TIME: 32.5 bars at 110 BPM = 70.91 s, 4,255 frames at 60 fps. A bar is 2.182 s, a beat 0.545 s (32.73 frames). Bar 0 starts at t = 0. Every time is `barT(bar, beat)` from kit.js.
 OUTPUT: HTML + motion.js + transitions.js + three.js r186, 1080x1350 (4:5), 60 fps, 4 subframes, shutter 0.4, linear-light blur. Not a loop. Mixed at −14 LUFS for social.
-VOICE: none, except one line: George's real take from `one-minute/` ("It writes the script, records the voice, and times every move to the words.", 4.88 s) in shot s09, as the demonstration of the voice. No new ElevenLabs credits. The words on screen are its captions.
-FRAME:
-- No chrome. Content inside x 54–1026, y 96–1255. The bottom 95 px stay empty (feed buttons and the progress bar).
-- One message per shot: a word or two set huge, over a real piece of output.
+MUSIC: a score composed with ElevenLabs Music from a six-chunk plan of whole bars at 110 BPM (`music/compose.py`), measured against Apple's films: sleek electronic hip-hop, a deep 808, snaps on 2 and 4, crisp hats, a dark plucked hook; a quiet intro and a one-beat stop before the drop on bar 4; a breakdown under the voice (bars 20–23); a build and stop on bar 23, the drop on bar 24; a final hit on bar 29. Cut to the picture on bar lines by `music/edit.py` (log.md, round 5). Options A and B (`bed.py --mood cinematic`) were rejected.
+VOICE: one line, George's real take from `one-minute/` ("It writes the script, records the voice, and times every move to the words.", 4.88 s), from bar 20 beat 1 (44.18 s), in the break. No new ElevenLabs credits.
+FRAME: no chrome. Content inside x 54–1026, y 96–1255. The bottom 95 px stay empty (feed buttons and the progress bar).
 
-SHOTS: one scene module per shot (scenes/sNN.js). Handoffs are centered on the bar line, so the new shot takes over on the downbeat. Music sections in brackets.
-  s01 Introducing · bars 0–4 (0–7.74) · keynote studio · cut. [intro, build in bar 3, stop on bar 3 beat 3]
-      f0 (the thumbnail): the mark at a three-quarter turn (yaw −38°), traced only by its rim lights against black, the key light at 8%. Bar 0 beat 2 (0.97): "Introducing" (h2, muted) reveals at y 170. Bar 1 (1.94): the key light rises over 1.2 s and the mark turns to −14° over 1.6 s (ζ 1.0, one purposeful turn, then still). Bar 2 (3.87): "Video Skill" (hero 168 px) reveals; light sweep at bar 2 beat 0.5. Bar 2 beat 2 (4.84): "for Claude Code" (h2, gradient). Bar 3 beat 3 (7.26), the stop: the key light snaps off over 3 frames; the rim and the type hold. Smash cut on bar 4.
-  s02 Every frame · bars 4–6 (7.74–11.61) · black · zoom-through. [drop]
-      Bar 4 (7.74): "Every frame." (giant 200–220 px, two lines) lands on the downbeat with one punch. Bar 4 beat 1: a mono counter under it shows this film's real frame number on every frame (`f 0465`). Bar 5 (9.68): "Made in code." (display 120 px, "code." in the gradient). Hold to the zoom-through.
-  s03 Walkthroughs · bars 6–8 (11.61–15.48) · light · whip left. [drop]
-      The walkthrough clip in a 16:9 window (972 px wide) is on screen from the zoom-through. Bar 6 beat 1: "Walkthroughs." (hero 140 px, ink). Bar 7: one short line under the window, "Real screens, clicked step by step." (small). The clip plays a stretch where the pointer clicks and types. Drift 1.00→1.04.
-  s04 Diagrams · bar 8 (15.48–17.42) · black · cut. [drop]
-      "Diagrams." over the Manim explainer clip, a stretch where the diagram moves. One bar.
-  s05 3D · bar 9 (17.42–19.35) · keynote studio · whip up. [drop]
-      "3D." (giant) above the mark. The mark hops; touchdown lands on bar 9 beat 2 (18.39), with a pop. Light sweep on bar 9 beat 2.
-  s06 Loops · bar 10 (19.35–21.29) · light · cut. [drop]
-      "Loops." over the loop clip (one shape morphing through checkout states), a stretch with one full morph.
-  s07 Any style · bars 11–13 (21.29–25.16) · black · cut. [drop]
-      "Any style." (display) at the top. One square window (860 px) plays "How a seed grows" in riso. Bar 11 beat 2 (22.26): an edge wipes from the right to one third: the right two thirds become pixel art. Bar 12 (23.23): a second edge to two thirds: the right third becomes cut paper. Three tags under it light as each style appears: Riso · Pixel · Paper. The three clips share one timeline, frame for frame. Hold the three-way picture 1.9 s.
-  s08 Any frame · bars 13–15 (25.16–29.03) · light · dissolve. [drop]
-      "Any frame." (display) at the top. One window springs through four frame sizes on half-bars: 16:9 (bar 13), 1:1 (bar 13 beat 2), 4:5 (bar 14), 9:16 (bar 14 beat 2), ζ 0.82, 0.5 s, with the picture inside reframing. A mono label under it swaps with each shape: "16:9 · YouTube", "1:1 · Feeds", "4:5 · LinkedIn", "9:16 · Reels".
-  s09 Voice · bars 15–18 (29.03–34.84) · black · cut. [break: no kick; the music ducks under the voice]
-      George's line starts at bar 15 beat 1 (29.52). The sentence is set in h1 (84 px) over three or four lines; every word starts dim and lights to white at its real start time (audio/voice.json), the word being spoken in the gradient. Under it, the take's real waveform draws on with a playhead at the true time. A label: "VOICE · ELEVENLABS · WORD-TIMED". Nothing invented: every time comes from voice.json.
-  s10 Review · bars 18–21 (34.84–40.65) · black · cut. [build in bar 18, stop on its beat 3; drop from bar 19]
-      Bar 18 (34.84): "It checks its own work." (display, two lines). Bar 19 (36.77), the drop: a real contact sheet of this film assembles cell by cell on eighth notes (9 cells). Bar 20 (38.71): its onion skin; bar 20 beat 2: its speed graph, the curve drawing on. One card at a time; the last steps back as the next arrives (60% travel, 150 ms later).
-  s11 Checks · bars 21–23 (40.65–44.52) · black · zoom-through. [drop]
-      Bar 21: a giant number counts up to this film's real number of check()s (window.CHECKS.length), "checks" beside it. Bar 22: the number turns mint, a check mark draws, and "All pass." reveals, with a success sound.
-  s12 Everything · bars 23–25 (44.52–48.39) · black · cut. [drop]
-      A bento grid of live tiles lands on eighth notes across bar 23: walkthrough, diagram, loop, riso, pixel, cut paper, the 3D mark, the waveform, and a stat tile or two ("60 fps", the check count). The whole grid plays and holds through bar 24.
-  s13 Get it · bars 25–28.5 (48.39–55.16) · keynote studio · end. [end: the final chord hits on bar 25, then rings out]
-      The mark drops in; touchdown on bar 25 beat 1 (48.87), with a pop. Bar 25 beat 2: "Video Skill" (hero); light sweep at bar 25 beat 2.5. Bar 26: "Free and open source." Bar 26 beat 2: the install line `/plugin marketplace add tstout729/video-skill`, then `github.com/tstout729/video-skill`. The full card holds at least 3.4 s.
+SHOTS: one scene module per shot (scenes/sNN.js). The music's sections are in brackets.
+  s01 Introducing · bars 0–4 (0–8.73) · black studio · cut. [intro; build in bar 3, stop on bar 3 beat 3]
+      f0: the mark rim-lit against black (the thumbnail). Bar 0 beat 2: "Introducing" (gray). Bar 1: the key light rises and the mark turns to face us. Bar 2: "Video Skill". Bar 2 beat 2: "for Claude Code" (gradient). Bar 3 beat 3, the stop: the key light snaps off. Cut on bar 4.
+  s02 Every frame · bars 4–6 (8.73–13.09) · black · cut. [drop 1: the boom]
+      "Every frame." lands on the boom on bar 4: the film's one hard landing. The live frame counter under it. "Made in code." on bar 5 ("code." in the gradient). Hold.
+  s03 Walkthroughs · bars 6–8 (13.09–17.45) · black · cut.
+      The walkthrough clip on a screen floating in black (`.stage3d` + `.screen`), turned −16° and easing to −5° across the shot, with its reflection. Bar 6 beat 1: headline "Walkthroughs."; bar 6 beat 3: subhead "Real screens, clicked step by step." The clip shows the pointer clicking and typing.
+  s04 Diagrams · bars 8–10 (17.45–21.82) · black · cut.
+      Mirror of s03: the screen turned +16° easing to +5°. "Diagrams." / "Ideas, explained in motion." Pick the stretch where the network draws on, and crop so the diagram fills the screen: v1's diagram was thin and small.
+  s05 3D · bars 10–12 (21.82–26.18) · black studio · cut.
+      "3D." / "Lit and rendered with three.js." The mark turns slowly into the light; the studio's specular sweep crosses it; one hop that touches down on bar 11 (pop).
+  s06 Loops · bars 12–14 (26.18–30.55) · black · dissolve 0.8 s into s07.
+      A square screen, gently tilted. "Loops." / "Seamless, and on the beat." One full morph of the checkout loop, then hold.
+  s07 Any style · bars 14–17 (30.55–37.09) · black. [drop 2: the boom on bar 14]
+      "Any style." lands with the boom. Riso from the start; bar 15: the edge wipes to pixel art on the right two thirds; bar 16: to cut paper on the right third. Tags Riso · Pixel · Paper. The three-way picture holds a full bar.
+  s08 Any frame · bars 17–20 (37.09–43.64) · black · dissolve 0.8 s into s09.
+      "Any frame." One screen springs (ζ 0.82, 0.6 s) through 16:9 · YouTube, 1:1 · Feeds, 4:5 · LinkedIn, 9:16 · Reels. Each shape holds at least 1.4 s settled with its label; the last at least 2 s.
+  s09 Voice · bars 20–23 (43.64–50.18) · black · cut. [break: no heartbeat; the music ducks under the voice]
+      The sentence in large type; every word dim until its real start (audio/voice.json), the spoken word in the gradient, then white. The take's waveform with a playhead at the true time. A gray subhead: "A voice, timed to every word." (It is an ElevenLabs voice: never call it real or human.)
+  s10 Review · bars 23–27 (50.18–58.91) · black · cut. [build on bar 23, stop on its beat 3; drop 3 from bar 24]
+      Bar 23: "It checks its own work." Bar 24, the boom: this film's own contact sheet assembles. Bar 25: its onion skin. Bar 26: its speed graph, the curve drawing on. Each card holds about a bar.
+  s11 Checks · bars 27–29 (58.91–63.27) · black · cut.
+      Bar 27: the number counts up to this film's real number of check()s. Bar 28: it turns mint, a check draws, "All pass." (success sound). Hold.
+  s13 Get it · bars 29–32.5 (63.27–70.91) · black studio · end. [end: the final boom on bar 29, then the chord rings out]
+      The mark drops in and touches down on bar 29 beat 1 (pop). Bar 29 beat 3: "Video Skill". Bar 30 beat 2: "Free and open source. Available now." Bar 31: both install lines, then the repo. The full card holds at least 3 s.
 
 LOOK:
-- The keynote stage: black #000 for dark shots; Apple's light gray #F5F5F7 with ink #1D1D1F for light shots. Light and dark alternate, so every cut reads.
-- Display type: Geist 700, tracking −0.045 to −0.055em, set huge. White #F5F5F7 on black. One warm gradient (saffron #F2B544 → orange #EE7A3A → clay #E2553A) on one word or phrase per shot at most, display type only.
-- Secondary text: #A1A1A6 on black, #6E6E73 on light. Mono (Geist Mono) for numbers, code and labels. Nothing under 28 px; contrast at least 4.5:1, measured with the finish off.
-- Windows: radius 36, a 1 px hairline; on light shots a soft shadow.
-- The keynote studio (hero3d variant "keynote"): black, a soft pool of light on a glossy dark floor, the satin ceramic mark with key, rim and a specular sweep. No visible wall, no horizon line.
-- Film finish: grain 0.03 at 12 fields a second, vignette 0.14. No finish sweeps: on black they read as grey haze (log/hero.md). The 3D studio's own specular sweep lands on the three beats instead: the title lands, the 3D shot, the end card.
+- An Apple announcement: black #000 throughout; output shown on screens floating in black space with soft reflections, or as the 3D mark in its studio. No light shots.
+- Headlines: Geist 700, 120–160 px, −0.045em, white #F5F5F7, centered (`.headline`). Subheads: Geist 600, 44 px, Apple gray #86868B (5.8:1 on black, `.subhead`). The warm gradient (saffron → orange → clay) on one word or phrase per shot at most, display type only.
+- Mono (Geist Mono) for numbers, code and labels. Nothing under 28 px; contrast at least 4.5:1, measured with the finish off.
+- Film finish: grain 0.03 at 12 fields a second, vignette 0.14, no finish sweeps (on black they read as haze); the studio's own specular sweep instead.
 MOTION:
-- Type lands on the beat: reveal() starts 2 frames before the beat (from 14 px blur and 106% scale, expo ease-out, 0.6 s). Exits 0.24 s. Words 80 ms apart.
-- One punch (4% scale, peak on the beat, gone in 6 frames) on each shot's hero at most.
-- Springs ζ 0.82 for objects and windows, 1.0 for text. One hero move per shot; secondaries travel 60% as far and start 150 ms later.
-- Every shot drifts: scale 1.00→1.03–1.04, linear over the shot. Text never moves otherwise while it is read.
-- Holds: the floor for fast teasers, 0.3 s per word plus 0.5 s, for every text; most shots hold a full bar (1.94 s).
-- Cuts and handoffs on bar lines; layout changes on beats, never more than one per beat.
-CAMERA: 3D: FOV 35°, drift under 2%, one reveal turn in s01. 2D: the drift only.
+- Calm and continuous, never rushed. Every shot pushes in slowly (scale 1.00 → 1.05, ease-in-out across the shot); screens turn slowly as described. The camera never stops dead inside a shot.
+- Text enters with `appear()`: up 24 px from 8 px of blur over 0.9 s, ease-out, starting 2 frames before its beat. A headline, then its subhead a beat or two later. No punch and no blur-slam, except "Every frame." on the first drop.
+- Springs ζ 0.82 for objects and windows, 1.0 for text. One hero move per shot.
+- Holds: every state at least 1.5 s settled plus 0.3 s per new word; each shot's finished picture at least 2 s before its cut (s01 excepted: its stop is the beat before the drop).
+- Handoffs: cuts on bar lines, and two dissolves. No whips, no zoom-throughs.
+CAMERA: 3D: FOV 35°, drift under 2%, one purposeful turn per 3D shot. 2D: the slow push and the screens' turns.
 SOUND:
-- Music: bed.py `--mood anthem` at 124 BPM in E major with `--sections intro:3,build:1,drop:11,break:3,build:1,drop:6,end:3.5`: offbeat open hats, four-on-the-floor kick, clap and snare on 2 and 4, sidechained bright chords, a sixteenth-note hook, snare rolls and a riser in each build, a one-beat stop before each drop, an impact on each drop. Generated, royalty-free.
-- sfx() only on visible hits, at most 2 per shot: whoosh on the two whips, pop on the two landings, success on "All pass."
-- `mux.py --social` (−14 LUFS), true peak −1 dBTP, the music ducked under George's line, sounds 1 frame after their picture. check_sync.py passes.
+- The cinematic score above, ducked under George's line (`mux.py --music-db -6`).
+- sfx() only on visible hits: pop on the two landings, success on "All pass." No whooshes.
+- `mux.py --social` (−14 LUFS), true peak −1 dBTP, sounds 1 frame after their picture. check_sync.py passes.
 BAN:
 - From references/brief.md: purple or blue gradients, navy "space" backgrounds, glow, bloom, lens flares, neon, halo rings, floating particles, sparkles, turntable spins, bouncy easing (ζ under 0.7), everything fading in at once, dead time, template looks.
-- Emoji. Stock icons. Text that moves while it is read (beyond the 3% drift).
-- Invented numbers: every figure on screen is this film's own (frame numbers, the check count, render settings).
-- The gradient anywhere but display type. Any light sweep beyond the three named beats, and the finish layer's sweeps on black.
+- v1's hype moves: beat-slams on every word, punches, whips, zoom-throughs, light/dark alternation, shots of one bar, states shorter than 1.4 s.
+- Emoji. Stock icons. Invented numbers: every figure on screen is this film's own.
 QA:
-- Per shot: a contact sheet, a speed graph of the hero move, check()s for landings on their beats, marks, and overlaps.
-- `review.mjs audit`, `lint --query finish=0` and `cuts` pass.
+- Per shot: a contact sheet, a speed graph of the hero move, check()s for landings on their beats, holds, marks and overlaps.
+- `review.mjs audit`, `lint --query finish=0 --allow lint-allow.txt` and `cuts` pass; `holds` on the final file.
 - Log every round in log.md, notes tied to frame numbers.
 
 Render contract: skills/video/references/brief.md → Render contract.

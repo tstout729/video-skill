@@ -21,6 +21,12 @@ anthem  an upbeat launch track, arranged in --sections: four-on-the-floor kick, 
           break  no kick: a warm pad, a felt-piano arpeggio, a soft shaker (room for a voice)
           end    one final hit on its first downbeat, then the chord rings out and fades
         Only the end may have a fractional length (end:3.5); --sections sets the number of bars.
+cinematic  a product-announcement score in the same --sections: a warm pad, a pulsing eighth-note
+        synth, glass bells, a soft heartbeat sub on beats 1 and 3, a low boom on each drop, no
+        claps or snares. Builds rise on the pulse and a riser into the same one-beat stop; breaks
+        keep the pad and a slow felt piano (room for a voice). Drops tick on closed offbeat hats;
+        each later drop adds a bell arpeggio and a soft shaker. Chords: I-vi-IV-V (i-VI-III-VII
+        in a minor key).
 
 The chords loop I-V-vi-IV in the key (i-VI-III-VII for a minor key such as "F#m"), voice-led,
 with velocities humanized by --seed and a short reverb (Schroeder allpasses into a feedback
@@ -54,6 +60,7 @@ MINOR = (0, 2, 3, 5, 7, 8, 10)
 LOOP_MAJOR = [(0, (0, 2, 4, 8)), (4, (0, 2, 4, 8)), (5, (0, 2, 4, 6)), (3, (0, 2, 4, 6))]  # Iadd9 Vadd9 vi7 IVmaj7
 END_MAJOR = [(3, (0, 2, 4, 6)), (4, (0, 2, 4, 6)), (0, (0, 2, 4, 7))]                      # IVmaj7 V7 I
 LOOP_MINOR = [(0, (0, 2, 4, 8)), (5, (0, 2, 4, 6)), (2, (0, 2, 4, 8)), (6, (0, 2, 4, 7))]  # i(add9) VImaj7 III(add9) VII
+CINEMATIC_MAJOR = [(0, (0, 2, 4, 8)), (5, (0, 2, 4, 6)), (3, (0, 2, 4, 6)), (4, (0, 2, 4, 8))]  # Iadd9 vi7 IVmaj7 Vadd9
 END_MINOR = [(5, (0, 2, 4, 6)), (6, (0, 2, 4, 7)), (0, (0, 2, 4, 7))]                      # VImaj7 VII i
 BASS_RANGE = (38, 49)  # D2 (73 Hz) to C#3: no bass fundamental below ~70 Hz
 CEILING = -1.5         # dBTP; leaves room for the AAC encoder's overshoot
@@ -947,6 +954,208 @@ def render_anthem(bpm: float, key: str, sections: list[tuple[str, float]], seed:
     return mix
 
 
+# ---------- cinematic: a product-announcement score ----------
+
+@functools.cache
+def glass(midi: int, layer: int) -> np.ndarray:
+    """A soft bell: sine partials at 1, 2, 3 and stretched 4.2, 5.4 and 6.8, the highs dying first."""
+    f0 = hz(midi)
+    vel = (0.55, 0.75, 1.0)[layer]
+    dur = 2.6
+    t = np.arange(int(dur * SR)) / SR
+    out = np.zeros_like(t)
+    partials = ((1.0, 1.0, 1.5), (2.0, 0.34 * vel, 0.7), (3.0, 0.14 * vel, 0.32), (4.2, 0.08 * vel, 0.16),
+                (5.4, 0.05 * vel, 0.09), (6.8, 0.03 * vel, 0.05))   # the last two are the strike's sparkle
+    for ratio, amp, tau in partials:
+        if ratio * f0 < 12000:
+            out += amp * np.exp(-t / tau) * np.sin(2 * np.pi * ratio * f0 * t)
+    out *= np.minimum(1, t / 0.003) * (1 - ramp(t, dur - 0.12, 0.12))
+    return out / np.abs(out).max()
+
+
+def pulse_note(midi: int, dur: float, bright: float) -> np.ndarray:
+    """One note of the eighth-note pulse: a saw between dark and bright, plucked short."""
+    n = int((dur + 0.03) * SR)
+    t = np.arange(n) / SR
+    dark, br = saw_tables(midi)
+    b = float(np.clip(bright, 0, 1))
+    sig = osc(dark, hz(midi), n, 0.0) * (1 - b) + osc(br, hz(midi), n, 0.0) * b
+    return sig * np.minimum(1, t / 0.004) * np.exp(-t / 0.17) * (1 - ramp(t, dur, 0.03))
+
+
+def render_cinematic(bpm: float, key: str, sections: list[tuple[str, float]], seed: int = 1,
+                     first: float = 0.5, target: float = -14.0) -> np.ndarray:
+    """Render the cinematic score as float stereo (n, 2) at 48 kHz, arranged in sections."""
+    spb = 60.0 / bpm
+    total_bars = sum(b for _, b in sections)
+    ends = sections[-1][0] == "end"
+    total = first + total_bars * 4 * spb + (0.0 if ends else 1.6)
+    n = int(np.ceil((total + 5.0) * SR))
+    rng = np.random.default_rng(seed)
+    root, minor = parse_key(key)
+    scale = MINOR if minor else MAJOR
+    cycle = LOOP_MINOR if minor else CINEMATIC_MAJOR
+    dominant = (4, (0, 2, 4, 6))
+    break_order = (1, 0, 2, 3) if minor else (2, 0, 1, 3)   # VI i III VII, or IV I vi V: it leans into the build
+
+    def at(b: float) -> float:
+        return first + b * spb
+
+    def vel(base: float) -> float:
+        return base * float(np.clip(1 + rng.normal(0, 0.05), 0.88, 1.12))
+
+    stems = {k: Bus(n) for k in ("sub", "pulse", "glass", "keys", "pad", "bass", "hats", "fx")}
+    send = Bus(n)
+
+    def place(stem: str, sig, t: float, gain: float, pan: float = 0.0, wet: float = 0.0) -> None:
+        stems[stem].add(sig, t, gain, pan)
+        if wet:
+            send.add(sig, t, gain * wet, pan)
+
+    # Every bar: its section's kind, its index in the section, the section's length, and which
+    # drop it belongs to (each later drop adds a layer).
+    bars, drop_no = [], -1
+    for kind, length in sections:
+        drop_no += kind == "drop"
+        bars += [(kind, i, length, max(drop_no, 0)) for i in range(int(np.ceil(length)))]
+
+    def chord_for(kind: str, i: int):
+        if kind == "build":
+            return dominant
+        if kind == "break":
+            return cycle[break_order[i % 4]]
+        if kind == "end":
+            return cycle[0]
+        return cycle[i % 4]
+
+    kicks, stops = [], []
+    pad_prev = keys_prev = None
+    pulse_prev = bass_prev = root_prev = top_prev = None
+    figure = (0, 0, 12, 0, 0, 12, 0, 7)   # the pulse: root, its octave and its fifth, in eighths
+    for b, (kind, i, length, lvl) in enumerate(bars):
+        degree, steps = chord_for(kind, i)
+        pcs = chord_pcs(root, scale, degree, steps)
+        bar_t = at(4 * b)
+        last = i == int(np.ceil(length)) - 1
+        stop = kind == "build" and last
+        beats = 3 if stop else 4
+        p0 = i / length
+        first_bar = i == 0
+
+        # Pad: one sustained chord per bar; the end's chord rings out.
+        if kind != "end" or first_bar:
+            pad_prev = voice(pcs, pad_prev, 55, 74)
+            hold = (length * 4 * spb - 0.4) if kind == "end" else beats * spb
+            attack = 0.03 if kind == "end" else (1.4 if b == 0 else 0.5 if kind in ("intro", "break") else 0.2)
+            release = 1.8 if kind == "end" else (0.05 if stop else 0.9)
+            gain = {"intro": 0.07 + 0.05 * p0, "build": 0.13, "drop": 0.13 + 0.015 * min(lvl, 2),
+                    "break": 0.065, "end": 0.16}[kind]
+            for m in pad_prev:
+                place("pad", pad_note(m, bar_t, hold, attack, release, 8 * 4 * spb, rng), bar_t, gain * vel(1.0), wet=0.5)
+
+        # The pulse: eighths on the chord's root, opening up through the intro and the build.
+        if kind in ("build", "drop") or (kind == "intro" and i >= 1):
+            pulse_prev = nearest(pcs[0], pulse_prev, 45, 56)
+            for e in range(2 * beats):
+                q = e / (2 * beats)
+                bright = {"intro": 0.08 + 0.3 * p0, "build": 0.35 + 0.55 * q, "drop": 0.5 + 0.15 * min(lvl, 2)}[kind]
+                g = {"intro": 0.07 + 0.05 * p0, "build": 0.15 + 0.04 * q, "drop": 0.16}[kind]
+                place("pulse", pulse_note(pulse_prev + figure[e], 0.42 * spb, bright), at(4 * b + e / 2),
+                      g * vel(1.0 if e % 2 == 0 else 0.8), (-0.15, 0.15)[e % 2], 0.18)
+
+        # Glass bells: a sparse motif in the intro and the first drop; an arpeggio in later drops.
+        if kind in ("intro", "drop") or (kind == "end" and first_bar):
+            tops = sorted(m for m in range(74, 90) if m % 12 in pcs)
+            k0 = min(range(len(tops)), key=lambda j: (abs(tops[j] - (top_prev or 81)), j))
+            if kind == "end":
+                place("glass", glass(tops[k0], 2), bar_t + 0.12, 0.2, 0.15, 0.5)
+            elif kind == "intro" or lvl == 0:
+                for h, d in zip((0, 1.5, 3) if kind == "drop" else (0, 2.5), (0, 1, -1)):
+                    m = tops[min(max(k0 + d, 0), len(tops) - 1)]
+                    place("glass", glass(m, 1), at(4 * b + h), (0.2 if kind == "drop" else 0.17) * vel(1.0), 0.2, 0.45)
+                top_prev = tops[k0]
+            else:
+                run = tops[max(0, min(k0, len(tops) - 4)):][:4]
+                for e, j in enumerate((0, 1, 2, 3, 2, 1, 2, 1)):
+                    m = run[min(j, len(run) - 1)]
+                    place("glass", glass(m, 0 if e % 2 else 1), at(4 * b + e / 2), 0.13 * vel(1.0), (m - 80) / 30, 0.4)
+                top_prev = run[0]
+
+        # Felt piano: slow quarter notes in breaks; a rolled chord on the end's hit.
+        if kind == "break" or (kind == "end" and first_bar):
+            root_prev = nearest(pcs[0], root_prev, 40, 51)
+            keys_prev = voice(pcs, keys_prev, 57, 79)
+            line = [root_prev, *keys_prev]
+            if kind == "end":
+                for j, m in enumerate(line):
+                    place("keys", piano(m, 1), bar_t + 0.03 * j, 0.36 * vel(0.9), (m - 64) / 40, 0.45)
+            else:
+                for e, j in enumerate((0, 2, 3, 4)):
+                    m = line[j]
+                    place("keys", piano(m, 1 if e == 0 else 0), at(4 * b + e), 0.2 * vel(1.0), (m - 64) / 40, 0.45)
+
+        # Bass: soft and sustained, under drops, breaks and the end.
+        if kind in ("drop", "break") or (kind == "end" and first_bar):
+            bass_prev = nearest(pcs[0], bass_prev, *BASS_RANGE)
+            dur = (2.5 * spb) if kind == "end" else 4 * spb
+            place("bass", bass_note(bass_prev, dur, True), bar_t, (0.24 if kind == "drop" else 0.12) * vel(1.0))
+
+        # The heartbeat: a soft low thump on beats 1 and 3 in drops; on every beat of a build,
+        # growing into the stop.
+        for beat in range(beats):
+            t = at(4 * b + beat)
+            if kind == "drop" and beat in (0, 2):
+                place("sub", kick("calm"), t, 0.42 * (1.0 if beat == 0 else 0.85))
+                kicks.append(t)
+            elif kind == "build":
+                place("sub", kick("calm"), t, 0.3 + 0.12 * (beat / max(beats - 1, 1)))
+                kicks.append(t)
+            # Ticks: a closed hat on the offbeats of every drop; a soft shaker in sixteenths from the second.
+            if kind == "drop":
+                place("hats", hat(int(rng.integers(4))), at(4 * b + beat + 0.5), 0.16 * vel(1.0), 0.25, 0.1)
+            if kind == "drop" and lvl >= 1:
+                for s, a in enumerate((0.3, 0.18, 0.55, 0.22)):
+                    place("hats", shaker(int(rng.integers(4))), at(4 * b + beat + s / 4), 0.14 * vel(a), -0.3, 0.2)
+
+        # A build's last bar: a riser into the stop.
+        if stop:
+            dur = min(4 * length - 1, 7) * spb
+            place("fx", riser(dur), at(4 * b + 3) - dur, 0.4, wet=0.45)
+            stops.append((at(4 * b + 3), at(4 * b + 4)))
+
+        # A low boom on the first downbeat of each drop and on the end's hit.
+        if first_bar and kind in ("drop", "end"):
+            place("fx", impact(), bar_t, 0.55, wet=0.5)
+
+    # The pad, the pulse and the bass breathe under the heartbeat.
+    t = np.arange(int(0.5 * SR)) / SR
+    shape = np.minimum(1, t / 0.004) * np.exp(-np.maximum(t - 0.004, 0) / 0.14)
+    duck = np.zeros(n + len(shape))
+    for k in kicks:
+        i = round(k * SR)
+        duck[i:i + len(shape)] = np.maximum(duck[i:i + len(shape)], shape)
+    duck = duck[:n]
+    for stem, depth in (("pad", 0.22), ("pulse", 0.15), ("bass", 0.45)):
+        stems[stem].x *= (1 - depth * duck)[:, None]
+    stems["pulse"].x = filt(stems["pulse"].x, [biquad("hp", 120), biquad("lp", 9000)])
+
+    dry = sum(s.x for s in stems.values())
+    tt = np.arange(n) / SR
+    for a, z in stops:   # the stop: only the reverb's tail rings
+        dry *= (1 - ramp(tt, a - 0.004, 0.004) * (1 - ramp(tt, z - 0.004, 0.004)))[:, None]
+    wet_in = filt(filt(send.x.mean(axis=1), [biquad("hp", 220)]), [biquad("lp", 6500)])
+    mix = dry + reverb(wet_in, 2.2)[:n] * 0.38
+
+    mix = mix[:round(total * SR)]
+    mix = filt(mix, [biquad("hp", 60)])
+    t = np.arange(len(mix)) / SR
+    mix *= (1 - ramp(t, total - (2.8 if ends else 0.45), 2.8 if ends else 0.45))[:, None]
+    mix = master(mix, target, circular=False)
+    if first < 0.01:
+        mix *= ramp(t, 0, 0.003)[:, None]
+    return mix
+
+
 def beats_of(bpm: float, bars: int, first: float, loop: bool) -> dict:
     """window.BEATS for the bed: every beat of the music from the first downbeat."""
     times = beat_grid(bpm, first, bars * 4)
@@ -980,8 +1189,8 @@ def main() -> None:
     ap.add_argument("--bpm", type=float, default=120.0)
     ap.add_argument("--bars", type=int, default=16, help="bars of 4 beats")
     ap.add_argument("--key", default="A", help="A, F#, Bb ... add m for minor (F#m)")
-    ap.add_argument("--mood", choices=("calm", "drive", "anthem"), default="calm")
-    ap.add_argument("--sections", help="anthem only: the arrangement, e.g. intro:3,build:1,drop:8,end:2 "
+    ap.add_argument("--mood", choices=("calm", "drive", "anthem", "cinematic"), default="calm")
+    ap.add_argument("--sections", help="anthem and cinematic: the arrangement, e.g. intro:3,build:1,drop:8,end:2 "
                     "(sets the number of bars)")
     ap.add_argument("--beats", type=Path, help="write the beat grid here (beats.js or .json)")
     ap.add_argument("--seed", type=int, default=1, help="humanized velocity and timing")
@@ -991,23 +1200,25 @@ def main() -> None:
     args = ap.parse_args()
     if not 40 <= args.bpm <= 220 or args.bars < 1 or args.first < 0:
         raise SystemExit("--bpm must be 40-220, --bars at least 1, --first at least 0")
-    if args.sections and args.mood != "anthem":
-        raise SystemExit("--sections arranges the anthem mood only")
-    if args.mood == "anthem" and args.loop:
-        raise SystemExit("the anthem is arranged with a start and an end; it does not loop")
+    arranged = args.mood in ("anthem", "cinematic")
+    if args.sections and not arranged:
+        raise SystemExit("--sections arranges the anthem and cinematic moods only")
+    if arranged and args.loop:
+        raise SystemExit(f"the {args.mood} mood is arranged with a start and an end; it does not loop")
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    if args.mood == "anthem":
+    if arranged:
         spec = args.sections or default_sections(args.bars)
         sections = parse_sections(spec)
-        mix = render_anthem(args.bpm, args.key, sections, args.seed, args.first, args.lufs)
+        arrange = render_anthem if args.mood == "anthem" else render_cinematic
+        mix = arrange(args.bpm, args.key, sections, args.seed, args.first, args.lufs)
         args.bars = int(np.ceil(sum(b for _, b in sections)))
     else:
         mix = render(args.bpm, args.bars, args.key, args.mood, args.seed, args.loop, args.first, args.lufs)
     write_wav(args.out, mix, args.seed)
     _, minor = parse_key(args.key)
     note = f"{args.mood}, {args.bpm:g} BPM, {args.key} {'minor' if minor else 'major'}, seed {args.seed}" \
-           + (", loop" if args.loop else "") + (f", sections {spec}" if args.mood == "anthem" else "")
+           + (", loop" if args.loop else "") + (f", sections {spec}" if arranged else "")
     tp = 20 * np.log10(peak_envelope(mix).max() + 1e-12)
     print(f"{args.out}  {len(mix) / SR:.2f}s  {note}  {lufs(mix):.1f} LUFS  {tp:.1f} dBTP  "
           f"below 60 Hz {low_share(mix):.1%}")

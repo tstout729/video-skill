@@ -1,2 +1,2 @@
 # Allowed lint findings. Pass with: review.mjs lint keynote/index.html --query finish=0 --allow keynote/lint-allow.txt
-contrast #s09-sentence @ 28.6-34.9 -- brief.md s09: every word starts dim (C.dim, 2.3:1) and lights to white at its voice.json start; the dim words are the not-yet-spoken half of a karaoke caption, each becomes white (19.8:1) as it is spoken
+contrast #s09-sentence @ 43.2-50.2 -- brief.md s09: every word starts dim (C.dim, 2.3:1) and lights to white at its voice.json start; the dim words are the not-yet-spoken half of a karaoke caption, each becomes white (19.8:1) as it is spoken

@@ -1,6 +1,6 @@
 # Building shots for "Video Skill: the keynote film"
 
-You are building shots for a 55-second, Apple-keynote-style launch film of the open-source video skill, for LinkedIn. It is cut to an upbeat 124 BPM track, not to a narrator: big type lands on the beat over real output of the skill. It must look studio-grade on a phone: bold, precise, readable muted, never generic, never cluttered. Energy comes from cutting on the beat and from type that lands hard and settles; it never comes from bounce, glow or clutter.
+You are building shots for a 71-second, Apple-announcement-style launch film of the open-source video skill, for LinkedIn. It is cut to a cinematic 110 BPM score, not to a narrator: big type appears over real output of the skill, held long enough to read. It must look studio-grade on a phone: bold, precise, readable muted, never generic, never cluttered. Its energy comes from cutting on the bar and from slow, continuous camera motion; it never comes from bounce, glow, clutter or rushing.
 
 ## Read first
 - `keynote/brief.md`: the direction. Your shots are under SHOTS. Follow FRAME, LOOK, MOTION, BAN and QA.
@@ -9,24 +9,25 @@ You are building shots for a 55-second, Apple-keynote-style launch film of the o
 - `one-minute/scenes/*.js` and `motion-lab/scenes/*.js`: finished, reviewed scenes in the same contract (one-minute's s03 plays clips in windows, s04 splits the style clips, s05 lights words from a take, s06 builds the review cards, s01 and s07 use the 3D mark). Borrow freely, but the look here is the keynote look in brief.md, not their warm one.
 - `keynote/hero3d.js` (the 3D mark): `createHero(canvas, {variant, width, height, seed, framing})` returns `{render(t, state), setSize, pose}`; read its header. The hero builder is adding a "keynote" variant (black studio); until it exists, use "directed".
 
-## Times
-Every time is `barT(bar, beat)`: bar 0 starts at t = 0, a bar is 1.935 s, a beat 0.484 s (29.03 frames at 60 fps). `k.win` carries your shot's window: `{start, end, cutIn, inEnd, outStart, cutOut, inKind, outKind, from, to}` in seconds (`from`/`to` in bars). During a transition both shots are on screen, so your shot must be a finished picture from `cutIn`, and hold steady from `outStart`. Things that land "on the beat" start 2 frames early (`reveal()` lands most of its move in its first 4 frames).
+## Times (v2: 110 BPM)
+Every time is `barT(bar, beat)`: bar 0 starts at t = 0, a bar is 2.182 s, a beat 0.545 s (32.73 frames at 60 fps). `k.win` carries your shot's window: `{start, end, cutIn, inEnd, outStart, cutOut, inKind, outKind, from, to}` in seconds (`from`/`to` in bars). During a dissolve both shots are on screen, so your shot must be a finished picture from `cutIn`, and hold steady from `outStart`. Text starts 2 frames before its beat.
 
 | Shot | Bars | On screen (s) | In | Out |
 | --- | --- | --- | --- | --- |
-| s01 Introducing | 0–4 | 0–7.74 | first frame | cut |
-| s02 Every frame | 4–6 | 7.74–12.01 | cut | zoom-through 11.21–12.01 |
-| s03 Walkthroughs | 6–8 | 11.21–15.78 | zoom-through | whip left 15.18–15.78 |
-| s04 Diagrams | 8–9 | 15.18–17.42 | whip | cut |
-| s05 3D | 9–10 | 17.42–19.65 | cut | whip up 19.05–19.65 |
-| s06 Loops | 10–11 | 19.05–21.29 | whip | cut |
-| s07 Any style | 11–13 | 21.29–25.16 | cut | cut |
-| s08 Any frame | 13–15 | 25.16–29.43 | cut | dissolve 28.63–29.43 |
-| s09 Voice | 15–18 | 28.63–34.84 | dissolve | cut |
-| s10 Review | 18–21 | 34.84–40.65 | cut | cut |
-| s11 Checks | 21–23 | 40.65–44.92 | cut | zoom-through 44.12–44.92 |
-| s12 Everything | 23–25 | 44.12–48.39 | zoom-through | cut |
-| s13 Get it | 25–28.5 | 48.39–55.16 | cut | end of film |
+| s01 Introducing | 0–4 | 0–8.73 | first frame | cut |
+| s02 Every frame | 4–6 | 8.73–13.09 | cut | cut |
+| s03 Walkthroughs | 6–8 | 13.09–17.45 | cut | cut |
+| s04 Diagrams | 8–10 | 17.45–21.82 | cut | cut |
+| s05 3D | 10–12 | 21.82–26.18 | cut | cut |
+| s06 Loops | 12–14 | 26.18–30.95 | cut | dissolve 30.15–30.95 |
+| s07 Any style | 14–17 | 30.15–37.09 | dissolve | cut |
+| s08 Any frame | 17–20 | 37.09–44.04 | cut | dissolve 43.24–44.04 |
+| s09 Voice | 20–23 | 43.24–50.18 | dissolve | cut |
+| s10 Review | 23–27 | 50.18–58.91 | cut | cut |
+| s11 Checks | 27–29 | 58.91–63.27 | cut | cut |
+| s13 Get it | 29–32.5 | 63.27–70.91 | cut | end of film |
+
+s12 (the bento) is gone in v2.
 
 ## The shot contract
 Write `keynote/scenes/sNN.js` for each of your shots:

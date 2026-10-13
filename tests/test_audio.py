@@ -69,11 +69,21 @@ def test_bed_kicks_land_on_downbeats_and_suit_phones() -> None:
     assert abs(len(loop) - 4 * 60 / bpm * SR) <= 1, len(loop)
 
 
-def test_anthem_stops_before_the_drop_and_lands_on_it() -> None:
+def test_arranged_moods_stop_before_the_drop_and_land_on_it() -> None:
     bpm, first = 124.0, 0.0
     spb = 60 / bpm
     sections = bed.parse_sections("intro:1,build:1,drop:2,break:1,end:1.5")
-    x = bed.render_anthem(bpm, "E", sections, seed=3, first=first)
+    for arrange in (bed.render_anthem, bed.render_cinematic):
+        check_arranged(arrange(bpm, "E", sections, seed=3, first=first), bpm, first, spb, arrange is bed.render_anthem)
+    for bad in ("drop:2.5", "end:1,drop:2", "verse:4"):
+        try:
+            bed.parse_sections(bad)
+        except SystemExit:
+            continue
+        raise AssertionError(f"--sections {bad} should be refused")
+
+
+def check_arranged(x: np.ndarray, bpm: float, first: float, spb: float, drive: bool) -> None:
     assert abs(len(x) - 6.5 * 4 * spb * SR) <= 1, len(x)   # the end's half bar sets the length
     assert abs(bed.lufs(x) - -14.0) < 0.3, bed.lufs(x)
     assert 20 * np.log10(bed.peak_envelope(x).max()) <= bed.CEILING + 0.05
@@ -84,8 +94,9 @@ def test_anthem_stops_before_the_drop_and_lands_on_it() -> None:
     stop, drop = (4 + 3) * spb, 8 * spb
     assert rms(stop + 0.02, drop - 0.01) < rms(drop, drop + spb) - 30, (rms(stop + 0.02, drop - 0.01), rms(drop, drop + spb))
     # The drop's kicks land on the grid; the break has none, so it sits under the drop.
-    kick = bed.kick("drive")[: int(0.08 * SR)]
-    for t in bed.beat_grid(bpm, first, 32)[9:16:2]:   # beats 1 and 3 of the drop's first two bars, past the impact
+    kick = bed.kick("drive" if drive else "calm")[: int(0.08 * SR)]
+    beats = bed.beat_grid(bpm, first, 32)[9:16:2] if drive else bed.beat_grid(bpm, first, 32)[10:16:4]
+    for t in beats:   # the drop's kicks past its impact: every beat (anthem), or beats 1 and 3 (cinematic)
         lo = round(t * SR) - int(0.01 * SR)
         seg = mono[lo:lo + int(0.02 * SR) + len(kick)]
         corr = np.correlate(seg, kick, mode="valid")
@@ -93,12 +104,6 @@ def test_anthem_stops_before_the_drop_and_lands_on_it() -> None:
         at = (lo + int(np.argmax(corr / (energy + 1e-12)))) / SR
         assert abs(at - t) < 0.002, (t, at)
     assert rms(16 * spb, 20 * spb) < rms(8 * spb, 16 * spb) - 2, (rms(16 * spb, 20 * spb), rms(8 * spb, 16 * spb))
-    for bad in ("drop:2.5", "end:1,drop:2", "verse:4"):
-        try:
-            bed.parse_sections(bad)
-        except SystemExit:
-            continue
-        raise AssertionError(f"--sections {bad} should be refused")
 
 
 def test_mux_puts_each_peak_one_frame_late() -> None:

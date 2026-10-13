@@ -1,34 +1,40 @@
-// s09 Voice · black · bars 15–18 (28.63–34.84): a dissolve from s08 brings it in, a cut takes it out.
-// George's real take (one-minute's s05 line, 4.88 s) starts at bar 15 beat 1. Its sentence is set in h1
-// over four lines, one clause a line. Every word is dim until its real start time in audio/voice.json,
-// then white; the word being spoken is in the gradient. Under it the take's real waveform
-// (audio/peaks.json, 10 ms peaks) draws on behind a playhead at the true time. Nothing is invented:
-// every time and every bar comes from those two files.
-// On screen from the dissolve: the label, the whole sentence (dim), the empty track and the playhead.
+// s09 Voice · black · bars 20–23 (43.24–50.18): a 0.8 s dissolve from s08 brings it in, a cut takes it out.
+// George's take (one-minute's s05 line, an ElevenLabs voice, 4.88 s) starts at bar 20 beat 1 (44.18 s).
+// Its sentence is set large and centered, one clause a line. Every word is dim until its start time in
+// audio/voice.json, then white; the word being spoken is in the gradient (the sentence is the
+// demonstration, so it is the one large text here, at most 84 px). Under it, the take's waveform
+// (audio/peaks.json, 10 ms peaks) runs the same way: the whole take is drawn dim, and the bars turn white
+// as a playhead crosses them at the true time. Under that, one Apple caption line (.caption, 64 px):
+// "A voice, timed to every word", the second half in gray. Nothing is invented: every time and every
+// bar comes from those two files.
+// The whole picture is on screen from the dissolve (the take starts 0.14 s after it ends, so an entrance
+// would compete with the first word). The only motion is the voice itself and a slow push 1.00 -> 1.04.
 export default async function build(root, k) {
-  const { make, place, barT, drift, check, box, overlap, clamp, easeOut, p01, C, STAGE } = k;
+  const { make, place, barT, check, box, overlap, clamp, easeOut, easeInOut, p01, C, STAGE } = k;
   const S = "s09", FPS = 60, EPS = 1e-6;
   const { cutIn, inEnd, cutOut } = k.win;
 
   // ---- the sources ----
   const V = window.VOICE;                                   // text, duration, words (relative to the take)
   const PEAKS = await (await fetch("audio/peaks.json")).json();
-  const T0 = barT(15, 1);                                   // the take starts here (29.52 s)
+  const T0 = barT(20, 1);                                   // the take starts here (44.18 s)
   const DUR = V.duration;
   // The last word's handoff is the take's end (voice.json gives "words." an end 0.08 s past the audio).
   const words = V.words.map((w, i) => ({ ...w, i, next: V.words[i + 1]?.start ?? Math.min(w.end, DUR) }));
-  const tLast = T0 + words.at(-1).next;                     // the last word turns white at its end
+  const tLast = T0 + words.at(-1).next;                     // the last word turns white at the take's end
 
-  // ---- layout ----
+  // ---- the push: 1.00 -> 1.04, ease-in-out across the shot, about the frame's centre ----
+  const PUSH = 0.04;
+  const scaleAt = (t) => 1 + PUSH * easeInOut(p01(t, cutIn, cutOut - cutIn));
   const stage = make("div", "", "", root, { position: "absolute", inset: "0px", transformOrigin: "540px 675px" });
-  // Drift-safe: 940 px wide about the centre stays inside x 54–1026 at the drift's 1.03.
-  const W = 940, X0 = 540 - W / 2;                          // 70..1010
-  const label = place(make("div", "label", "Voice · ElevenLabs · Word-timed", stage, { whiteSpace: "nowrap" }), X0, 0);
-  label.id = "s09-label";
+  // 920 px about the centre stays inside x 54–1026 at 1.04.
+  const W = 920, X0 = 540 - W / 2;
 
-  // The sentence, one clause a line: "It writes the script, / records the voice, / and times every move / to the words."
+  // ---- the sentence, one clause a line ----
   const BREAK_AFTER = new Set(["script,", "voice,", "move"]);
-  const sentence = place(make("div", "h1", "", stage, { color: C.dim, width: `${W}px` }), X0, 0);
+  const sentence = place(make("div", "", "", stage, {
+    width: `${W}px`, textAlign: "center", fontWeight: "700", letterSpacing: "-0.04em", lineHeight: "1.04", color: C.dim,
+  }), X0, 0);
   sentence.id = "s09-sentence";
   let line = make("div", "", "", sentence, { whiteSpace: "nowrap" });
   // One span a word, in one of three looks: dim (not yet spoken), the gradient (being spoken, text
@@ -42,7 +48,6 @@ export default async function build(root, k) {
   });
   const GRAD = `linear-gradient(100deg, ${C.saffron} 0%, ${C.orange} 52%, ${C.clay} 100%)`;
   const WHITE_RGB = [1, 3, 5].map((j) => parseInt(C.white.slice(j, j + 2), 16)).join(", ");
-  // look: 0 dim, 1 white; g: how much gradient shows (1 the word being spoken, 0 none).
   const paint = (el, lit, g) => {
     const st = el.style;
     if (!lit || g <= 0) {
@@ -57,9 +62,9 @@ export default async function build(root, k) {
     st.webkitBackgroundClip = st.backgroundClip = "text";
   };
 
-  // The waveform: three 10 ms peaks a bar (30 ms), drawn on as the playhead passes each bar.
+  // ---- the waveform: three 10 ms peaks a bar (30 ms), all drawn dim; white once the playhead passes ----
   const NS = "http://www.w3.org/2000/svg";
-  const RATE = PEAKS.rate, peaks = PEAKS.peaks, PER = 3, BAR_W = 3.6, WAVE_H = 184;
+  const RATE = PEAKS.rate, peaks = PEAKS.peaks, PER = 3, BAR_W = 3.6, WAVE_H = 150;
   const vmax = Math.max(...peaks);
   const xOf = (tau) => (clamp(tau, 0, DUR) / DUR) * W;      // take time -> x inside the waveform
   const wave = document.createElementNS(NS, "svg");
@@ -67,37 +72,43 @@ export default async function build(root, k) {
   wave.id = "s09-wave";
   Object.assign(wave.style, { position: "absolute", left: `${X0}px`, top: "0px", overflow: "visible" });
   stage.appendChild(wave);
-  const track = document.createElementNS(NS, "path");
-  track.setAttribute("d", `M0 ${WAVE_H / 2} H${W}`);
-  Object.entries({ stroke: C.white, "stroke-opacity": 0.16, "stroke-width": 2 }).forEach(([a, v]) => track.setAttribute(a, v));
-  wave.appendChild(track);
   const bars = [];
   for (let j = 0; j * PER < peaks.length; j++) {
     const v = Math.max(...peaks.slice(j * PER, j * PER + PER));
     const full = Math.max(BAR_W, (v / vmax) * WAVE_H);
-    const t0 = (j * PER) / RATE;                            // the bar's first 10 ms
-    const cx = xOf((j * PER + Math.min(PER, peaks.length - j * PER) / 2) / RATE);
+    const tc = (j * PER + Math.min(PER, peaks.length - j * PER) / 2) / RATE;   // the bar's middle, in take time
     const r = document.createElementNS(NS, "rect");
-    Object.entries({ x: (cx - BAR_W / 2).toFixed(2), width: BAR_W, rx: BAR_W / 2, fill: C.mutedDark, y: WAVE_H / 2, height: 0 }).forEach(([a, b]) => r.setAttribute(a, b));
+    Object.entries({ x: (xOf(tc) - BAR_W / 2).toFixed(2), width: BAR_W, rx: BAR_W / 2, fill: C.dim, y: ((WAVE_H - full) / 2).toFixed(2), height: full.toFixed(2) })
+      .forEach(([a, b]) => r.setAttribute(a, b));
     wave.appendChild(r);
-    bars.push({ r, full, t0, v });
+    bars.push({ r, full, tc, v });
   }
-  const GROW = 0.09;                                        // a bar grows to its height in 90 ms
-  const PH_OVER = 22;
+  const PH_OVER = 20;
   const playhead = place(make("div", "", "", stage, { width: "4px", marginLeft: "-2px", borderRadius: "2px", background: C.white }), X0, 0, null, WAVE_H + 2 * PH_OVER);
   playhead.id = "s09-playhead";
 
-  // Stack the three parts in the middle of the stage.
+  // ---- the caption: one line, white then gray ----
+  const sub = place(make("div", "caption", 'A voice, <span class="soft">timed to every word</span>', stage, { width: `${W}px` }), X0, 0);
+  sub.id = "s09-caption";
+  const CAPTION = "A voice, timed to every word";
+
+  // ---- size and stack, once the fonts are in ----
   await document.fonts.ready;
-  const GAP1 = 40, GAP2 = 84;
-  const lh = label.offsetHeight, sh = sentence.offsetHeight;
-  const groupH = lh + GAP1 + sh + GAP2 + WAVE_H;
-  const top = Math.round((STAGE.y0 + STAGE.y1) / 2 - groupH / 2);
-  const Y = { label: top, sentence: top + lh + GAP1, wave: top + lh + GAP1 + sh + GAP2 };
-  label.style.top = `${Y.label}px`;
+  // The largest size up to 84 px at which the widest clause fits the 920 px column.
+  sentence.style.fontSize = "84px";
+  const widest = Math.max(...[...sentence.children].map((l) => l.scrollWidth));
+  const SIZE = Math.min(84, Math.floor((84 * (W - 10)) / widest));
+  sentence.style.fontSize = `${SIZE}px`;
+  const GAP1 = 76, GAP2 = 60;
+  const sh = sentence.offsetHeight, subH = sub.offsetHeight;
+  const groupH = sh + GAP1 + PH_OVER + WAVE_H + PH_OVER + GAP2 + subH;
+  const top = Math.round(675 - groupH / 2);
+  const Y = { sentence: top, wave: top + sh + GAP1 + PH_OVER };
+  Y.sub = Y.wave + WAVE_H + PH_OVER + GAP2;
   sentence.style.top = `${Y.sentence}px`;
   wave.style.top = `${Y.wave}px`;
   playhead.style.top = `${Y.wave - PH_OVER}px`;
+  sub.style.top = `${Y.sub}px`;
 
   // ---- state at t (pure) ----
   // The gradient hands over to white in 100 ms; it drops to 85% on the frame the next word lights,
@@ -109,7 +120,6 @@ export default async function build(root, k) {
     const g = !lit ? 0 : tau < w.next - EPS ? 1 : 0.85 * (1 - easeOut(p01(tau, w.next, FADE)));
     return { lit, g };
   };
-  const scaleAt = (t) => drift(t, cutIn, cutOut, 0.03);
   const toScreenX = (x, t) => 540 + (x - 540) * scaleAt(t);
 
   // ---- checks ----
@@ -123,18 +133,26 @@ export default async function build(root, k) {
     if (st.color === "transparent" && st.backgroundImage.startsWith("linear-gradient(rgba")) return "handover";
     return "?";
   };
-  check(`${S} composed from the dissolve: label, all ${words.length} words (dim), the track and the playhead on screen at cutIn`, cutIn, () => {
+  const fill = (b) => css(b.r.getAttribute("fill"));
+  check(`${S} composed from the dissolve: all ${words.length} words (dim), the dim waveform, the playhead and the caption on screen at cutIn`, cutIn, () => {
     if (spans.some((s) => look(s) !== "dim")) return "a word is lit before the take";
-    const vis = [label, sentence, wave, playhead].every((e) => box(e).w > 0 && getComputedStyle(e).visibility !== "hidden");
-    return vis || "a part is missing";
+    if (bars.some((b) => fill(b) !== DIM)) return "a bar is lit before the take";
+    // The element's own style: on the dissolve's first frame the root (owned by transitions.js) is still hidden.
+    const missing = [sentence, wave, playhead, sub].filter((e) => !(box(e).w > 0 && e.style.visibility !== "hidden" && Number(getComputedStyle(e).opacity) === 1));
+    return !missing.length || `missing: ${missing.map((e) => `${e.id} (w ${box(e).w.toFixed(0)}, opacity ${getComputedStyle(e).opacity})`).join(", ")}`;
   });
-  check(`${S} the words on screen are voice.json's text, in order`, cutIn, () => {
+  check(`${S} the words on screen are voice.json's text, in order; the caption reads “${CAPTION}”, one 64 px line, “timed to every word” in gray`, cutIn, () => {
     const got = spans.map((s) => s.el.textContent).join(" ");
-    return got === V.text || `reads “${got}”`;
+    if (got !== V.text) return `reads “${got}”`;
+    if (sub.textContent !== CAPTION) return `caption “${sub.textContent}”`;
+    const soft = sub.querySelector(".soft");
+    return (getComputedStyle(sub).fontSize === "64px" && sub.offsetHeight < 64 * 1.4 && soft && getComputedStyle(soft).color === css(C.gray)) || "caption is not one 64 px line with a gray second half";
   });
+  check(`${S} the sentence is ${SIZE} px (72–84 px: large, but under the product-name sizes) and every clause fits the 920 px column`, cutIn, () =>
+    (SIZE >= 72 && SIZE <= 84 && [...sentence.children].every((l) => l.scrollWidth <= W + 0.5)) || `size ${SIZE}, widest ${widest * SIZE / 84}`);
   for (const s of spans) {
     const f = Math.ceil((T0 + s.start) * FPS - EPS);
-    check(`${S} “${s.word}” lights at voice.json ${s.start.toFixed(2)} s + bar 15 beat 1 (f${f}), not a frame before`, [(f - 1) / FPS, (f + 1) / FPS], (t) => {
+    check(`${S} “${s.word}” lights at voice.json ${s.start.toFixed(2)} s + bar 20 beat 1 (f${f}), not a frame before`, [(f - 1) / FPS, (f + 1) / FPS], (t) => {
       const before = t < T0 + s.start - EPS;
       if (before) return look(s) === "dim" || `lit at ${t.toFixed(3)}`;
       return look(s) === "gradient" || `not lit at ${t.toFixed(3)} (${look(s)})`;
@@ -147,38 +165,37 @@ export default async function build(root, k) {
     if (cur < 0) return full.length === 0 || `gradient on ${full} between words`;
     return (full.length === 1 && full[0] === cur) || `gradient on [${full}], speaking ${cur}`;
   });
-  check(`${S} every word is white once the take ends (by ${tLast.toFixed(2)} s) and holds to the cut`, [tLast + FADE, cutOut - 1 / FPS], () =>
+  check(`${S} every word is white once the take ends (by ${(tLast + FADE).toFixed(2)} s) and holds to the cut`, [tLast + FADE, cutOut - 1 / FPS], () =>
     spans.every((s) => look(s) === "white") || "a word is not white");
   check(`${S} the waveform is peaks.json (${peaks.length} peaks, ${(peaks.length / RATE).toFixed(2)} s = the take), ${bars.length} bars to scale`, cutIn, () => {
     if (Math.abs(peaks.length / RATE - DUR) > 0.011) return `peaks ${peaks.length / RATE} s, take ${DUR} s`;
-    const bad = bars.findIndex((b, j) => Math.abs(b.v - Math.max(...peaks.slice(j * PER, j * PER + PER))) > 0 || Math.abs(b.full - Math.max(BAR_W, (b.v / vmax) * WAVE_H)) > 1e-9);
+    const bad = bars.findIndex((b, j) => Math.abs(b.v - Math.max(...peaks.slice(j * PER, j * PER + PER))) > 0 || Math.abs(Number(b.r.getAttribute("height")) - Math.max(BAR_W, (b.v / vmax) * WAVE_H)) > 0.01);
     return bad < 0 || `bar ${bad} off scale`;
   });
   check(`${S} the playhead is at the true time on every frame of the take (±0.5 px)`, [T0, T0 + DUR], (t) => {
     const got = box(playhead).cx, want = toScreenX(X0 + xOf(t - T0), t);
     return Math.abs(got - want) < 0.5 || `x ${got.toFixed(2)}, the take says ${want.toFixed(2)}`;
   });
-  check(`${S} the waveform is drawn only behind the playhead, fully by the take's end`, [cutIn, cutOut - 1 / FPS], (t) => {
+  check(`${S} the waveform is white behind the playhead and dim ahead of it, all white by the take's end`, [cutIn, cutOut - 1 / FPS], (t) => {
     const tau = t - T0;
-    for (const b of bars) {
-      const h = Number(b.r.getAttribute("height"));
-      if (tau < b.t0 - EPS && h > 0) return `a bar at ${b.t0.toFixed(2)} s drawn early`;
-      if (tau >= b.t0 + GROW && Math.abs(h - b.full) > 0.01) return `a bar at ${b.t0.toFixed(2)} s not drawn`;
-    }
-    return true;
+    const bad = bars.find((b) => fill(b) !== (tau >= b.tc - EPS ? WHITE : DIM));
+    return !bad || `the bar at ${bad.tc.toFixed(2)} s is ${fill(bad)} at ${t.toFixed(3)}`;
   });
-  check(`${S} label, sentence and waveform sit inside the stage and clear of each other`, [inEnd, cutOut - 1 / FPS], () => {
-    const parts = [label, sentence, wave, playhead];
-    for (const e of parts) {
+  check(`${S} sentence, waveform and caption sit inside the stage and clear of each other through the push`, [inEnd, cutOut - 1 / FPS], () => {
+    for (const e of [sentence, wave, playhead, sub]) {
       const b = box(e);
       if (b.x < STAGE.x0 - 0.5 || b.x + b.w > STAGE.x1 + 0.5 || b.y < STAGE.y0 || b.y + b.h > STAGE.y1) return `${e.id} at ${b.x.toFixed(0)},${b.y.toFixed(0)} ${b.w.toFixed(0)}×${b.h.toFixed(0)}`;
     }
-    if (overlap(label, sentence) > 0) return "label over sentence";
     if (overlap(sentence, wave) > 0 || overlap(sentence, playhead) > 0) return "sentence over waveform";
-    return [...sentence.children].every((l) => l.scrollWidth <= W + 0.5) || "a line is wider than the stage";
+    return (overlap(sub, wave) === 0 && overlap(sub, playhead) === 0) || "caption over waveform";
   });
-  check(`${S} the take (${DUR} s from ${T0.toFixed(2)} s) ends before the cut, and the white sentence holds ≥ 0.3 s`, cutIn, () =>
-    (T0 + DUR < cutOut && cutOut - (tLast + FADE) >= 0.3) || `take ends ${(T0 + DUR).toFixed(2)}, white at ${(tLast + FADE).toFixed(2)}, cut ${cutOut.toFixed(2)}`);
+  check(`${S} the take (${DUR} s from ${T0.toFixed(2)} s) ends before the cut, and the all-white sentence holds ≥ 1.0 s`, cutIn, () =>
+    (T0 + DUR < cutOut && cutOut - (tLast + FADE) >= 1.0) || `take ends ${(T0 + DUR).toFixed(2)}, white at ${(tLast + FADE).toFixed(2)}, cut ${cutOut.toFixed(2)}`);
+  check(`${S} the push is 1.00 -> 1.04, ease-in-out from cutIn to the cut, and never stops inside the shot`, cutIn, () => {
+    const a = scaleAt(cutIn), b = scaleAt(cutOut), mid = scaleAt((cutIn + cutOut) / 2);
+    const still = [0.1, 0.5, 0.9].some((f) => { const t = cutIn + f * (cutOut - cutIn); return scaleAt(t + 1 / FPS) - scaleAt(t) <= 0; });
+    return (Math.abs(a - 1) < 1e-9 && Math.abs(b - 1.04) < 1e-9 && Math.abs(mid - 1.02) < 1e-9 && !still) || `push ${a} ${mid} ${b}`;
+  });
 
   // ---- seek ----
   return (t) => {
@@ -188,11 +205,7 @@ export default async function build(root, k) {
       paint(s.el, lit, g);
     }
     const tau = t - T0;
-    for (const b of bars) {
-      const h = b.full * easeOut(p01(tau, b.t0, GROW));
-      b.r.setAttribute("height", h.toFixed(2));
-      b.r.setAttribute("y", ((WAVE_H - h) / 2).toFixed(2));
-    }
+    for (const b of bars) b.r.setAttribute("fill", tau >= b.tc - EPS ? C.white : C.dim);
     playhead.style.transform = `translateX(${xOf(tau).toFixed(3)}px)`;
   };
 }

@@ -1,6 +1,7 @@
 // Shared helpers for every scene of "Video Skill: the keynote film". Scenes import only from here,
 // so the look and the motion vocabulary stay one system. Everything is a pure function of t.
 // The film is cut to the music, not to a narrator: every time is a bar or a beat (brief.md → TIME).
+// v2 (2026-10-13): 110 BPM, longer shots, an Apple-announcement look; see brief.md.
 export * from "/_skill/runtime/motion.js";
 import { springStep, clamp, lerp } from "/_skill/runtime/motion.js";
 
@@ -15,6 +16,7 @@ export const C = {
   ink: "#1d1d1f",          // text on white (15.9:1)
   muted: "#6e6e73",        // secondary text on white (4.7:1)
   mutedDark: "#a1a1a6",    // secondary text on black (8.2:1)
+  gray: "#86868b",         // Apple's subhead gray on black (5.8:1)
   dim: "#48484a",          // words not yet spoken, on black (decorative: never the only copy of a text)
   saffron: "#f2b544", orange: "#ee7a3a", clay: "#e2553a",   // the one gradient, on display type only
   mint: "#7fd1a8",         // pass, on black (11.9:1)
@@ -24,9 +26,9 @@ export const C = {
 
 // ---------- the beat grid ----------
 // music/beats.js (bed.py) sets window.BEATS; the fallback is the same grid.
-const B = () => window.BEATS ?? { bpm: 124, first: 0 };
+const B = () => window.BEATS ?? { bpm: 110, first: 0 };
 export const BPM = () => B().bpm;
-export const SPB = () => 60 / B().bpm;                           // seconds per beat (0.4839 at 124)
+export const SPB = () => 60 / B().bpm;                           // seconds per beat (0.5455 at 110)
 export const beatT = (n) => B().first + (n * 60) / B().bpm;      // computed from n, never summed
 export const barT = (bar, beat = 0) => beatT(4 * bar + beat);    // bar 0 starts at t = 0
 export const FPS = 60;
@@ -37,20 +39,19 @@ export const frameOf = (t) => Math.round(t * FPS);
 // next shot. A transition is centered on the bar line: the new shot takes over on the downbeat.
 export const SHOTS = [
   { id: "s01", name: "Introducing",  from: 0,  to: 4,  out: { kind: "cut" } },
-  { id: "s02", name: "Every frame",  from: 4,  to: 6,  out: { kind: "zoom-through", dur: 0.8 } },
-  { id: "s03", name: "Walkthroughs", from: 6,  to: 8,  out: { kind: "whip", dir: "left", dur: 0.6 } },
-  { id: "s04", name: "Diagrams",     from: 8,  to: 9,  out: { kind: "cut" } },
-  { id: "s05", name: "3D",           from: 9,  to: 10, out: { kind: "whip", dir: "up", dur: 0.6 } },
-  { id: "s06", name: "Loops",        from: 10, to: 11, out: { kind: "cut" } },
-  { id: "s07", name: "Any style",    from: 11, to: 13, out: { kind: "cut" } },
-  { id: "s08", name: "Any frame",    from: 13, to: 15, out: { kind: "dissolve", dur: 0.8 } },
-  { id: "s09", name: "Voice",        from: 15, to: 18, out: { kind: "cut" } },
-  { id: "s10", name: "Review",       from: 18, to: 21, out: { kind: "cut" } },
-  { id: "s11", name: "Checks",       from: 21, to: 23, out: { kind: "zoom-through", dur: 0.8 } },
-  { id: "s12", name: "Everything",   from: 23, to: 25, out: { kind: "cut" } },
-  { id: "s13", name: "Get it",       from: 25, to: 28.5, out: null },
+  { id: "s02", name: "Every frame",  from: 4,  to: 6,  out: { kind: "cut" } },
+  { id: "s03", name: "Walkthroughs", from: 6,  to: 8,  out: { kind: "cut" } },
+  { id: "s04", name: "Diagrams",     from: 8,  to: 10, out: { kind: "cut" } },
+  { id: "s05", name: "3D",           from: 10, to: 12, out: { kind: "cut" } },
+  { id: "s06", name: "Loops",        from: 12, to: 14, out: { kind: "dissolve", dur: 0.8 } },
+  { id: "s07", name: "Any style",    from: 14, to: 17, out: { kind: "cut" } },
+  { id: "s08", name: "Any frame",    from: 17, to: 20, out: { kind: "dissolve", dur: 0.8 } },
+  { id: "s09", name: "Voice",        from: 20, to: 23, out: { kind: "cut" } },
+  { id: "s10", name: "Review",       from: 23, to: 27, out: { kind: "cut" } },
+  { id: "s11", name: "Checks",       from: 27, to: 29, out: { kind: "cut" } },
+  { id: "s13", name: "Get it",       from: 29, to: 32.5, out: null },
 ];
-export const DURATION = () => barT(28.5);   // 55.16 s at 124 BPM; the music rings out under the end card
+export const DURATION = () => barT(32.5);   // 70.91 s at 110 BPM; the music rings out under the end card
 const HANDOFF_AT = { cut: 0, dissolve: 0.5, push: 0.5, "zoom-through": 0.5, whip: 0.5, wipe: 0.5, "light-leak": 0.5, morph: 0.475 };
 
 // The handoffs between shots, in order, with absolute times.
@@ -96,6 +97,11 @@ export const spring01 = (t, t0, { duration = 0.6, damping = 0.82 } = {}) =>
 // A slow push that keeps a hold alive: scale 1 -> 1 + amount, linear over [t0, t1] (the camera's
 // steady drift; linear is allowed for a steady process). Keep amount at 0.02–0.05.
 export const drift = (t, t0, t1, amount = 0.03) => 1 + amount * clamp((t - t0) / (t1 - t0), 0, 1);
+
+// The Apple-announcement text entrance: up 24 px from 8 px of blur over 0.9 s, ease-out; out in 0.54 s.
+// The default for every headline and subhead in v2. Start it 2 frames before its beat.
+export const appear = (el, t, t0, t1 = Infinity, o = {}) =>
+  show(el, t, t0, t1, { dur: 0.9, dy: 24, scale: 1, blur: 8, ease: easeOut, ...o });
 
 // A hit on the beat: a quick scale of `amount` that peaks `at` and is gone 6 frames later. It rises
 // over 2 frames, so the peak lands on the beat. Use it on the shot's hero once, never on every beat.

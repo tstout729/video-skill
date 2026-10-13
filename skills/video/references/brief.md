@@ -52,7 +52,7 @@ Cuts are the default handoff between shots. A match cut or a wipe is a deliberat
 | playful | ζ 0.5–0.6 on position and size only, 10% squash on landings, arcs on every travel |
 | calm | ζ 1.0, moves of 800 ms or more, one change per 2 bars, ambient motion under 2% |
 | energetic | cuts on every beat, layout changes on every bar, 120–128 BPM |
-| upbeat, like a keynote | `bed.py --mood anthem` at 124 BPM with a one-beat stop before each reveal; a black stage (#000) and Apple's light gray (#F5F5F7) alternating; one or two words per shot at 140–220 px, landing on downbeats from 14 px of blur and 106% scale; real output in every shot; a cut or handoff on every bar line (`keynote/brief.md`) |
+| like an Apple announcement | measured from Apple's 2025–26 product films: a sub-bass-led score at 100–130 BPM with one breath before a hard drop; a black stage; one small centered caption per shot (about 5% of the frame's height, white key phrase, gray rest), only the product name set huge; the output on screens floating in black with reflections; a slow push in every shot; a cut on the bar; each shot 4 s or more (`keynote/brief.md`) |
 | cinematic | 24 fps, a 180° shutter (`--shutter 0.5`), slow push-ins, shallow parallax |
 | animation | a tempo (120 BPM), 3–6 frames of anticipation, springs with exact ζ, follow-through 80–150 ms after the main move |
 

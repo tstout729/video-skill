@@ -71,3 +71,20 @@ svg.plot { position: absolute; overflow: visible; }
 svg.plot .axis { stroke: currentColor; stroke-opacity: 0.25; stroke-width: 2; fill: none; }
 svg.plot .curve { stroke: var(--saffron); stroke-width: 6; fill: none; stroke-linecap: round; stroke-linejoin: round; }
 .placeholder { position: absolute; left: 54px; right: 54px; top: 520px; text-align: center; }
+
+/* ---- v2: the Apple-announcement look ---- */
+/* A headline and its subhead, centered: white over black, then Apple's gray. */
+.headline { font-size: 132px; font-weight: 700; letter-spacing: -0.045em; line-height: 0.98; text-align: center; white-space: nowrap; }
+.subhead { font-size: 44px; font-weight: 600; letter-spacing: -0.012em; line-height: 1.2; text-align: center; color: #86868b; }
+/* A screen floating in black space: put .screen inside a .stage3d and tilt it with rotateY/rotateX.
+   The reflection on the floor is the screen's own picture, faded (check it renders in headless Chromium). */
+.stage3d { position: absolute; perspective: 1800px; perspective-origin: 50% 40%; }
+.screen { position: absolute; overflow: hidden; border-radius: 28px; background: #000; transform-style: preserve-3d;
+  -webkit-box-reflect: below 14px linear-gradient(to bottom, transparent 64%, rgba(255, 255, 255, 0.14)); }
+.screen::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 3;
+  box-shadow: inset 0 0 0 1px rgba(245, 245, 247, 0.14); }
+.screen img, .screen canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+/* v2.1: Apple's feature captions, measured from Apple's 2025–26 product films: one centered line, about
+   5% of the frame's height, white for the key phrase and gray for the rest. Only the product name is huge. */
+.caption { font-size: 64px; font-weight: 600; letter-spacing: -0.022em; line-height: 1.15; text-align: center; color: #f5f5f7; white-space: nowrap; }
+.caption .soft { color: #86868b; }

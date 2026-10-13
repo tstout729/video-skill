@@ -2,6 +2,7 @@
 **/clips/
 **/media/
 **/music/*.wav
+**/music/*.mp3
 **/out/
 **/qa/
 **/render/
