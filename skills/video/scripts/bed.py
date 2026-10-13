@@ -5,11 +5,22 @@
 # ///
 """Synthesize a royalty-free music bed to cut on, and write its exact beat grid.
 
-    python3 bed.py --out bed.wav [--bpm 120] [--bars 16] [--key A] [--mood calm|drive]
-        [--beats beats.js] [--seed 1] [--loop] [--first 0.5] [--lufs -14]
+    python3 bed.py --out bed.wav [--bpm 120] [--bars 16] [--key A] [--mood calm|drive|anthem]
+        [--sections intro:3,build:1,drop:8,end:2] [--beats beats.js] [--seed 1] [--loop]
+        [--first 0.5] [--lufs -14]
 
-calm   felt-piano arpeggio over a warm pad, a soft shaker, a very soft kick on beats 1 and 3
-drive  tight kick on every beat, clap on 2 and 4, muted pluck ostinato, eighth-note bass
+calm    felt-piano arpeggio over a warm pad, a soft shaker, a very soft kick on beats 1 and 3
+drive   tight kick on every beat, clap on 2 and 4, muted pluck ostinato, eighth-note bass
+anthem  an upbeat launch track, arranged in --sections: four-on-the-floor kick, clap and snare on
+        2 and 4, offbeat open hats, bright detuned-saw chords pumping under the kick, a sixteenth-
+        note lead hook, rolling eighth-note bass. Section kinds:
+          intro  the chords and a muted hook, darker at first, opening up; hats, then the kick, join
+          build  one bar or more on the dominant: kick, a snare roll that speeds up and a riser;
+                 everything stops on the last beat (a one-beat stop), so the next downbeat lands
+          drop   everything, with an impact and a crash on its first downbeat
+          break  no kick: a warm pad, a felt-piano arpeggio, a soft shaker (room for a voice)
+          end    one final hit on its first downbeat, then the chord rings out and fades
+        Only the end may have a fractional length (end:3.5); --sections sets the number of bars.
 
 The chords loop I-V-vi-IV in the key (i-VI-III-VII for a minor key such as "F#m"), voice-led,
 with velocities humanized by --seed and a short reverb (Schroeder allpasses into a feedback
@@ -390,6 +401,74 @@ def riser(dur: float) -> np.ndarray:
     return sig * p ** 2.5
 
 
+@functools.cache
+def saw_tables(midi: int) -> tuple[np.ndarray, np.ndarray]:
+    """Dark and bright saw cycles for one pitch, band-limited under 15 kHz so high notes never
+    alias."""
+    n = max(4, min(64, int(15000 / hz(midi))))
+    return table(n, 1.0, 3.0), table(n, 1.0, 40.0)
+
+
+def supersaw(midi: int, dur: float, b0: float, b1: float, rng: np.random.Generator,
+             release: float = 0.06) -> np.ndarray:
+    """Five detuned saws spread across the stereo field (the bright chord of an upbeat track).
+    Brightness moves from b0 to b1 over the note: 0 dark, 1 fully open."""
+    n = int((dur + release) * SR)
+    t = np.arange(n) / SR
+    dark, bright = saw_tables(midi)
+    b = np.clip(b0 + (b1 - b0) * np.clip(t / max(dur, 1e-6), 0, 1), 0, 1)
+    out = np.zeros((n, 2))
+    for cents, pan in ((-16, -0.85), (-7, -0.4), (0, 0.0), (7, 0.4), (16, 0.85)):
+        f, ph = hz(midi) * 2 ** (cents / 1200), rng.random()
+        voice = osc(dark, f, n, ph) * (1 - b) + osc(bright, f, n, ph) * b
+        out += voice[:, None] * pan_gains(pan)
+    env = np.minimum(1, t / 0.006) * (1 - ramp(t, dur, release))
+    return out * env[:, None] / 5
+
+
+@functools.cache
+def lead(midi: int, layer: int) -> np.ndarray:
+    """A bright pluck for the hook: saw partials whose highs fade first, two voices 8 cents apart."""
+    f0 = hz(midi)
+    vel = (0.6, 0.8, 1.0)[layer]
+    t = np.arange(int(0.9 * SR)) / SR
+    out = np.zeros_like(t)
+    for k in range(1, 40):
+        if k * f0 > 12000:
+            break
+        amp = k ** -1.0 * np.exp(-(k - 1) * (0.10 - 0.04 * vel))
+        tau = 0.42 / (1 + 0.22 * (k - 1))
+        out += amp * np.exp(-t / tau) * (np.sin(2 * np.pi * k * f0 * t) + 0.5 * np.sin(2 * np.pi * k * f0 * 1.0046 * t + 0.7))
+    out = out * np.minimum(1, t / 0.002)
+    out *= 1 - ramp(t, 0.8, 0.1)
+    return out / np.abs(out).max()
+
+
+def snare() -> np.ndarray:
+    """A tight snare: a short tone near 200 Hz under a bright noise burst."""
+    t = np.arange(int(0.3 * SR)) / SR
+    f = 185 + 60 * np.exp(-t / 0.01)
+    tone = np.sin(2 * np.pi * (np.cumsum(f) - f[0]) / SR) * np.exp(-t / 0.05)
+    noise = band_noise(np.random.default_rng(12), 0.3, 1500, 9000, dense=1.5) * np.exp(-t / 0.11)
+    return (0.55 * tone + noise) * np.minimum(1, t / 0.0005)
+
+
+def crash() -> np.ndarray:
+    t = np.arange(int(2.2 * SR)) / SR
+    noise = band_noise(np.random.default_rng(13), 2.2, 3500, 15000, dense=1.0)
+    return noise * np.minimum(1, t / 0.001) * (0.35 * np.exp(-t / 0.08) + 0.65 * np.exp(-t / 0.7))
+
+
+def impact() -> np.ndarray:
+    """The hit on a drop: a pitched thump that settles near 75 Hz (phones still play it), a body of
+    filtered noise, and a long soft tail for the reverb."""
+    t = np.arange(int(1.4 * SR)) / SR
+    f = 75 + 70 * np.exp(-t / 0.05)
+    thump = np.tanh(1.8 * np.sin(2 * np.pi * (np.cumsum(f) - f[0]) / SR) * np.exp(-t / 0.32)) / np.tanh(1.8)
+    body = band_noise(np.random.default_rng(14), 1.4, 200, 2500, dense=1.0) * np.exp(-t / 0.18)
+    return (thump + 0.35 * body) * np.minimum(1, t / 0.0008)
+
+
 def pan_gains(pan: float) -> np.ndarray:
     th = (pan + 1) * np.pi / 4
     return np.array([np.cos(th), np.sin(th)]) * np.sqrt(2)
@@ -639,6 +718,235 @@ def render(bpm: float = 120.0, bars: int = 16, key: str = "A", mood: str = "calm
     return mix
 
 
+# ---------- the anthem: an arranged, upbeat launch track ----------
+
+SECTION_KINDS = ("intro", "build", "drop", "break", "end")
+
+
+def parse_sections(spec: str) -> list[tuple[str, float]]:
+    """"intro:3,build:1,drop:8,end:2" -> [("intro", 3.0), ...]."""
+    out = []
+    for part in spec.split(","):
+        kind, _, n = part.strip().partition(":")
+        try:
+            bars = float(n)
+        except ValueError:
+            bars = 0.0
+        if kind not in SECTION_KINDS or bars <= 0:
+            raise SystemExit(f"--sections: {part.strip()!r} is not kind:bars, with a kind in {', '.join(SECTION_KINDS)}")
+        if kind != "end" and bars != int(bars):
+            raise SystemExit("--sections: only the end may have a fractional length")
+        out.append((kind, bars))
+    if any(k == "end" for k, _ in out[:-1]):
+        raise SystemExit("--sections: the end comes last")
+    return out
+
+
+def default_sections(bars: int) -> str:
+    return f"drop:{bars}" if bars < 8 else f"intro:2,build:1,drop:{bars - 5},end:2"
+
+
+def render_anthem(bpm: float, key: str, sections: list[tuple[str, float]], seed: int = 1,
+                  first: float = 0.5, target: float = -14.0) -> np.ndarray:
+    """Render the anthem as float stereo (n, 2) at 48 kHz, arranged in sections."""
+    spb = 60.0 / bpm
+    total_bars = sum(b for _, b in sections)
+    ends = sections[-1][0] == "end"
+    total = first + total_bars * 4 * spb + (0.0 if ends else 1.6)
+    n = int(np.ceil((total + 5.0) * SR))
+    rng = np.random.default_rng(seed)
+    root, minor = parse_key(key)
+    scale = MINOR if minor else MAJOR
+    cycle = LOOP_MINOR if minor else LOOP_MAJOR
+    dominant = (4, (0, 2, 4, 6))   # V7 under a build (v7 in a minor key): four distinct tones
+
+    def at(b: float) -> float:
+        return first + b * spb
+
+    def vel(base: float) -> float:
+        return base * float(np.clip(1 + rng.normal(0, 0.06), 0.85, 1.15))
+
+    stems = {k: Bus(n) for k in ("kick", "snare", "hats", "chords", "lead", "keys", "pad", "bass", "fx")}
+    send = Bus(n)
+
+    def place(stem: str, sig, t: float, gain: float, pan: float = 0.0, wet: float = 0.0) -> None:
+        stems[stem].add(sig, t, gain, pan)
+        if wet:
+            send.add(sig, t, gain * wet, pan)
+
+    # Every bar: its section's kind, its index in the section, and the section's length.
+    bars, start = [], 0.0
+    for kind, length in sections:
+        bars += [(kind, i, length, start) for i in range(int(np.ceil(length)))]
+        start += length
+
+    def chord_for(kind: str, i: int):
+        if kind == "build":
+            return dominant
+        if kind == "break":
+            return [cycle[3], cycle[0], cycle[2], cycle[1]][i % 4]   # IV I vi V: it leans into the build
+        if kind == "end":
+            return cycle[0]
+        return cycle[i % 4]                                          # intro and drops start on the tonic
+
+    def brightness(kind: str, p: float) -> float:   # p: 0..1 through the section
+        return {"intro": 0.08 + 0.47 * p, "build": 0.55 + 0.45 * p, "drop": 1.0, "break": 0.35, "end": 0.8}[kind]
+
+    kicks, stops = [], []
+    chords_prev = lead_prev = keys_prev = pad_prev = None
+    bass_prev = root_prev = None
+    hook = ((0, 0, 2), (3, 2, 1), (6, 3, 1), (8, 1, 2), (11, 2, 1), (14, 3, 1), (7, 0, 0), (15, 0, 0))
+    for b, (kind, i, length, s0) in enumerate(bars):
+        degree, steps = chord_for(kind, i)
+        pcs = chord_pcs(root, scale, degree, steps)
+        bar_t = at(4 * b)
+        last = i == int(np.ceil(length)) - 1
+        stop = kind == "build" and last          # the build's last beat is silent
+        beats = 3 if stop else 4
+        p0, p1 = i / length, min(1.0, (i + beats / 4) / length)
+        first_bar = i == 0
+
+        # Chords: bright detuned saws, one sustained chord per bar, pumping under the kick.
+        if kind in ("intro", "build", "drop") or (kind == "end" and first_bar):
+            chords_prev = voice(pcs, chords_prev, 60, 79)
+            dur = 1.5 * spb if kind == "end" else beats * spb
+            gain = {"intro": 0.085 + 0.045 * p0, "build": 0.13, "drop": 0.16, "end": 0.15}[kind]
+            release = 1.1 if kind == "end" else (0.03 if stop else 0.1)
+            for m in chords_prev:
+                place("chords", supersaw(m, dur, brightness(kind, p0), brightness(kind, p1), rng, release),
+                      bar_t, gain * vel(1.0), wet=0.3)
+
+        # The hook: sixteenths on a 3-3-2 pattern. Muted in the intro and builds, bright in drops.
+        if kind in ("intro", "build", "drop"):
+            lead_prev = voice(pcs, lead_prev, 64, 84)
+            for step, idx, layer in hook:
+                if stop and step >= 12:
+                    continue
+                pan = (-0.2, 0.2)[step % 2]
+                t = at(4 * b + step / 4)
+                if kind == "drop":
+                    place("lead", lead(lead_prev[idx], layer), t, (0.16, 0.22, 0.28)[layer] * vel(1.0), pan, 0.3)
+                else:
+                    g = (0.24, 0.33, 0.42)[layer] * (0.65 + 0.35 * p0)
+                    place("lead", pluck(lead_prev[idx], layer), t, g * vel(1.0), pan, 0.25)
+
+        # Felt piano: an eighth-note arpeggio in breaks; a rolled chord on the end's hit.
+        if kind == "break" or (kind == "end" and i < 2):
+            root_prev = nearest(pcs[0], root_prev, 40, 51)
+            keys_prev = voice(pcs, keys_prev, 57, 79)
+            line = [root_prev, *keys_prev]
+            if kind == "end":
+                notes = line if first_bar else [keys_prev[-1] + 12]
+                for j, m in enumerate(notes):
+                    place("keys", piano(m, 1), bar_t + 0.03 * j, 0.42 * vel(0.9), (m - 64) / 40, 0.4)
+            else:
+                accents = (0.95, 0.6, 0.75, 0.6, 0.85, 0.6, 0.72, 0.58)
+                for e, j in enumerate((0, 1, 2, 3, 4, 3, 2, 1)):
+                    m, a = line[j], accents[e]
+                    sig = piano(m, 2 if a >= 0.85 else 1 if a >= 0.7 else 0)
+                    keep = int((4 * spb - e * spb / 2 + 0.3) * SR)   # the damper lifts at the chord change
+                    sig = sig[:keep] * (1 - ramp(np.arange(min(keep, len(sig))) / SR, keep / SR - 0.3, 0.3))
+                    place("keys", sig, at(4 * b + e / 2), 0.3 * vel(a), (m - 64) / 40, 0.35)
+
+        # Pad: under breaks, and the end's long ring.
+        if kind == "break" or (kind == "end" and first_bar):
+            pad_prev = voice(pcs, pad_prev, 55, 74)
+            hold = (length * 4 * spb - 0.5) if kind == "end" else 4 * spb
+            for m in pad_prev:
+                note = pad_note(m, bar_t, hold, 0.05 if kind == "end" else 0.4, 1.6, 8 * 4 * spb, rng)
+                place("pad", note, bar_t, (0.1 if kind == "end" else 0.06) * vel(1.0), wet=0.5)
+
+        # Bass: rolling eighths in drops, a pedal in builds, soft whole notes in the intro's last bar
+        # and in breaks, one note on the end's hit.
+        bass_prev = nearest(pcs[0], bass_prev, *BASS_RANGE)
+        if kind == "drop":
+            for e in range(8):
+                m = bass_prev + (12 if e == 7 else 0)
+                place("bass", bass_note(m, 0.75 * spb / 2, False), at(4 * b + e / 2), 0.42 * vel(1.0 if e % 2 else 0.85))
+        elif kind == "build":
+            for e in range(2 * beats):
+                place("bass", bass_note(bass_prev, 0.7 * spb / 2, False), at(4 * b + e / 2), 0.36 * vel(0.9))
+        elif kind == "break" or (kind == "intro" and last):
+            place("bass", bass_note(bass_prev, 4 * spb, True), bar_t, 0.14 * vel(1.0))
+        elif kind == "end" and first_bar:
+            place("bass", bass_note(bass_prev, 2 * spb, False), bar_t, 0.42)
+
+        # Drums.
+        for beat in range(beats):
+            t = at(4 * b + beat)   # exactly on the grid: the downbeats are measured against these
+            kick_on = kind in ("drop", "build") or (kind == "intro" and last) or (kind == "end" and first_bar and beat == 0)
+            if kick_on:
+                place("kick", kick("drive"), t, {"intro": 0.42, "build": 0.56}.get(kind, 0.64))
+                kicks.append(t)
+            if kind == "drop" and beat in (1, 3):
+                place("snare", clap(), t, 0.95 * vel(1.0), wet=0.3)
+                place("snare", snare(), t, 0.32 * vel(1.0), wet=0.2)
+            # The offbeat open hat is what makes it feel up.
+            if kind in ("drop", "build") or (kind == "intro" and i >= 1):
+                g = {"drop": 0.3, "build": 0.22}.get(kind, 0.12 + 0.08 * p0)
+                place("hats", hat(int(rng.integers(4)), True), at(4 * b + beat + 0.5), g * vel(1.0), 0.3, 0.08)
+            if kind == "drop":
+                for s, a in ((1, 0.45), (3, 0.35)):
+                    place("hats", hat(int(rng.integers(4))), at(4 * b + beat + s / 4), 0.28 * vel(a), -0.25, 0.05)
+            if kind == "break":
+                for s, a in enumerate((0.35, 0.22, 0.75, 0.3)):
+                    place("hats", shaker(int(rng.integers(4))), at(4 * b + beat + s / 4), 0.16 * vel(a), 0.35, 0.2)
+
+        # A snare fill closes every fourth bar of a drop, unless the drop ends there.
+        if kind == "drop" and i % 4 == 3 and not last:
+            for s in range(4):
+                place("snare", snare(), at(4 * b + 3 + s / 4), (0.16 + 0.05 * s) * vel(1.0), wet=0.25)
+
+        # A build's last bar: a snare roll that speeds up (eighths, sixteenths, then 32nds) under a
+        # riser, both cut off by the stop.
+        if kind == "build" and last:
+            hits = [0, 0.5] + [1 + k / 4 for k in range(4)] + [2 + k / 8 for k in range(8)]
+            for k, h in enumerate(hits):
+                place("snare", snare(), at(4 * b + h), (0.12 + 0.30 * k / (len(hits) - 1)) * vel(1.0), wet=0.3)
+            dur = 3 * spb if length == 1 else min(4 * length - 1, 8) * spb
+            place("fx", riser(dur), at(4 * b + 3) - dur, 0.5, wet=0.4)
+            stops.append((at(4 * b + 3), at(4 * b + 4)))
+        if kind == "build" and not last:
+            for beat in (1, 3):
+                place("snare", snare(), at(4 * b + beat), 0.22 * vel(1.0), wet=0.25)
+
+        # Impact and crash on the first downbeat of each drop and on the end's hit.
+        if first_bar and kind in ("drop", "end"):
+            place("fx", impact(), bar_t, 0.62, wet=0.45)
+            place("hats", crash(), bar_t, 0.28, 0.0, 0.3)
+
+    # Sidechain: chords, bass and pad duck under each kick, so the track pumps.
+    t = np.arange(int(0.4 * SR)) / SR
+    shape = np.minimum(1, t / 0.003) * np.exp(-np.maximum(t - 0.003, 0) / 0.1)
+    duck = np.zeros(n + len(shape))
+    for k in kicks:
+        i = round(k * SR)
+        duck[i:i + len(shape)] = np.maximum(duck[i:i + len(shape)], shape)
+    duck = duck[:n]
+    for stem, depth in (("chords", 0.6), ("bass", 0.65), ("pad", 0.3), ("lead", 0.15)):
+        stems[stem].x *= (1 - depth * duck)[:, None]
+    # The saws: no mud under the bass, no fizz above 9 kHz.
+    stems["chords"].x = filt(stems["chords"].x, [biquad("hp", 180), biquad("lp", 9000)])
+
+    dry = sum(s.x for s in stems.values())
+    # The stops: the dry track goes silent for the build's last beat; only the reverb's tail rings.
+    tt = np.arange(n) / SR
+    for a, z in stops:
+        dry *= (1 - ramp(tt, a - 0.004, 0.004) * (1 - ramp(tt, z - 0.004, 0.004)))[:, None]
+    wet_in = filt(filt(send.x.mean(axis=1), [biquad("hp", 220)]), [biquad("lp", 6500)])
+    mix = dry + reverb(wet_in, 1.3)[:n] * 0.3
+
+    mix = mix[:round(total * SR)]
+    mix = filt(mix, [biquad("hp", 60)])
+    # Fade before mastering, so the loudness is measured on what plays.
+    t = np.arange(len(mix)) / SR
+    mix *= (1 - ramp(t, total - (2.4 if ends else 0.45), 2.4 if ends else 0.45))[:, None]
+    mix = master(mix, target, circular=False)
+    if first < 0.01:
+        mix *= ramp(t, 0, 0.003)[:, None]
+    return mix
+
+
 def beats_of(bpm: float, bars: int, first: float, loop: bool) -> dict:
     """window.BEATS for the bed: every beat of the music from the first downbeat."""
     times = beat_grid(bpm, first, bars * 4)
@@ -672,7 +980,9 @@ def main() -> None:
     ap.add_argument("--bpm", type=float, default=120.0)
     ap.add_argument("--bars", type=int, default=16, help="bars of 4 beats")
     ap.add_argument("--key", default="A", help="A, F#, Bb ... add m for minor (F#m)")
-    ap.add_argument("--mood", choices=("calm", "drive"), default="calm")
+    ap.add_argument("--mood", choices=("calm", "drive", "anthem"), default="calm")
+    ap.add_argument("--sections", help="anthem only: the arrangement, e.g. intro:3,build:1,drop:8,end:2 "
+                    "(sets the number of bars)")
     ap.add_argument("--beats", type=Path, help="write the beat grid here (beats.js or .json)")
     ap.add_argument("--seed", type=int, default=1, help="humanized velocity and timing")
     ap.add_argument("--loop", action="store_true", help="exactly --bars long; the end flows into the start")
@@ -681,13 +991,23 @@ def main() -> None:
     args = ap.parse_args()
     if not 40 <= args.bpm <= 220 or args.bars < 1 or args.first < 0:
         raise SystemExit("--bpm must be 40-220, --bars at least 1, --first at least 0")
+    if args.sections and args.mood != "anthem":
+        raise SystemExit("--sections arranges the anthem mood only")
+    if args.mood == "anthem" and args.loop:
+        raise SystemExit("the anthem is arranged with a start and an end; it does not loop")
 
-    mix = render(args.bpm, args.bars, args.key, args.mood, args.seed, args.loop, args.first, args.lufs)
     args.out.parent.mkdir(parents=True, exist_ok=True)
+    if args.mood == "anthem":
+        spec = args.sections or default_sections(args.bars)
+        sections = parse_sections(spec)
+        mix = render_anthem(args.bpm, args.key, sections, args.seed, args.first, args.lufs)
+        args.bars = int(np.ceil(sum(b for _, b in sections)))
+    else:
+        mix = render(args.bpm, args.bars, args.key, args.mood, args.seed, args.loop, args.first, args.lufs)
     write_wav(args.out, mix, args.seed)
     _, minor = parse_key(args.key)
     note = f"{args.mood}, {args.bpm:g} BPM, {args.key} {'minor' if minor else 'major'}, seed {args.seed}" \
-           + (", loop" if args.loop else "")
+           + (", loop" if args.loop else "") + (f", sections {spec}" if args.mood == "anthem" else "")
     tp = 20 * np.log10(peak_envelope(mix).max() + 1e-12)
     print(f"{args.out}  {len(mix) / SR:.2f}s  {note}  {lufs(mix):.1f} LUFS  {tp:.1f} dBTP  "
           f"below 60 Hz {low_share(mix):.1%}")

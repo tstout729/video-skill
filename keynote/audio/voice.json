@@ -1,0 +1,77 @@
+{
+ "text": "It writes the script, records the voice, and times every move to the words.",
+ "duration": 4.88,
+ "words": [
+  {
+   "word": "It",
+   "start": 0.0,
+   "end": 0.16
+  },
+  {
+   "word": "writes",
+   "start": 0.32,
+   "end": 0.48
+  },
+  {
+   "word": "the",
+   "start": 0.52,
+   "end": 0.56
+  },
+  {
+   "word": "script,",
+   "start": 0.64,
+   "end": 1.28
+  },
+  {
+   "word": "records",
+   "start": 1.52,
+   "end": 1.76
+  },
+  {
+   "word": "the",
+   "start": 1.8,
+   "end": 1.84
+  },
+  {
+   "word": "voice,",
+   "start": 1.92,
+   "end": 2.48
+  },
+  {
+   "word": "and",
+   "start": 2.56,
+   "end": 2.64
+  },
+  {
+   "word": "times",
+   "start": 2.88,
+   "end": 3.12
+  },
+  {
+   "word": "every",
+   "start": 3.28,
+   "end": 3.44
+  },
+  {
+   "word": "move",
+   "start": 3.6,
+   "end": 3.92
+  },
+  {
+   "word": "to",
+   "start": 3.96,
+   "end": 4.0
+  },
+  {
+   "word": "the",
+   "start": 4.04,
+   "end": 4.08
+  },
+  {
+   "word": "words.",
+   "start": 4.16,
+   "end": 4.96
+  }
+ ],
+ "source": "one-minute/audio/s05.mp3 (George, ElevenLabs eleven_v4)"
+}

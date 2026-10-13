@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Video Skill: the keynote film</title>
+<link rel="stylesheet" href="design.css">
+<script type="importmap">
+{"imports": {"three": "/_vendor/three/build/three.module.js", "three/addons/": "/_vendor/three/examples/jsm/"}}
+</script>
+</head>
+<body>
+<div id="scenes"></div>
+<div id="finish"></div>
+<script src="music/beats.js" onerror="window.BEATS = { bpm: 124, first: 0 }"></script>
+<script type="module">
+import { make, SHOTS, shotWindow, handoffs, barT, DURATION } from "./kit.js";
+import { scenes, finish } from "/_skill/runtime/transitions.js";
+
+const ids = SHOTS.map((s) => s.id);
+const wins = Object.fromEntries(ids.map((id) => [id, shotWindow(id)]));
+// The voice line in shot s09: George's real take and its word times (audio/voice.json).
+window.VOICE = await (await fetch("audio/voice.json")).json();
+await Promise.all([document.fonts.load("700 220px Geist"), document.fonts.load("500 28px 'Geist Mono'")]);
+
+// ---- shots: each module default-exports build(root, k) -> (t) => void | Promise ----
+const box = document.getElementById("scenes");
+const kit = await import("./kit.js");
+const roots = {}, seekers = {};
+for (const s of SHOTS) {
+  const root = make("section", "scene", "", box);
+  root.dataset.scene = s.id;
+  roots[s.id] = root;
+  let build = null;
+  try { build = (await import(`./scenes/${s.id}.js`)).default; } catch (e) {
+    if (!/Failed to fetch|Importing a module|404/.test(String(e))) throw e;
+  }
+  if (build) {
+    seekers[s.id] = await build(root, { ...kit, id: s.id, win: wins[s.id] });
+  } else {
+    // Placeholder until the shot is built: its id and name.
+    make("div", "placeholder", `<div class="label">${s.id} · bars ${s.from}–${s.to}</div><div class="hero" style="margin-top:24px">${s.name}</div>`, root);
+    seekers[s.id] = () => {};
+  }
+}
+
+// ---- the film: shot roots with the handoffs between them ----
+const hs = handoffs();
+const film = scenes(ids.flatMap((id, i) => (i < hs.length ? [roots[id], hs[i]] : [roots[id]])));
+// No finish sweeps: on a black stage the 12% white band reads as grey haze (log/hero.md). The three
+// beats the brief names get the 3D studio's own specular sweep across the mark instead.
+const sweeps = {};
+
+// ---- seek ----
+window.seek = (t) => {
+  // Every shot on screen at t draws its content first; then film(t) decides what shows.
+  const pending = ids.filter((id) => t >= wins[id].cutIn - 1e-6 && t <= wins[id].cutOut + 1e-6).map((id) => seekers[id](t));
+  film(t);
+  finish("#finish", t, { grain: 0.03, vignette: 0.14, sweeps });
+  return Promise.all(pending);
+};
+
+window.VIDEO = { width: 1080, height: 1350, duration: DURATION(),
+  cuts: film.cuts,   // hard cuts only: motion blur never blends two shots there
+  stills: ids.map((id) => +((wins[id].start + wins[id].end) / 2).toFixed(2)) };
+window.WINDOWS = wins;   // for the review tools and the shot builders
+</script>
+</body>
+</html>

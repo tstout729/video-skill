@@ -1,0 +1,73 @@
+/* Video Skill, the keynote film: the one design system every shot uses. 1080x1350 (4:5). */
+
+@font-face { font-family: "Geist"; src: url("/_skill/assets/fonts/geist-wght-normal.woff2") format("woff2"); font-weight: 100 900; }
+@font-face { font-family: "Geist Mono"; src: url("/_skill/assets/fonts/geist-mono-wght-normal.woff2") format("woff2"); font-weight: 100 900; }
+
+:root {
+  --black: #000000; --studio: #0b0b0c; --white: #f5f5f7; --ink: #1d1d1f;
+  --muted: #6e6e73; --muted-dark: #a1a1a6; --dim: #48484a;
+  --saffron: #f2b544; --orange: #ee7a3a; --clay: #e2553a; --mint: #7fd1a8; --green: #1a6b45;
+  /* The one gradient: display type only, never chrome, never a background. */
+  --grad: linear-gradient(100deg, var(--saffron) 0%, var(--orange) 52%, var(--clay) 100%);
+
+  /* Type scale at 1080 px wide. Nothing under 28 px. */
+  --t-giant: 220px;  /* one word, the shot's whole message */
+  --t-hero: 168px;
+  --t-display: 120px;
+  --t-h1: 84px;
+  --t-h2: 56px;
+  --t-body: 40px;
+  --t-small: 32px;
+  --t-label: 28px;
+
+  --r-win: 36px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1080px; height: 1350px; overflow: hidden; background: var(--black); }
+body {
+  font-family: "Geist", system-ui, sans-serif; color: var(--white); font-size: var(--t-body);
+  font-feature-settings: "tnum" 1, "ss01" 1; -webkit-font-smoothing: antialiased; text-rendering: geometricPrecision;
+}
+
+#scenes { position: absolute; inset: 0; overflow: hidden; background: var(--black); }
+/* transitions.js owns each root's opacity, transform, filter, clip-path, z-index and visibility.
+   A shot sets only its own background and its content. Dark is the default; .light flips it. */
+.scene { position: absolute; inset: 0; overflow: hidden; background: var(--black); color: var(--white); }
+.scene.light { background: var(--white); color: var(--ink); }
+#finish { z-index: 1000; }
+
+/* ---- type ---- */
+.giant { font-size: var(--t-giant); font-weight: 700; letter-spacing: -0.055em; line-height: 0.88; white-space: nowrap; }
+.hero { font-size: var(--t-hero); font-weight: 700; letter-spacing: -0.05em; line-height: 0.9; white-space: nowrap; }
+.display { font-size: var(--t-display); font-weight: 700; letter-spacing: -0.045em; line-height: 0.95; }
+.h1 { font-size: var(--t-h1); font-weight: 700; letter-spacing: -0.035em; line-height: 1.0; }
+.h2 { font-size: var(--t-h2); font-weight: 600; letter-spacing: -0.025em; line-height: 1.1; }
+.body { font-size: var(--t-body); font-weight: 500; line-height: 1.3; }
+.small { font-size: var(--t-small); font-weight: 500; line-height: 1.3; color: var(--muted-dark); }
+.light .small { color: var(--muted); }
+.label { font: 500 var(--t-label)/1.1 "Geist Mono", monospace; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted-dark); }
+.light .label { color: var(--muted); }
+.mono { font-family: "Geist Mono", ui-monospace, monospace; font-feature-settings: "zero" 1; }
+.grad { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.word { display: inline-block; }
+.center { text-align: center; }
+.abs { position: absolute; }
+
+/* ---- windows ---- */
+.clipwin { position: absolute; overflow: hidden; border-radius: var(--r-win); background: #000; }
+/* The hairline sits above the picture: an inset shadow on the window itself is covered by its <img>. */
+.clipwin::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 3;
+  box-shadow: inset 0 0 0 1px rgba(245, 245, 247, 0.14); }
+.clipwin.light { box-shadow: 0 30px 80px rgba(0, 0, 0, 0.16), 0 3px 10px rgba(0, 0, 0, 0.08); }
+.clipwin.light::after { box-shadow: inset 0 0 0 1px rgba(29, 29, 31, 0.10); }
+.clipwin img, .clipwin canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.tile { position: absolute; overflow: hidden; border-radius: 32px; background: #161617; }
+.tile::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 3;
+  box-shadow: inset 0 0 0 1px rgba(245, 245, 247, 0.10); }
+.tile img, .tile canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+
+svg.plot { position: absolute; overflow: visible; }
+svg.plot .axis { stroke: currentColor; stroke-opacity: 0.25; stroke-width: 2; fill: none; }
+svg.plot .curve { stroke: var(--saffron); stroke-width: 6; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.placeholder { position: absolute; left: 54px; right: 54px; top: 520px; text-align: center; }
