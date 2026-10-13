@@ -28,6 +28,6 @@ The film is cut to the music: frames are 60 fps, a beat is 29.03 frames, a bar 1
 
 ## Round 3: the final file (2026-10-12)
 
-- Render: 3,310 frames at 60 fps with 4 subframes, 268 s. Mix: −14.0 LUFS, −1.2 dBTP true peak, nothing below 60 Hz; check_sync.py puts all 5 sounds 0.9–1.3 frames after their picture. The music's hits measured in the final file land on their cuts: drop 1 at f464.5 and drop 2 at f2206.5 (each cut at the same half-frame), the end hit at f2903.3 (cut f2903.2); both stops fall to −41 dB under the hit.
+- Render: 3,310 frames at 60 fps with 4 subframes, 268 s. Mix: −14.0 LUFS, −1.2 dBTP true peak, nothing below 60 Hz; check_sync.py puts all 5 sounds 0.9–1.3 frames after their picture. The music's hits measured in the final file land on their cuts: drop 1 at f464.5 and drop 2 at f2206.5 (each cut at the same half-frame), the end hit at f2903.3 (cut f2903.2); the stops fall 39 dB and 42 dB under their hits.
 - Read in the LinkedIn copy (export.py, 83.9 MB): f0 rim-lit mark, f456 the stop (key off), the three-way style split, the voice line half lit, the review deck with this film's own sheet, and the two-line install card. No notes.
 - Delivered to Downloads and iCloud Drive (byte-identical). Not merged to `main`: the headline swap and the LinkedIn post wait for Trevor's review.
