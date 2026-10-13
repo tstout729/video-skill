@@ -25,3 +25,9 @@ The film is cut to the music: frames are 60 fps, a beat is 29.03 frames, a bar 1
 - s13 f3020 on: the end card showed only `/plugin marketplace add tstout729/video-skill`, but the plugin installs in two lines (README.md → Install). The pill now holds both lines (`/plugin install video-skill@video-skill` second); the repo line moved from y 1136 to y 1178. 15 of 15 s13 checks pass.
 - s10: the contact sheet inside the film was made before the s13 fix, so its last cell showed the one-line end card. Regenerated assets/sheet.png from the same 9 times and rendered again.
 - assets: the regenerated sheet was 8.1 MB because film grain does not compress. Rendered it with the finish off (1.7 MB). Without the vignette, the light cells' backgrounds match the sheet's paper, so the Walkthroughs cell filled 54% of its box and s10's region finder (60% minimum) dropped it; s10 now accepts 40% for the sheet, still matched by the common cell size. The onion skin keeps the finish (1.7 MB): without the vignette its light frame's edge vanishes into the paper. 14 of 14 s10 checks pass.
+
+## Round 3: the final file (2026-10-12)
+
+- Render: 3,310 frames at 60 fps with 4 subframes, 268 s. Mix: −14.0 LUFS, −1.2 dBTP true peak, nothing below 60 Hz; check_sync.py puts all 5 sounds 0.9–1.3 frames after their picture. The music's hits measured in the final file land on their cuts: drop 1 at f464.5 and drop 2 at f2206.5 (each cut at the same half-frame), the end hit at f2903.3 (cut f2903.2); both stops fall to −41 dB under the hit.
+- Read in the LinkedIn copy (export.py, 83.9 MB): f0 rim-lit mark, f456 the stop (key off), the three-way style split, the voice line half lit, the review deck with this film's own sheet, and the two-line install card. No notes.
+- Delivered to Downloads and iCloud Drive (byte-identical). Not merged to `main`: the headline swap and the LinkedIn post wait for Trevor's review.
