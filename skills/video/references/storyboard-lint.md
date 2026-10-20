@@ -90,15 +90,13 @@ The minimum is 28 px on a 1080 px short side, scaled for other sizes: 28 px for 
 
 ### Contrast
 
-Contrast is measured from the real pixels, so it works over photos, video frames, 2D canvases and WebGL:
+Contrast is measured from the real pixels, so it works over photos, video frames and canvases:
 
 1. Lint hides every glyph (`-webkit-text-fill-color: transparent`, which never moves the layout) and takes a screenshot. The median color behind each text's visible glyphs is its background.
 2. It marks every glyph magenta, then green, each with a 3 px outline, and takes two more screenshots. Where a glyph covers a pixel fully, the difference between the two marks shows how much of the text reaches the screen. Opacity, blur and anything translucent drawn over the text, such as a modal's scrim, all reduce it.
 3. The text's computed color, passed through that share, is compared with the background by the WCAG formula.
 
 All text needs 4.5:1. WCAG allows 3:1 for large text, but video text is read once, at a distance, often on a phone.
-
-A WebGL canvas needs `preserveDrawingBuffer: true`, as [3D with three.js](three.md) already requires.
 
 ### Covered text and overlaps
 

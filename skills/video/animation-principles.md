@@ -1,6 +1,6 @@
 # Animation principles and pacing
 
-Read this before you plan the motion. Review the draft against it before the final render. It applies to every video people watch: explainers, walkthroughs, loops and 3D pieces. It does not apply to transitions inside an app that people operate; those stay short (about 150–300 ms).
+Read this before you plan the motion. Review the draft against it before the final render. It applies to every video people watch: explainers, walkthroughs, loops and launch films. It does not apply to transitions inside an app that people operate; those stay short (about 150–300 ms).
 
 Every rule here is a number on purpose. Adjectives such as "smooth" or "premium" leave the decision to the model's defaults, and the defaults are what make motion look generated. Write the numbers into the brief ([directed brief](references/brief.md)).
 
@@ -68,7 +68,6 @@ Explainers and training run slower, because the viewer must learn the screen, no
 **Camera.**
 - Camera moves get the gentlest curves; objects get snappier ones. The camera moves only after the content has settled.
 - A starting point for parallax: speed 1.0 for the foreground, 0.5 for the midground and 0.2 for the background.
-- In 3D, use a narrow field of view, 35–50°.
 
 **Exaggeration for phones.** Most viewers watch on a phone. Take key poses 10–30% further than feels natural, in size, contrast and travel, never in bounce.
 
@@ -78,16 +77,16 @@ Explainers and training run slower, because the viewer must learn the screen, no
 
 ## The principles
 
-John Lasseter's SIGGRAPH 1987 paper, [Principles of Traditional Animation Applied to 3D Computer Animation](https://dl.acm.org/doi/10.1145/37402.37407), applies the Disney studio's principles of animation to computer animation. These are its eleven principles, in its order, and what each means for UI, diagram and 3D motion. In a short piece, five do most of the work: anticipation, squash and stretch, overlapping action, follow-through and arcs.
+John Lasseter's SIGGRAPH 1987 paper, [Principles of Traditional Animation Applied to 3D Computer Animation](https://dl.acm.org/doi/10.1145/37402.37407), applies the Disney studio's principles of animation to computer animation. These are its eleven principles, in its order, and what each means for UI and diagram motion. In a short piece, five do most of the work: anticipation, squash and stretch, overlapping action, follow-through and arcs.
 
-1. **Squash and stretch.** Keep it slight. A pressed button shrinks to about 0.97. A sliding pill stretches toward its target, then settles. A 3D object keeps its volume: it widens as it flattens.
+1. **Squash and stretch.** Keep it slight. A pressed button shrinks to about 0.97. A sliding pill stretches toward its target, then settles.
 2. **Timing.** Duration tells the viewer how big and how important a thing is. Heavy or important things move slower and hold longer. Give time to the preparation, the action and the result.
 3. **Anticipation.** Prepare the eye before each change: 3–6 frames of a small opposite move before a big one. The pointer arrives and presses before the screen responds. Dim or highlight before a reveal. The narrator names a thing just before it moves.
 4. **Staging.** Show one idea at a time, and make it unmistakable: the one-hero rule. Dim, blur or move away everything else, and zoom to the subject. Do not bring in a title, cards and arrows in the same second.
 5. **Follow-through and overlapping action.** Parts do not start and stop together. Stagger the items in a group by 40–80 ms. Let the trailing edge finish after the leading edge. Let a moved element settle with a slight overshoot (ζ about 0.8) instead of stopping dead.
 6. **Straight-ahead and pose-to-pose.** Work pose to pose. Plan the key poses first (the shot list in the brief), then the moves between them.
 7. **Slow in and slow out.** Every move eases in and eases out. Springs and Manim's default `smooth` do this. Use linear motion only for a steady process.
-8. **Arcs.** A thing that travels follows a gentle curve, not a straight line: the pointer's path, a card that flies to a list, a node that crosses a diagram, a hop in 3D.
+8. **Arcs.** A thing that travels follows a gentle curve, not a straight line: the pointer's path, a card that flies to a list, a node that crosses a diagram.
 9. **Exaggeration.** Make the important change big enough to see on a phone. Zoom in, enlarge the control, raise the contrast. Exaggerate size and clarity, not bounce.
 10. **Secondary action.** Small supporting motion, such as a counter that ticks or a check mark that draws, helps the main action. It never competes with the main action or starts at the same moment.
 11. **Appeal.** Clean shapes, one font, readable text and the real colors. The viewer wants to keep watching.

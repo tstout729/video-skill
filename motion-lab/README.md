@@ -19,7 +19,9 @@ A 5½-minute video that explains Florence's X Article [*Opus 5.5 Motion Lab: Mak
 The narration takes are in `audio/`, so no ElevenLabs key is needed. Run these from the repository root:
 
 ```sh
-bash skills/video/scripts/setup.sh --with three
+bash skills/video/scripts/setup.sh
+# The film's 3D mark needs three.js r186, which the skill no longer installs.
+npm install --silent --no-audit --no-fund --ignore-scripts --prefix "${VIDEO_SKILL_HOME:-$HOME/.cache/video-skill}" three@0.186.1
 cd motion-lab
 
 # The two files too large to commit, rebuilt exactly:

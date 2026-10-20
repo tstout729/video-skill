@@ -136,7 +136,7 @@ Fix a warning in one of these ways:
 
 The check found a real flaw in the example's first draft. The zoom-through's old scene was still a faint ghost zooming at full speed in its last frames, then vanished: a 12× speed jump at the transition's end. Fading it out by 90% of the way fixed it.
 
-The check sees DOM elements only. For a three.js or canvas scene, pin an invisible element to the object's projected position, as for `review.mjs graph`.
+The check sees DOM elements only. For a canvas scene, pin an invisible element to the object's projected position, as for `review.mjs graph`.
 
 ## Credits
 

@@ -66,7 +66,7 @@
 //        width per frame) or the direction or zoom reverses while both sides move. Writes a strip
 //        of frames across each edit with every frame's motion, prints a line per edit, and notes
 //        a cut missing from VIDEO.cuts or a VIDEO.cuts time inside a transition. Exits 0. Motion
-//        inside a canvas or WebGL is invisible to it; pin an element to the object, as for graph.
+//        inside a canvas is invisible to it; pin an element to the object, as for graph.
 //
 // Frames are numbered as render.mjs renders them: frame n of a page is window.seek(n / fps)
 // (--fps, default 60); a video uses its own frame rate and an exact ffmpeg seek. --debug opens

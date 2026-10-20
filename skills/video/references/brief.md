@@ -9,7 +9,7 @@ A brief is short. Most fit on one screen. Show it to the user before animating w
 brief → look frames → board → narrate → animate → review. Each step costs more than the one before, so get the user's yes before each costly step.
 
 1. **Brief.** Write it from the template below.
-2. **Look frames.** Build two to four key poses in the page at planned times, and render them at full size: `review.mjs board index.html --look`. The user approves the palette, type, materials and framing.
+2. **Look frames.** Build two to four key poses in the page at planned times, and render them at full size: `review.mjs board index.html --look`. The user approves the palette, type and framing.
 3. **Board.** List each shot's key pose in `window.SHOTS` and render the storyboard: `review.mjs board index.html`. The user approves or rejects each panel by its number ("1–4 yes; 5: hold the receipt longer").
 4. **Narrate.** Record the voice only after the board is approved, because narration costs ElevenLabs credits.
 5. **Animate.** Time the approved poses to the narrator's words, and add the motion between them.
@@ -25,14 +25,13 @@ brief → look frames → board → narrate → animate → review. Each step co
 GOAL: <one sentence: what the viewer should feel, know or do afterwards. Write this first.>
 AUDIENCE: <who watches, where, with or without sound>
 TIME: <duration> at <fps>. <frames> frames. <BPM if music>
-OUTPUT: <engine: Manim | HTML | HTML + three.js r186>, <width>x<height>, <fps> fps, <frames> frames, <loop: frames 0..N-1 | no loop>
+OUTPUT: <engine: Manim | HTML>, <width>x<height>, <fps> fps, <frames> frames, <loop: frames 0..N-1 | no loop>
 SHOTS:
   1. f0–f119 (0–2 s): <one hero move>. Handoff: <cut on beat 4 | match cut: the card becomes the window | mask wipe>
   2. ...
-LOOK: <background hex>, <ink hex>, <one accent hex, used only on ...>, <font>, <materials for 3D: satin ceramic, roughness 0.35, clearcoat 1>
+LOOK: <background hex>, <ink hex>, <one accent hex, used only on ...>, <font>
 MOTION: springs ζ 0.82 (UI) and 1.0 (text); entrances 400 ms ease-out, exits 200 ms ease-in; stagger 60 ms; anticipation 4 frames
-MODEL: <for 3D: the object's locked proportions, e.g. "slab 1 : 1 : 0.28, corner radius 22% of width, triangle 42%"; the library version>
-CAMERA: <for 3D or zooms: FOV 40°, path, one push-in at f240–f300 ease-in-out, parallax 1.0 / 0.5 / 0.2>
+CAMERA: <for zooms and pushes: path, one push-in at f240–f300 ease-in-out, parallax 1.0 / 0.5 / 0.2>
 SOUND: <voice id | silent | bed: calm, 120 BPM>; hits land 1 frame after their picture; -14 LUFS for social, -16 for training
 BAN: <the starter list below, plus anything specific>
 QA: look frames, then a storyboard signed off by panel number, before narration; render stills at <frames> and a contact sheet before the full render; speed graph the hero move of each shot; check() the numbers that can be tested (settle frames, the caption band) and run review.mjs audit; review.mjs lint passes (clipping, safe area, overlap, type of 28 px or more, contrast of 4.5:1 or more), with a reason for each allowed finding
@@ -44,9 +43,8 @@ Cuts are the default handoff between shots. A match cut or a wipe is a deliberat
 
 | The request says | The brief says |
 | --- | --- |
-| premium | ζ 0.8–0.85 springs, no overshoot on text, strong ease-out on entrances; real materials (satin ceramic, roughness 0.35, clearcoat 1), the brand color on one part only |
-| cool | a real light setup: key, fill and rim with colors and strengths, soft contact shadows, no glow |
-| modern | a narrow lens (FOV 35–50°), a camera that drifts and never stops, one push-in at a set time on ease-in-out |
+| premium | ζ 0.8–0.85 springs, no overshoot on text, strong ease-out on entrances; the brand color on one part only |
+| modern | a camera that drifts and never stops, one push-in at a set time on ease-in-out |
 | smooth | ease-out entrances of 400–600 ms, exits 40% shorter, items staggered 40–80 ms |
 | snappy | feedback in 100–150 ms, ζ 0.7, moves under 300 ms, holds unchanged |
 | playful | ζ 0.5–0.6 on position and size only, 10% squash on landings, arcs on every travel |
@@ -95,7 +93,6 @@ Paste this under every brief. It keeps every frame reproducible, checkable and f
 - A loop renders frames 0 to N−1, never frame N, which repeats frame 0 and causes a hitch at the seam. Drive a loop from a phase (frame ÷ N) with whole-number cycles, and sample noise along a circle (`loopNoise`) so it returns to its start.
 - Frame 0 is a finished composition: it is the thumbnail people see while the video loads.
 - Text is real text in the bundled fonts, never an image of text. Fonts load before the first frame.
-- For 3D: pin the library version (three.js r186 from `/_vendor/`), and name the exact options. For example, `TextGeometry` takes `depth`, not `height`: an unknown option is ignored, and the default depth of 50 makes the letters absurdly thick.
 
 ## Review log
 

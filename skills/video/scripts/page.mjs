@@ -4,8 +4,8 @@
 // The page is served over a local HTTP server (ES modules do not load from file://):
 //   /            the page's own folder
 //   /_skill/     this skill's folder, so pages import /_skill/runtime/motion.js
-//   /_vendor/    node_modules in the skill's cache folder (setup.sh --with three installs three.js),
-//                so pages import /_vendor/three/build/three.module.js at a pinned version
+//   /_vendor/    node_modules in the skill's cache folder (setup.sh --with gsap installs GSAP),
+//                so pages import /_vendor/gsap/index.js at a pinned version
 
 import { createRequire } from "node:module";
 import { execFileSync } from "node:child_process";
@@ -39,8 +39,7 @@ const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; ch
   ".mjs": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".json": "application/json; charset=utf-8",
   ".woff2": "font/woff2", ".woff": "font/woff", ".ttf": "font/ttf", ".otf": "font/otf",
   ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp",
-  ".mp3": "audio/mpeg", ".wav": "audio/wav", ".mp4": "video/mp4", ".webm": "video/webm",
-  ".glb": "model/gltf-binary", ".gltf": "model/gltf+json", ".hdr": "application/octet-stream" };
+  ".mp3": "audio/mpeg", ".wav": "audio/wav", ".mp4": "video/mp4", ".webm": "video/webm" };
 
 export async function serve(page, port = 0) {
   const roots = { "/_skill/": SKILL, "/_vendor/": path.join(CACHE, "node_modules") };
