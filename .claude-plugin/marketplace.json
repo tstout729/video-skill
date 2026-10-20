@@ -9,7 +9,7 @@
     {
       "name": "video-skill",
       "source": "./",
-      "description": "Make videos in code from a directed brief: narrated explainers, app walkthroughs and training videos, launch films with kinetic type, 3D and clips, and motion loops. Script, voice, word-timed animation, captions and music, reviewed frame by frame like an animator."
+      "description": "Make videos in code from a directed brief: narrated explainers, app walkthroughs and training videos, launch films with kinetic type, real UI and clips, and motion loops. Script, voice, word-timed animation, captions and music, reviewed frame by frame like an animator."
     }
   ]
 }

@@ -6,7 +6,6 @@ Name the engine in the brief's OUTPUT line, with the exact size, frame rate and 
 | --- | --- | --- |
 | A diagram explainer: how something works, with narration | **Manim** | `video.py` with `Narrated` scenes ([Explainer (Manim)](../SKILL.md#explainer-manim)) |
 | A UI walkthrough, loop, kinetic type, a launch film | **HTML + `motion.js`** | `index.html` with `seek(t)`; springs, cues, pointer, captions, clips |
-| Anything 3D: a product, logo, character, material or camera move | **three.js** in the same HTML page | [3D with three.js](three.md); `setup.sh --with three` |
 | You already think in GSAP timelines | **GSAP** in the same HTML page | `setup.sh --with gsap`; build a paused timeline and call `tl.seek(t)` inside `seek(t)` |
 | A long series, a template filled from data, a React codebase | **Remotion** | A separate framework with its own renderer and [official Agent Skills](https://www.remotion.dev). It is source-available: free for individuals, companies of up to 3 people, non-profits and evaluation, and other companies need a company license. Use this skill's brief, numbers and review loop with it. |
 | HTML, CSS and GSAP rendered by a command-line tool | **HyperFrames** (HeyGen, Apache 2.0) | A separate renderer. The brief, numbers and review loop apply unchanged. |
@@ -16,9 +15,8 @@ Rules of thumb from the Motion Lab article:
 - A single idea under ten seconds is plain HTML.
 - A series, a template or a data-driven video is Remotion.
 - If you think in web pages and GSAP, use GSAP here or HyperFrames.
-- Anything 3D is three.js.
 
-In this skill, every HTML engine shares one page and one renderer. The `seek(t)` contract keeps it simple: three.js, GSAP and `motion.js` can all draw the same frame, and the review tools, captions and sound work the same way for all of them.
+In this skill, every HTML engine shares one page and one renderer. The `seek(t)` contract keeps it simple: GSAP and `motion.js` can both draw the same frame, and the review tools, captions and sound work the same way for both.
 
 ## GSAP in a page
 

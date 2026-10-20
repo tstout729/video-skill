@@ -20,10 +20,6 @@ Every fix that works goes into the project's brief (BAN or the render contract) 
 | Text blurs during a zoom | `will-change` on a scaled element, or a full 360° shutter | Remove `will-change`; keep `--shutter 0.4` |
 | Something leaves the frame | The arc or camera framing was not checked | A contact sheet with `--from`/`--to` around the move; keep motion inside the safe area |
 | Text is too small on a phone | Desktop-sized type | At 1080 px wide: body at 28 px or more, key words at 44 px or more; exaggerate key poses 10–30% |
-| Chrome looks like white plastic | Nothing for the chrome to reflect | An environment (`RoomEnvironment`), a horizon line or a bright card in reflection; roughness of 0.1 or less |
-| 3D letters are absurdly thick | `TextGeometry` given `height` in r186 | Use `depth` |
-| Bevels fuse letters together | Bevel size too large for the letter spacing | A smaller `bevelSize`, more letter spacing, or a larger font |
-| A glint washes out a letter | A highlight too wide or too bright | Narrow the highlight, lower its strength, and check frame by frame |
 | The page never loads in the renderer | A script error or a missing file | `render.mjs` prints the errors and failed URLs; fix the first one |
 | A sound lands early or late | The sound placed on the picture's frame, or codec padding | `mux.py` places it a frame after (`--sfx-lag 1`); `check_sync.py` measures it |
 | Hits disappear on phones | Energy below about 100 Hz | A calm bed, or a bed weighted above 100 Hz; `check_sync.py` reports the low share |

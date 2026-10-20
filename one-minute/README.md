@@ -31,7 +31,9 @@ A 56-second film for LinkedIn that shows what the skill makes, using its real ou
 The narration takes are in `audio/`, so no ElevenLabs key is needed. Run these from the repository root:
 
 ```sh
-bash skills/video/scripts/setup.sh --with three
+bash skills/video/scripts/setup.sh
+# The film's 3D mark needs three.js r186, which the skill no longer installs.
+npm install --silent --no-audit --no-fund --ignore-scripts --prefix "${VIDEO_SKILL_HOME:-$HOME/.cache/video-skill}" three@0.186.1
 S=skills/video/scripts
 
 # The music and the clips are too large to commit; these rebuild them exactly.
